@@ -46,9 +46,9 @@ We will build mostly on the **simulators** (Display Simulator for Web Apps, Mock
 **A. How we build (ask first)**
 | # | Ask | Why we need it | Answer |
 |---|---|---|---|
-| 1 | **We know a toolkit display session and a Web App can't share the Display. But can a toolkit session with only camera and speech (no display) stay alive while our Web App is open? Or does opening the Web App stop it?** | Decides option 1 or 2 | |
-| 1b | If it stops: can our phone app open our Web App on the glasses by itself after taking the photo (a handover), so the wearer doesn't have to launch it by hand? | A slower route to option 2 | |
-| 2 | **Is WebMCP on for the loaner pairs? If the wearer says "Hey Meta, explain what I'm looking at", can Meta AI look through the camera and pass what it sees as text to our Web App's tool?** | Would give live animation with no toolkit at all | |
+| 1 | **We know a toolkit display session and a Web App can't share the Display. But can a toolkit session with only camera and speech (no display) stay alive while our Web App is open? Or does opening the Web App stop it?** | Decides option 1 or 2 | **No.** Both can't run in parallel (team, 14 Nov) |
+| 1b | If it stops: can our phone app open our Web App on the glasses by itself after taking the photo (a handover), so the wearer doesn't have to launch it by hand? | A slower route to option 2 | **Maybe.** Handover might work; not confirmed (team, 14 Nov) |
+| 2 | **Is WebMCP on for the loaner pairs? If the wearer says "Hey Meta, explain what I'm looking at", can Meta AI look through the camera and pass what it sees as text to our Web App's tool?** | Would give live animation with no toolkit at all | **No.** The Meta AI route won't work (team, 14 Nov) |
 | 3 | Do speech, pinch input and photo capture work in Developer Mode without a registered app (app ID `0`)? | Whether we need Developer Center accounts | |
 
 **B. Glasses time**
