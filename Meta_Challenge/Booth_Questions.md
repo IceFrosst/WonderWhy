@@ -79,6 +79,24 @@ We will build mostly on the **simulators** (Display Simulator for Web Apps, Mock
 | 18 | Which languages does on-device speech support? | "Any language" feature | |
 | 19 | How long does the battery last with photo-on-demand use, and does the venue Wi-Fi or Bluetooth crowding cause drops? | 3.5 hours of peer review | |
 
+## What the simulators can answer (checked 13 Nov in Meta's repos)
+The Display Simulator (Chrome extension) only fakes the Web App screen. Mock Device Kit runs **inside our phone app**: it fakes the glasses (camera from a file or the phone camera, pinch, speech, Display preview, don/doff, permissions). Neither fakes the Meta AI app, Bluetooth or the real device.
+
+| Question | Sim answers it? | How |
+|---|---|---|
+| 1. Toolkit + Web App at the same time | **No** | Nothing in the sims arbitrates between apps. Docs: a session "may pause or stop when another experience takes over". Ask Meta or test on real glasses |
+| 2. WebMCP on loaner pairs | No | Ask |
+| 3. Developer Mode with app ID `0` | Partly | Mock works without registration; real glasses still need checking |
+| 9-10. Mock in emulator, pinch + speech + Display together | **Yes** | Build the Android app with Mock Device Kit (needs an Android 12+ phone or an emulator image) |
+| 12. Simulator vs real display look | Partly | Simulator does additive blending and backgrounds; brightness needs real glasses |
+| 14. Photo to phone latency | **No** | Bluetooth only exists on real glasses. Our phone stand-in has a delay slider to model it |
+| Model and render latency | **Yes** | Our bridge logs capture → detect → rendered for every request (`GET /latency`) |
+| Web App load time on glasses | **Yes (estimate)** | Meta's `ai-glasses-webapp-optimize-performance` throttles to the glasses link (1 KB ≈ 16 ms) |
+| Live physics animation at 30 fps | **Yes** | The ball trajectory scene runs in the simulator |
+| 15-19. Video limits, image swap rate, speaker, languages, battery | No | Ask or test on glasses |
+
+Test rig: `Meta_Challenge/app/` (glasses Web App + bridge + phone stand-in page).
+
 ## After the booth
 - Answer 1 or 2 is **yes**: build option 2. The animation player becomes a Web App on Saturday.
 - Only 1b is yes: option 1 first, handover as a stretch goal.
