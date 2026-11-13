@@ -15,7 +15,8 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 | Var | Meaning |
 |---|---|
 | `PORT` | default 8787 |
-| `DETECT_PROVIDER` | `anthropic` / `gemini` / `mock`; unset = anthropic if key, else gemini if key, else mock |
+| `DETECT_PROVIDER` | `anthropic` / `gemini` / `mock` / `pi`; unset = anthropic if key, else gemini if key, else mock |
+| `PI_DETECT_MODEL`, `DETECT_TIMEOUT_MS` | Only for `pi`: runs the local `pi` CLI with that machine's model login (no API key). Dev only: about 7 s per photo, default model `anthropic/claude-haiku-4-5`, default timeout 25 s |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | default model `claude-haiku-5-5` |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | default model `gemini-2.5-flash` (key sent in header) |
 | `LATENCY_LOG` | path of the JSONL log, default `latency.jsonl` |
