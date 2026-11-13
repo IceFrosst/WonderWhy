@@ -34,6 +34,8 @@ Notes:
 - Opus writing animation code takes seconds. Plan an instant short answer (text or voice) first, with the animation arriving after.
 - The Gemini API tech prize is €4k and DeepMind is on the jury. Option: Gemini for seeing the object, Opus for writing the animation.
 
+**Plan:** [Plan](Plan.md) (Fable 5.2 review, hour-by-hour plan, booth questions).
+
 ## The brief (full text: [Brief](Brief.md), Discord: [Discord_Notes](Discord_Notes.md))
 - Show how a first-person view enables new or better everyday interactions.
 - Deliver: a working prototype plus a **deck**. It must handle permissions, errors, connectivity and device state changes.
