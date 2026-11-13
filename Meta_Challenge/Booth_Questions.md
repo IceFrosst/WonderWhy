@@ -28,23 +28,49 @@ updated: 2026-11-13
 
 Speed, estimated (nothing measured): first text answer ~3-5 s after the pinch. A ready-made animation ~1-3 s more. An AI-generated one ~15-25 s more as video, less if drawn live.
 
+## Our situation
+We will build mostly on the **simulators** (Display Simulator for Web Apps, Mock Device Kit for the toolkit) and get only a **few hours on real glasses**. So we need to know what the simulators can't show us, and when we can have glasses.
+
 ## Questions
+**A. How we build (ask first)**
 | # | Ask | Why we need it | Answer |
 |---|---|---|---|
-| **1** | **Can a toolkit session (camera, speech) keep running while a Web App is on the Display? If not, can one hand over to the other?** | Decides option 1 or 2 | |
-| 2 | Can we keep one Display pair and a Neural Band until Sunday 15:00? If not, how do booking slots work? | No glasses means no demo | |
+| 1 | **Can a toolkit session (camera, speech) keep running while a Web App is on the Display? If not, can one hand over to the other?** | Decides option 1 or 2 | |
+| 2 | Is WebMCP on for the loaner pairs? Can Meta AI pass what it sees to our Web App? | A possible way around question 1 | |
 | 3 | Do speech, pinch input and photo capture work in Developer Mode without a registered app (app ID `0`)? | Whether we need Developer Center accounts | |
-| 4 | How long does a photo take to reach the phone? How long until a video clip starts on the Display? | Our speed budget | |
-| 5 | Video on the Display: limits on size and length, can it loop, must the URL be public? | Our animation clips | |
-| 6 | How fast can the phone app swap images on the Display? Is 2-5 per second possible? | Would give near-live animation without the Web App | |
-| 7 | Can the phone speak through the glasses speakers during a session? | Spoken explanation | |
-| 8 | Which languages does on-device speech support? | "Any language" feature | |
-| 9 | Is WebMCP on for the loaner pairs? Can Meta AI pass what it sees to our Web App? | A possible way around question 1 | |
-| 10 | Does the Display Simulator match the real glasses closely enough to film the video in it? | Backup footage | |
+
+**B. Glasses time**
+| # | Ask | Why we need it | Answer |
+|---|---|---|---|
+| 4 | How do we book glasses? How long is a slot, and how many can we get? | Plan our test sessions | |
+| 5 | **Can we have a Display pair and Neural Band for peer review (Sun 10:30-14:00) and the pitch (14:15)?** | Reviewers must try it at our table | |
+| 6 | Can we book a slot on Sunday morning to film the video? | Video is due 09:30 | |
+| 7 | How long does setup take with a loaner pair (factory reset, pairing, Developer Mode)? Do we need our own Meta account ready? | Not to lose half a slot on setup | |
+| 8 | How do Meta's judges see our demo: on real glasses at our table, or is a simulator recording enough? | What must work live | |
+
+**C. Building on simulators**
+| # | Ask | Why we need it | Answer |
+|---|---|---|---|
+| 9 | Does Mock Device Kit run in the Android emulator, or does it need a real Android phone? | Whether we can develop on a laptop alone | |
+| 10 | Can the mock simulate Neural Band pinches, speech and the Display together? | Test the full loop without glasses | |
+| 11 | What usually breaks when a project moves from the simulator to real glasses? | Fix it before our slot | |
+| 12 | Does the Display Simulator look close enough to the real display (brightness, colours, text size) to design in and to film for the video? | Design and backup footage | |
+| 13 | Is there a way to record what the wearer sees (camera view plus display) for the video? | The hero shot | |
+
+**D. Speed and limits on real glasses**
+| # | Ask | Why we need it | Answer |
+|---|---|---|---|
+| 14 | How long does a photo take to reach the phone? How long until a video clip starts on the Display? | Our speed budget, which we can't measure on a simulator | |
+| 15 | Video on the Display: limits on size and length, can it loop, must the URL be public? | Our animation clips | |
+| 16 | How fast can the phone app swap images on the Display? Is 2-5 per second possible? | Near-live animation without the Web App | |
+| 17 | Can the phone speak through the glasses speakers during a session? | Spoken explanation | |
+| 18 | Which languages does on-device speech support? | "Any language" feature | |
+| 19 | How long does the battery last with photo-on-demand use, and does the venue Wi-Fi or Bluetooth crowding cause drops? | 3.5 hours of peer review | |
 
 ## After the booth
 - Answer 1 is **yes**: build option 2. The animation player becomes a Web App on Saturday.
 - Answer 1 is **no**: stay on option 1. Render the ~5 checked simulations to clips in advance.
 - Either way the animation code is the same, so start it now.
+- Build everything on the simulators first. Use glasses slots only to test, measure speed and film.
 
 Background: [Platform_Notes](Platform_Notes.md), full plan: [Plan](Plan.md).
