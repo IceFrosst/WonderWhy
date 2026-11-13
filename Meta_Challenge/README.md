@@ -22,9 +22,15 @@ updated: 2026-11-13
 | Depth | High-school level by default. Gets deeper as the user digs further or asks harder questions |
 | Language | Any language: answers in the language the user speaks |
 | Hero shot | Not decided yet |
+| Accuracy | Open. Later: sources and/or a simulation check |
+| Privacy (bare bones) | The camera captures **only on a tap or voice request**, never streams in the background. Frames are not stored after the answer |
+| Phones | Team has iPhone and Android; who has which is in issue #1. Android is easier (builds from Linux) |
+| Name | Not yet |
+| Scope | **Bare-bones shippable demo first**; nice-to-haves later |
+| Build path | See [Platform_Notes](Platform_Notes.md): start DAT-only (B), go hybrid with a WebGL Web App (A) if time allows |
 
 Notes:
-- The Display web app gets no camera, so the camera goes glasses → phone (toolkit app) → model, and the result goes back to the Display web app.
+- The Display web app gets no camera, so the camera goes glasses → phone (toolkit app) → model. Details in [Platform_Notes](Platform_Notes.md).
 - Opus writing animation code takes seconds. Plan an instant short answer (text or voice) first, with the animation arriving after.
 - The Gemini API tech prize is €4k and DeepMind is on the jury. Option: Gemini for seeing the object, Opus for writing the animation.
 
