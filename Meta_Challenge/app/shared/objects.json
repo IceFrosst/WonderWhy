@@ -1,0 +1,10 @@
+{
+  "_note": "Prerendered library. The bridge sends one of these ids; the glasses app holds the full content and scenes. 'unknown' = not in the library.",
+  "objects": [
+    { "id": "guitar",   "label": "Guitar string",  "detect_hint": "a guitar, ukulele or any plucked string instrument, or a close-up of strings and frets", "concept": "Standing waves: a shorter string vibrates faster, so the note is higher" },
+    { "id": "ball",     "label": "Thrown ball",    "detect_hint": "any ball (tennis, football, basketball, crumpled paper ball) held in a hand or about to be thrown", "concept": "Projectile motion: gravity bends the path into a parabola; 45 degrees goes furthest without air drag", "live": true },
+    { "id": "bicycle",  "label": "Bike gears",     "detect_hint": "a bicycle, its chain, chainring, cassette or rear gears", "concept": "Gear ratio: a big front and small back gear trades pedalling force for speed" },
+    { "id": "kettle",   "label": "Boiling kettle", "detect_hint": "a kettle, pot of water, or a cup or mug of hot drink", "concept": "Convection: hot water rises, cool water sinks, bubbles are water turning to vapour" },
+    { "id": "pendulum", "label": "Swinging keys",  "detect_hint": "keys on a lanyard or string, a necklace, a yo-yo, anything hanging that can swing", "concept": "Pendulum: the swing time depends on the length, not the weight" }
+  ]
+}
