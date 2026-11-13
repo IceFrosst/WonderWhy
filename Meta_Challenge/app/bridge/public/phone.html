@@ -71,12 +71,12 @@ async function capture(force){
  if(!force&&!img){$('status').innerHTML='<span class="bad">No camera frame</span>';busy=false;return;}
  const d=Number($('delay').value);if(d)await new Promise(r=>setTimeout(r,d));
  $('status').textContent='Sending…';
- try{const r=await fetch('/detect',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,t_capture})});
+ try{const r=await fetch('/detect',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,t_capture,preUploadMs:Date.now()-t_capture})});
   const j=await r.json();
   if(!r.ok){$('status').innerHTML='<span class="bad">'+(j.error||r.status)+': '+(j.message||'')+'</span>';}
   else{$('status').innerHTML='<span class="ok">'+j.objectId+' ('+Math.round(j.confidence*100)+'%) via '+j.timings.model+'</span>'+(j.answer?' - '+j.answer:'');
    $('prov').textContent='model: '+j.timings.model;
-   rows.push({reqId,objectId:j.objectId,captureToReceivedMs:j.timings.t_received-t_capture,detectMs:j.timings.detectMs,detectedToRenderedMs:null,totalMs:null});render();}
+   rows.push({reqId,objectId:j.objectId,captureToReceivedMs:j.timings.preUploadMs,detectMs:j.timings.detectMs,detectedToRenderedMs:null,totalMs:null});render();}
  }catch(e){$('status').innerHTML='<span class="bad">'+e.message+'</span>';}
  busy=false;}
 $('cap').onclick=()=>capture();

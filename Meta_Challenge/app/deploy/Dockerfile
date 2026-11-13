@@ -1,0 +1,14 @@
+# Physics Lens: bridge + built glasses Web App in one container.
+# Build context = Meta_Challenge/app (after `npm run build` in glasses/).
+FROM node:24-alpine
+WORKDIR /app
+COPY shared ./shared
+COPY glasses/dist ./glasses/dist
+COPY bridge/package.json bridge/package-lock.json ./bridge/
+RUN cd bridge && npm ci --omit=dev
+COPY bridge/server.js bridge/detect.js bridge/bench.js ./bridge/
+COPY bridge/public ./bridge/public
+WORKDIR /app/bridge
+ENV PORT=8787 LATENCY_LOG=/data/latency.jsonl
+EXPOSE 8787
+CMD ["node", "--env-file-if-exists=/data/.env", "server.js"]

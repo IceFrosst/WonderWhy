@@ -33,7 +33,7 @@ const post = (body) => fetch(`${base}/detect`, { method: 'POST', headers: { 'con
 
 test('forced detect relays detecting then show, and rendered yields latency', async () => {
   const g = await client('glasses'); const p = await client('phone');
-  const r = await post({ reqId: 'r1', imageBase64: null, forceObjectId: 'ball', t_capture: Date.now() - 50 });
+  const r = await post({ reqId: 'r1', imageBase64: null, forceObjectId: 'ball', t_capture: Date.now() - 50, preUploadMs: 50 });
   assert.equal(r.status, 200);
   const body = await r.json();
   assert.equal(body.objectId, 'ball');
@@ -45,13 +45,13 @@ test('forced detect relays detecting then show, and rendered yields latency', as
   g.ws.send(JSON.stringify({ type: 'rendered', reqId: 'r1', t_rendered: Date.now() + 20 }));
   const lat = await p.next('latency');
   assert.equal(lat.objectId, 'ball');
-  assert.ok(lat.captureToReceivedMs >= 50 && lat.totalMs >= 70);
+  assert.ok(lat.captureToReceivedMs === 50 && lat.totalMs >= 50 && lat.detectedToRenderedMs >= 0);
   await new Promise((r) => setTimeout(r, 50));
   assert.ok(existsSync(logPath));
   assert.equal(readFileSync(logPath, 'utf8').trim().split('\n').length, 1);
   const s = await (await fetch(`${base}/latency`)).json();
   assert.equal(s.count, 1);
-  assert.ok(s.totalMs.p50 >= 70);
+  assert.ok(s.totalMs.p50 >= 50);
   g.ws.close(); p.ws.close();
 });
 

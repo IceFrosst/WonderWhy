@@ -1,0 +1,6 @@
+
+# Physics Lens (Junction 2026), added by the lens deploy kit. Remove this block to unhost.
+lens.167-71-139-39.sslip.io {
+    encode zstd gzip
+    reverse_proxy lens-bridge:8787
+}
