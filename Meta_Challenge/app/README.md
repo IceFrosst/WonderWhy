@@ -10,7 +10,17 @@ Look at an object, pinch, see the physics inside it. 5 objects are **prerendered
 
 Contract: [shared/PROTOCOL.md](shared/PROTOCOL.md). Object library: [shared/objects.json](shared/objects.json).
 
-## Run
+## Live server (for real-glasses testing)
+| What | URL |
+|---|---|
+| Glasses app | https://lens.167-71-139-39.sslip.io/ (install with [deploy/install-qr.png](deploy/install-qr.png)) |
+| Phone page | https://lens.167-71-139-39.sslip.io/phone |
+| Latency | https://lens.167-71-139-39.sslip.io/latency |
+| Toolkit app endpoint | `POST https://lens.167-71-139-39.sslip.io/detect` (send `preUploadMs`, see [shared/PROTOCOL.md](shared/PROTOCOL.md)) |
+
+Hosted on the athena droplet next to Athena; deploy and ops notes in [deploy/README.md](deploy/README.md). Update with `deploy/deploy.sh`.
+
+## Run locally
 ```bash
 cd glasses && npm install && npm run build
 cd ../bridge && npm install && npm start

@@ -69,6 +69,8 @@ export function start({ port = Number(process.env.PORT) || 8787, latencyLog = pr
     const reqId = body.reqId || crypto.randomUUID();
     const t_received = Date.now();
     const t_capture = Number(body.t_capture) || t_received;
+    // Measured on the sender's own clock (capture -> request sent). Avoids phone/server clock skew.
+    const preUploadMs = Number.isFinite(Number(body.preUploadMs)) ? Math.max(0, Number(body.preUploadMs)) : null;
     both({ type: 'detecting', reqId, t_sent: Date.now() });
     try {
       const r = await detect({ imageBase64: body.imageBase64, question: body.question, forceObjectId: body.forceObjectId, objects });
@@ -79,7 +81,7 @@ export function start({ port = Number(process.env.PORT) || 8787, latencyLog = pr
         type: 'show', reqId, objectId: r.objectId, label: obj ? obj.label : 'Unknown object', confidence: r.confidence,
         ...(body.question ? { question: body.question } : {}),
         ...(r.answer ? { answer: r.answer } : {}),
-        timings: { t_capture, t_received, t_detected, detectMs: r.detectMs, model: r.model },
+        timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: r.detectMs, model: r.model },
         t_sent: Date.now(),
       };
       pending.set(reqId, show);
@@ -132,13 +134,17 @@ export function start({ port = Number(process.env.PORT) || 8787, latencyLog = pr
         if (!show) return;
         pending.delete(m.reqId);
         const t = show.timings;
+        // Every duration uses one clock. Server clock: detected -> 'rendered' ack arrives
+        // (includes the trip to the glasses, first paint, and the ack's trip back).
+        const t_ack = Date.now();
+        const pre = t.preUploadMs ?? Math.max(0, t.t_received - t.t_capture); // fallback only valid on one machine
         const rec = {
           reqId: m.reqId, objectId: show.objectId, model: t.model,
-          captureToReceivedMs: t.t_received - t.t_capture,
+          captureToReceivedMs: pre,
           detectMs: t.detectMs,
-          detectedToRenderedMs: m.t_rendered - t.t_detected,
-          totalMs: m.t_rendered - t.t_capture,
-          at: Date.now(),
+          detectedToRenderedMs: t_ack - t.t_detected,
+          totalMs: pre + (t_ack - t.t_received),
+          at: t_ack,
         };
         records.push(rec);
         try { appendFileSync(latencyLog, JSON.stringify(rec) + '\n'); } catch (e) { console.error('latency log failed', e.message); }

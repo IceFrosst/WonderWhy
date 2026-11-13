@@ -13,11 +13,12 @@ Later the real Android toolkit app replaces the phone stand-in and calls the sam
 ## Phone → bridge: `POST /detect` (JSON)
 ```json
 { "reqId": "uuid", "imageBase64": "<jpeg, no data: prefix> | null", "question": "optional text",
-  "forceObjectId": "optional id from objects.json (skips the model)", "t_capture": 1731500000000 }
+  "forceObjectId": "optional id from objects.json (skips the model)", "t_capture": 1731500000000,
+  "preUploadMs": 820 }
 ```
 Response: the same `show` message the glasses get (below), plus `timings`.
 
-`t_*` are `Date.now()` ms epoch from the sender's clock (same laptop, so comparable).
+`t_*` are `Date.now()` ms epoch from the sender's clock. Clocks on the phone, server and glasses differ, so **latency is never computed across clocks**: the phone sends `preUploadMs` (capture → request sent, on its own clock, e.g. the glasses → phone Bluetooth photo transfer), and the server times `detectMs` and detected → `rendered` ack arrival on its own clock.
 
 ## Bridge → glasses (WebSocket `/ws`, JSON text frames)
 | type | fields | glasses does |
