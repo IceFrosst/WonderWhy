@@ -34,6 +34,8 @@ Notes:
 - Opus writing animation code takes seconds. Plan an instant short answer (text or voice) first, with the animation arriving after.
 - The Gemini API tech prize is €4k and DeepMind is on the jury. Option: Gemini for seeing the object, Opus for writing the animation.
 
+**Going to the Meta booth? Take [Booth_Questions](Booth_Questions.md).**
+
 **Plan:** [Plan](Plan.md) (Fable 5.2 review, hour-by-hour plan, booth questions).
 
 ## The brief (full text: [Brief](Brief.md), Discord: [Discord_Notes](Discord_Notes.md))
@@ -48,14 +50,6 @@ Notes:
 - Camera only through the DAT phone app; web apps get no camera.
 - 20 shared pairs. Ask whether we can keep one overnight.
 - Contact: Amanda Le (mentor). Web Apps: Ming Lin, William La, Amy Lee, Odil Nikadambaev. DAT iOS: Dennis Punjabi.
-
-## Open questions for the Meta booth
-1. Delay and frame rate of the camera stream to the phone?
-2. Can a Display web app draw custom graphics (canvas or WebGL)?
-3. Can a Display web app hold a WebSocket to a local laptop or phone?
-4. Battery life while streaming the camera nonstop?
-5. Is the Neural Band open to developers?
-6. Can we keep a pair overnight?
 
 ## Idea shortlist
 _To fill in._ Candidates: [Wearables_Research](../Research/Wearables_Research.md#other-glasses-ideas-not-yet-picked).
