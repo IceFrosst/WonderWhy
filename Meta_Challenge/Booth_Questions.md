@@ -28,6 +28,17 @@ updated: 2026-11-13
 
 Speed, estimated (nothing measured): first text answer ~3-5 s after the pinch. A ready-made animation ~1-3 s more. An AI-generated one ~15-25 s more as video, less if drawn live.
 
+## What Meta's docs already say (checked 13 Nov, late)
+| Finding | Source |
+|---|---|
+| "Your app has **exclusive display control** during active sessions" (toolkit display) | Docs: Display overview, "Sessions" |
+| A toolkit session can be paused or stopped when "the user performs a system action that opens another experience" or "another app or system feature starts a device session" | Docs: Session lifecycle |
+| Only the toolkit can use the camera or microphone. Web Apps get speech only as dictated text, or through WebMCP | Docs index (`llms.txt`) |
+| WebMCP is off by default; on in Developer Mode (may need a restart of glasses and app) | Docs: WebMCP agent tools |
+| "Hey Meta, start <app name>" can launch our phone app by voice (needs Developer Center setup) | Docs: Voice invocations |
+
+**So:** a toolkit display and a Web App on the Display at the same time is **out**. Still open: questions 1, 1b and 2. **The simulators can't answer them.** They are two separate tools with no shared "glasses system" deciding which app wins, so only Meta or a real pair can tell us.
+
 ## Our situation
 We will build mostly on the **simulators** (Display Simulator for Web Apps, Mock Device Kit for the toolkit) and get only a **few hours on real glasses**. So we need to know what the simulators can't show us, and when we can have glasses.
 
@@ -35,8 +46,9 @@ We will build mostly on the **simulators** (Display Simulator for Web Apps, Mock
 **A. How we build (ask first)**
 | # | Ask | Why we need it | Answer |
 |---|---|---|---|
-| 1 | **Can a toolkit session (camera, speech) keep running while a Web App is on the Display? If not, can one hand over to the other?** | Decides option 1 or 2 | |
-| 2 | Is WebMCP on for the loaner pairs? Can Meta AI pass what it sees to our Web App? | A possible way around question 1 | |
+| 1 | **We know a toolkit display session and a Web App can't share the Display. But can a toolkit session with only camera and speech (no display) stay alive while our Web App is open? Or does opening the Web App stop it?** | Decides option 1 or 2 | |
+| 1b | If it stops: can our phone app open our Web App on the glasses by itself after taking the photo (a handover), so the wearer doesn't have to launch it by hand? | A slower route to option 2 | |
+| 2 | **Is WebMCP on for the loaner pairs? If the wearer says "Hey Meta, explain what I'm looking at", can Meta AI look through the camera and pass what it sees as text to our Web App's tool?** | Would give live animation with no toolkit at all | |
 | 3 | Do speech, pinch input and photo capture work in Developer Mode without a registered app (app ID `0`)? | Whether we need Developer Center accounts | |
 
 **B. Glasses time**
@@ -68,8 +80,9 @@ We will build mostly on the **simulators** (Display Simulator for Web Apps, Mock
 | 19 | How long does the battery last with photo-on-demand use, and does the venue Wi-Fi or Bluetooth crowding cause drops? | 3.5 hours of peer review | |
 
 ## After the booth
-- Answer 1 is **yes**: build option 2. The animation player becomes a Web App on Saturday.
-- Answer 1 is **no**: stay on option 1. Render the ~5 checked simulations to clips in advance.
+- Answer 1 or 2 is **yes**: build option 2. The animation player becomes a Web App on Saturday.
+- Only 1b is yes: option 1 first, handover as a stretch goal.
+- All **no**: stay on option 1. Render the ~5 checked simulations to clips in advance.
 - Either way the animation code is the same, so start it now.
 - Build everything on the simulators first. Use glasses slots only to test, measure speed and film.
 
