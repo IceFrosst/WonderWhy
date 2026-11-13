@@ -8,7 +8,21 @@ updated: 2026-11-13
 # Meta challenge: AI Glasses for Everyone, Everyday
 
 > [!summary]
-> Our working folder for the Meta challenge. **Idea: not chosen yet.** The trajectory-prediction idea is parked (see [Wearables_Research](../Research/Wearables_Research.md)).
+> Our **grand prize project**. Idea: **real-world explanation mode**. The trajectory-prediction idea is parked (see [Wearables_Research](../Research/Wearables_Research.md)).
+
+## Idea: real-world explanation mode (draft, 13 Nov)
+| Decision | Choice |
+|---|---|
+| What | Look at an object, ask, and get an explanation of the object or concept with animations of how the physics works |
+| User | Students and curious people who want to keep learning and understand the world better |
+| Where visuals play | **Everything on the glasses** (Ray-Ban Display). Only 10 Display pairs exist, so we must secure one |
+| How animations are made | **A/B/C test three ways:** (1) real physics simulations, (2) AI-generated animated diagrams (SVG/canvas code), (3) generated video clips. Claude Opus 5.5 is strong at writing animation code |
+| Trigger | **Both:** a tap for a quick "what is this", voice for a specific question |
+
+Notes:
+- The Display web app gets no camera, so the camera goes glasses → phone (toolkit app) → model, and the result goes back to the Display web app.
+- Opus writing animation code takes seconds. Plan an instant short answer (text or voice) first, with the animation arriving after.
+- The Gemini API tech prize is €4k and DeepMind is on the jury. Option: Gemini for seeing the object, Opus for writing the animation.
 
 ## The brief (full text: [Sources](../Research/Sources/Junction_2026_Challenges_full.txt), lines 752-796)
 - Show how a first-person view enables new or better everyday interactions.
@@ -37,6 +51,6 @@ _To fill in._ Candidates: [Wearables_Research](../Research/Wearables_Research.md
 ## Status
 | Item | State |
 |---|---|
-| Idea chosen | No |
+| Idea chosen | Draft: explanation mode |
 | Booth questions answered | No |
 | Code | None yet |
