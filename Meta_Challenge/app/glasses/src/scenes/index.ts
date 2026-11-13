@@ -1,5 +1,8 @@
 import {BallScene} from './ball';
 import {BicycleScene} from './bicycle';
+import {BounceScene} from './bounce';
+import {ExplodedScene} from './exploded';
+import {PHONE_SPEC} from './specs/phone';
 import {GuitarScene} from './guitar';
 import {KettleScene} from './kettle';
 import {PendulumScene} from './pendulum';
@@ -13,9 +16,11 @@ const FACTORIES: Record<string, () => Scene> = {
   bicycle: () => new BicycleScene(),
   kettle: () => new KettleScene(),
   pendulum: () => new PendulumScene(),
+  bounce: () => new BounceScene(),
+  'phone-exploded': () => new ExplodedScene(PHONE_SPEC),
 };
 
-/** Returns null for `unknown` or any id without a scene. */
+/** Scene factory id (see Chapter.scene). Returns null for unknown ids. */
 export function createScene(id: string): Scene | null {
   const f = FACTORIES[id];
   return f ? f() : null;

@@ -101,6 +101,9 @@ body {
 
 .ex-chip {
   white-space: nowrap;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ex-answer,

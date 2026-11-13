@@ -74,6 +74,6 @@ test('mock provider returns unknown without forceObjectId', async () => {
 
 test('basic endpoints', async () => {
   assert.equal((await (await fetch(`${base}/health`)).json()).ok, true);
-  assert.equal((await (await fetch(`${base}/objects`)).json()).objects.length, 5);
+  assert.equal((await (await fetch(`${base}/objects`)).json()).objects.length, (await import("../detect.js")).loadObjects().length);
   assert.equal((await fetch(`${base}/phone`)).status, 200);
 });

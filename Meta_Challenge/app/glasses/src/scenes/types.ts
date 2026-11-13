@@ -1,4 +1,5 @@
-export type Step = 1 | 2 | 3;
+/** 1-based step within the current chapter. */
+export type Step = number;
 
 export interface Readout {
   label: string;

@@ -1,6 +1,21 @@
 import objectsJson from '../../shared/objects.json';
 
-export type Step = 1 | 2 | 3;
+import {BALL_BOUNCE} from './content/ball_bounce';
+import {PHONE_LAYERS} from './content/phone';
+
+export type Step = number;
+
+/** One scene with its own steps. An object can have several chapters (ball: trajectory, then bounce). */
+export interface Chapter {
+  /** Scene factory id in scenes/index.ts. */
+  scene: string;
+  title: string;
+  /** One-line answer shown under the title while this chapter plays; defaults to the object's answer. */
+  lead?: string;
+  hint: string;
+  /** One caption per step; any length >= 1. */
+  captions: string[];
+}
 
 export interface ObjectInfo {
   id: string;
@@ -8,8 +23,13 @@ export interface ObjectInfo {
   concept: string;
   tagline: string;
   answer: string;
-  hint: string;
-  captions: [string, string, string];
+  chapters: Chapter[];
+}
+
+type Extra = Omit<ObjectInfo, 'id' | 'label' | 'concept'>;
+/** Legacy single-chapter content: scene id = object id. */
+function one(id: string, e: {tagline: string; answer: string; hint: string; captions: string[]}): Extra {
+  return {tagline: e.tagline, answer: e.answer, chapters: [{scene: id, title: e.tagline, hint: e.hint, captions: e.captions}]};
 }
 
 interface RawObject {
@@ -21,7 +41,7 @@ interface RawObject {
 const raw = (objectsJson as {objects: RawObject[]}).objects;
 
 // Content for the prerendered library. Keys must match shared/objects.json ids.
-const EXTRA: Record<string, Omit<ObjectInfo, 'id' | 'label' | 'concept'>> = {
+const LEGACY: Record<string, {tagline: string; answer: string; hint: string; captions: string[]}> = {
   ball: {
     tagline: 'Projectile motion',
     answer: 'Gravity bends the path into a curve.',
@@ -74,16 +94,16 @@ const EXTRA: Record<string, Omit<ObjectInfo, 'id' | 'label' | 'concept'>> = {
   },
 };
 
+const EXTRA: Record<string, Extra> = Object.fromEntries(Object.entries(LEGACY).map(([id, e]) => [id, one(id, e)]));
+// Multi-chapter objects.
+EXTRA.ball = {...EXTRA.ball, chapters: [...EXTRA.ball.chapters, BALL_BOUNCE]};
+EXTRA.phone = {tagline: 'What is inside', answer: PHONE_LAYERS.answer, chapters: [PHONE_LAYERS.chapter]};
+
 export const OBJECTS: ObjectInfo[] = raw.map(o => ({
   id: o.id,
   label: o.label,
   concept: o.concept,
-  ...(EXTRA[o.id] ?? {
-    tagline: o.concept,
-    answer: o.concept,
-    hint: '',
-    captions: [o.concept, o.concept, o.concept] as [string, string, string],
-  }),
+  ...(EXTRA[o.id] ?? {tagline: o.concept, answer: o.concept, chapters: []}),
 }));
 
 export const UNKNOWN: ObjectInfo = {
@@ -92,8 +112,7 @@ export const UNKNOWN: ObjectInfo = {
   concept: '',
   tagline: '',
   answer: '',
-  hint: '',
-  captions: ['', '', ''],
+  chapters: [],
 };
 
 export function findObject(id: string): ObjectInfo {

@@ -1,10 +1,9 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Button, ButtonRail, TextColor, TextStyle, TextView} from '@wearables-ui-toolkit/mrbd';
 import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
 import {emitNav, onNav} from './bus';
 import type {NavAction} from './bus';
 import {findObject} from './content';
-import type {Step} from './content';
 import {createScene} from './scenes';
 import type {Readout, Scene} from './scenes';
 
@@ -28,30 +27,52 @@ declare global {
 
 export default function Explainer({objectId, label, answer, question, onRendered, onState}: Props) {
   const info = findObject(objectId);
-  const known = info.id !== 'unknown';
-  const [step, setStep] = useState<Step>(1);
+  const known = info.id !== 'unknown' && info.chapters.length > 0;
+  // Every step of every chapter, in order. idx indexes this list.
+  const flat = useMemo(
+    () => info.chapters.flatMap((c, ci) => c.captions.map((caption, si) => ({ci, step: si + 1, caption}))),
+    [info],
+  );
+  const total = Math.max(1, flat.length);
+  const [idx, setIdx] = useState(0);
+  const cur = flat[Math.min(idx, flat.length - 1)];
+  const chapterIdx = cur?.ci ?? 0;
+  const chapter = info.chapters[chapterIdx];
+  const sceneId = chapter?.scene ?? '';
   const [readouts, setReadouts] = useState<Readout[]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<Scene | null>(null);
-  const stepRef = useRef<Step>(1);
+  const idxRef = useRef(0);
+  const flatRef = useRef(flat);
+  flatRef.current = flat;
   const btnRef = useRef<ButtonHandle>(null);
   const cb = useRef({onRendered, onState});
   cb.current = {onRendered, onState};
 
   const reportState = useCallback(() => {
-    cb.current.onState(stepRef.current, sceneRef.current?.param());
+    cb.current.onState(idxRef.current + 1, sceneRef.current?.param());
   }, []);
 
   const goStep = useCallback(
-    (s: Step) => {
-      stepRef.current = s;
-      setStep(s);
-      sceneRef.current?.setStep(s);
+    (i: number) => {
+      const f = flatRef.current;
+      if (!f.length) return;
+      const prev = f[idxRef.current];
+      idxRef.current = i;
+      setIdx(i);
+      // Same chapter: just change the scene's step. New chapter: the scene effect swaps scenes.
+      if (prev && prev.ci === f[i].ci) sceneRef.current?.setStep(f[i].step);
       reportState();
     },
     [reportState],
   );
+
+  // New object: start at the first step.
+  useEffect(() => {
+    idxRef.current = 0;
+    setIdx(0);
+  }, [objectId]);
 
   // Scene lifecycle and 30 fps loop.
   useEffect(() => {
@@ -70,7 +91,7 @@ export default function Explainer({objectId, label, answer, question, onRendered
       };
     }
     const ctx = canvas.getContext('2d');
-    const scene = createScene(objectId);
+    const scene = createScene(sceneId);
     if (!ctx || !scene) return;
     sceneRef.current = scene;
     const fit = (): void => {
@@ -84,7 +105,7 @@ export default function Explainer({objectId, label, answer, question, onRendered
     };
     fit();
     scene.init(ctx, canvas.width, canvas.height);
-    scene.setStep(stepRef.current);
+    scene.setStep(flatRef.current[idxRef.current]?.step ?? 1);
     const ro = new ResizeObserver(fit);
     ro.observe(stage);
 
@@ -137,15 +158,16 @@ export default function Explainer({objectId, label, answer, question, onRendered
       scene.dispose();
       sceneRef.current = null;
     };
-  }, [objectId, known, reportState]);
+  }, [objectId, sceneId, chapterIdx, known, reportState]);
 
   // Arrow keys and bridge `nav` messages share one bus.
   useEffect(() => {
     const off = onNav((a: NavAction) => {
-      const s = stepRef.current;
-      if (a === 'next') goStep(s === 3 ? 1 : ((s + 1) as Step));
-      else if (a === 'deeper') goStep(s === 3 ? 3 : ((s + 1) as Step));
-      else if (a === 'prev') goStep(s === 1 ? 1 : ((s - 1) as Step));
+      const i = idxRef.current;
+      const last = flatRef.current.length - 1;
+      if (a === 'next') goStep(i >= last ? 0 : i + 1);
+      else if (a === 'deeper') goStep(Math.min(last, i + 1));
+      else if (a === 'prev') goStep(Math.max(0, i - 1));
       else if (a === 'left' || a === 'right' || a === 'up' || a === 'down') {
         const scene = sceneRef.current;
         if (!scene) return;
@@ -191,10 +213,11 @@ export default function Explainer({objectId, label, answer, question, onRendered
       if (el && !el.contains(document.activeElement)) el.focus();
     }, FOCUS_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [step, objectId]);
+  }, [idx, objectId]);
 
-  const title = known ? info.label : 'Not in the library yet';
-  const oneLine = known ? info.answer : label ? `Looks like: ${label}` : '';
+  const multi = info.chapters.length > 1;
+  const title = known ? (multi && chapter ? `${info.label} · ${chapter.title}` : info.label) : 'Not in the library yet';
+  const oneLine = known ? (chapter?.lead ?? info.answer) : label ? `Looks like: ${label}` : '';
   const hasBridgeAnswer = Boolean(answer);
 
   return (
@@ -241,10 +264,10 @@ export default function Explainer({objectId, label, answer, question, onRendered
             </TextView>
           ) : null}
           <TextView as="p" textStyle={TextStyle.META1} className="ex-caption" aria-live="polite">
-            {`Step ${step}/3. ${info.captions[step - 1]}`}
+            {`Step ${idx + 1}/${total}. ${cur?.caption ?? ''}`}
           </TextView>
           <TextView as="p" textStyle={TextStyle.META2} textColor={TextColor.SECONDARY} className="ex-hint">
-            {info.hint}
+            {chapter?.hint ?? ''}
           </TextView>
         </>
       ) : null}
@@ -253,7 +276,7 @@ export default function Explainer({objectId, label, answer, question, onRendered
         <ButtonRail>
           <Button
             ref={btnRef}
-            title={known ? (step === 3 ? 'Back to step 1' : `Next step (${step}/3)`) : 'Done'}
+            title={known ? (idx >= total - 1 ? 'Back to step 1' : `Next step (${idx + 1}/${total})`) : 'Done'}
             onClick={() => emitNav(known ? 'next' : 'done')}
           />
         </ButtonRail>
