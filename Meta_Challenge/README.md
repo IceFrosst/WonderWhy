@@ -18,6 +18,10 @@ updated: 2026-11-13
 | Where visuals play | **Everything on the glasses** (Ray-Ban Display). Only 10 Display pairs exist, so we must secure one |
 | How animations are made | **A/B/C test three ways:** (1) real physics simulations, (2) AI-generated animated diagrams (SVG/canvas code), (3) generated video clips. Claude Opus 5.5 is strong at writing animation code |
 | Trigger | **Both:** a tap for a quick "what is this", voice for a specific question |
+| After an explanation | **Rabbit hole:** follow-up questions go deeper with more research and visuals. Say "done" and the visual and research disappear. No saved journal |
+| Depth | High-school level by default. Gets deeper as the user digs further or asks harder questions |
+| Language | Any language: answers in the language the user speaks |
+| Hero shot | Not decided yet |
 
 Notes:
 - The Display web app gets no camera, so the camera goes glasses → phone (toolkit app) → model, and the result goes back to the Display web app.
