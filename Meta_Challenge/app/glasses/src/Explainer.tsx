@@ -1,14 +1,19 @@
-import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {Button, ButtonRail, TextColor, TextStyle, TextView} from '@wearables-ui-toolkit/mrbd';
 import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
 import {emitNav, onNav} from './bus';
 import type {NavAction} from './bus';
 import type {Chapter, ObjectInfo} from './content';
+import ExploreView from './ExploreView';
+import {isExploreChapter, parseExploreSpec} from './explore';
+import type {ExploreMedia} from './explore';
 import {createScene} from './scenes';
 import type {Readout, Scene} from './scenes';
 
 interface Props {
   info: ObjectInfo;
+  /** Streamed media for the Explore lens; the lens is only in `info.chapters` when this is set. */
+  explore?: ExploreMedia | null;
   label?: string;
   /** Unknown view only: a sketch is being drawn, or none came. */
   sketchState?: 'pending' | 'failed';
@@ -43,6 +48,7 @@ const FOCUS_DELAY_MS = 50;
 const MAX_LENS_MARKS = 5;
 
 const LENS_NAMES: Record<string, string> = {
+  explore: 'Explore',
   motion: 'Motion',
   inside: 'Inside',
   cutaway: 'Cutaway',
@@ -72,6 +78,7 @@ declare global {
 
 export default function Explainer({
   info,
+  explore = null,
   label,
   sketchState,
   lang,
@@ -97,6 +104,14 @@ export default function Explainer({
   const chapter = info.chapters[lens];
   const sceneId = chapter?.scene ?? '';
   const stepsInLens = Math.max(1, chapter?.captions.length ?? 0);
+  const exploreSpec = useMemo(
+    () => (explore && isExploreChapter(chapter) ? parseExploreSpec(chapter?.spec, chapter?.captions.length ?? 0) : null),
+    [explore, chapter],
+  );
+  const isExplore = known && exploreSpec !== null && explore !== null;
+  const isExploreRef = useRef(isExplore);
+  isExploreRef.current = isExplore;
+  const [replay, setReplay] = useState(0);
   const [sceneInstance, setSceneInstance] = useState<Scene | null | undefined>(undefined);
   const [readouts, setReadouts] = useState<Readout[]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -144,6 +159,15 @@ export default function Explainer({
     [reportState],
   );
 
+  // Explore auto-play: one beat forward, never past the last beat and never into another lens.
+  const autoAdvance = useCallback(() => {
+    const current = positionRef.current;
+    const currentChapter = current.info.chapters[current.lens];
+    if (!currentChapter || !isExploreChapter(currentChapter)) return;
+    if (current.step < currentChapter.captions.length - 1) goPosition(current.lens, current.step + 1);
+  }, [goPosition]);
+  const exploreRendered = useCallback(() => cb.current.onRendered(), []);
+
   // New object: start at the requested answer position, or the first step of the first lens.
   useEffect(() => {
     positionRef.current = {info, lens: startingLens, step: startingStep};
@@ -168,6 +192,11 @@ export default function Explainer({
   useEffect(() => {
     if (sceneInstance === undefined) return;
     if (sceneInstance !== sceneRef.current) return;
+    if (known && isExploreRef.current) {
+      // The Explore player acknowledges the first frame itself.
+      reportState();
+      return;
+    }
     if (!known || sceneInstance === null) {
       // No scene: tell the bridge the text is on screen after the next paint.
       let r2 = 0;
@@ -284,6 +313,10 @@ export default function Explainer({
         if (chapters.length < 2) return;
         const delta = a === 'left' ? -1 : 1;
         goPosition((current.lens + delta + chapters.length) % chapters.length, 0);
+      } else if ((a === 'up' || a === 'down') && isExploreRef.current) {
+        // The video cannot turn: up replays the beat from its camera move, down goes back one beat.
+        if (a === 'up') setReplay(value => value + 1);
+        else if (current.step > 0) goPosition(current.lens, current.step - 1);
       } else if (a === 'up' || a === 'down') {
         const knob = currentChapter.knobs === undefined ? {axis: 'x' as const} : currentChapter.knobs[current.step];
         const scene = sceneRef.current;
@@ -368,6 +401,29 @@ export default function Explainer({
         : 'Back to step 1'
       : `Next step (${step + 1}/${stepsInLens})`;
 
+  if (isExplore && chapter && exploreSpec && explore) {
+    return (
+      <ExploreView
+        key={`${objectId}.${lens}`}
+        name={lang && lang !== 'en' ? info.label : (info.short ?? info.label)}
+        captions={chapter.captions}
+        spec={exploreSpec}
+        media={explore}
+        step={step}
+        replay={replay}
+        isSketch={isSketch}
+        autoPlay={!demo}
+        paused={paused}
+        standIn={standIn}
+        demo={demo}
+        lang={lang}
+        onAuto={autoAdvance}
+        onRendered={exploreRendered}
+        followUp={showFollowUp && question && answer ? {question, answer} : null}
+      />
+    );
+  }
+
   return (
     <div className="ex" lang={lang}>
       <div className="ex-head">
@@ -447,7 +503,11 @@ export default function Explainer({
                   const current = i === lens;
                   return (
                     <span className="ex-lens-mark" aria-hidden="true" key={i}>
-                      <span className={`ex-lens-dot${current ? ' ex-lens-dot--current' : ''}`} />
+                      <span
+                        className={`ex-lens-dot${current ? ' ex-lens-dot--current' : ''}${
+                          isExploreChapter(info.chapters[i]) ? ' ex-lens-dot--explore' : ''
+                        }`}
+                      />
                       {current ? (
                         <TextView as="span" textStyle={TextStyle.META1} className="ex-lens-name">
                           {currentLensName}

@@ -1,10 +1,10 @@
 # Glasses state check
 
-Date: 2026-11-14T06:54:57.668Z
+Date: 2026-11-14T08:12:27.880Z
 
-Bundle: 214579 bytes gzip (196084 JS + 18495 CSS); 5 first-paint requests.
+Bundle: 224191 bytes gzip (205260 JS + 18931 CSS); 5 first-paint requests.
 
-Frame rates: guitar.motion: 29.85/29.94 fps min/median; guitar.whatif: 29.82/29.9 fps min/median; guitar.flow: 29.9/29.94 fps min/median; guitar.number: 29.9/29.93 fps min/median; ball.motion: 28.92/29.9 fps min/median; ball.compare: 29.83/29.93 fps min/median; ball.whatif: 29.78/29.99 fps min/median; ball.flow: 29.8/29.99 fps min/median; ball.number: 29.84/29.98 fps min/median; bicycle.motion: 29.88/29.97 fps min/median; bicycle.whatif: 29.86/29.89 fps min/median; bicycle.flow: 29.9/29.93 fps min/median; bicycle.number: 29.95/29.95 fps min/median; kettle.motion: 29.93/29.93 fps min/median; kettle.cutaway: 29.87/29.95 fps min/median; kettle.whatif: 29.85/29.9 fps min/median; kettle.flow: 29.89/29.91 fps min/median; kettle.number: 29.87/29.95 fps min/median; pendulum.motion: 29.79/29.87 fps min/median; pendulum.whatif: 29.84/29.92 fps min/median; pendulum.flow: 29.83/29.97 fps min/median; pendulum.number: 29.87/29.93 fps min/median; phone.inside: 29.9/29.97 fps min/median; phone.whatif: 29.82/29.92 fps min/median; phone.flow: 29.79/30.07 fps min/median; phone.number: 29.89/29.98 fps min/median; spoon.zoom: 29.85/29.96 fps min/median; spoon.flow: 29.82/29.96 fps min/median; spoon.number: 29.88/29.94 fps min/median
+Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.91 fps min/median; guitar.flow: 29.81/30.01 fps min/median; guitar.number: 29.87/29.98 fps min/median; ball.motion: 29.87/29.94 fps min/median; ball.compare: 29.8/30.05 fps min/median; ball.whatif: 29.8/29.9 fps min/median; ball.flow: 29.79/29.94 fps min/median; ball.number: 29.86/29.95 fps min/median; bicycle.motion: 29.91/30 fps min/median; bicycle.whatif: 29.83/29.9 fps min/median; bicycle.flow: 29.84/29.94 fps min/median; bicycle.number: 29.88/29.96 fps min/median; kettle.motion: 29.93/29.94 fps min/median; kettle.cutaway: 29.8/29.99 fps min/median; kettle.whatif: 29.9/29.92 fps min/median; kettle.flow: 29.88/30.03 fps min/median; kettle.number: 29.87/29.96 fps min/median; pendulum.motion: 29.81/30.01 fps min/median; pendulum.whatif: 29.8/29.92 fps min/median; pendulum.flow: 29.89/29.93 fps min/median; pendulum.number: 29.87/29.96 fps min/median; phone.inside: 29.85/29.97 fps min/median; phone.whatif: 29.9/29.9 fps min/median; phone.flow: 29.96/29.97 fps min/median; phone.number: 29.86/29.95 fps min/median; spoon.zoom: 29.87/29.98 fps min/median; spoon.flow: 29.9/29.97 fps min/median; spoon.number: 29.9/29.96 fps min/median
 
 | State | Result | Screenshot |
 |---|---|---|
@@ -43,6 +43,18 @@ Frame rates: guitar.motion: 29.85/29.94 fps min/median; guitar.whatif: 29.82/29.
 | demo-stops | OK | ![demo-stops](states/33-demo-stops.png) |
 | flow-loss-clamp | OK | ![flow-loss-clamp](states/34-flow-loss-clamp.png) |
 | curve-bounds | OK | ![curve-bounds](states/35-curve-bounds.png) |
+| explore-plays | OK | ![explore-plays](states/36-explore-plays.png) |
+| explore-labels | OK | ![explore-labels](states/37-explore-labels.png) |
+| explore-autoplay | OK | ![explore-autoplay](states/38-explore-autoplay.png) |
+| explore-input-pause | OK | ![explore-input-pause](states/39-explore-input-pause.png) |
+| explore-preload | OK | ![explore-preload](states/40-explore-preload.png) |
+| explore-number | OK | ![explore-number](states/41-explore-number.png) |
+| explore-last-beat | OK | ![explore-last-beat](states/42-explore-last-beat.png) |
+| explore-fallback | OK | ![explore-fallback](states/43-explore-fallback.png) |
+| explore-missing | OK | ![explore-missing](states/44-explore-missing.png) |
+| explore-finnish | OK | ![explore-finnish](states/45-explore-finnish.png) |
+| explore-sketch | OK | ![explore-sketch](states/46-explore-sketch.png) |
+| explore-home | OK | ![explore-home](states/47-explore-home.png) |
 | scene-guitar-motion-s1 | OK | ![scene-guitar-motion-s1](states/scene-guitar-motion-s1.png) |
 | scene-guitar-motion-s2 | OK | ![scene-guitar-motion-s2](states/scene-guitar-motion-s2.png) |
 | scene-guitar-motion-s3 | OK | ![scene-guitar-motion-s3](states/scene-guitar-motion-s3.png) |
@@ -82,6 +94,12 @@ Frame rates: guitar.motion: 29.85/29.94 fps min/median; guitar.whatif: 29.82/29.
 | scene-bicycle-number-s1 | OK | ![scene-bicycle-number-s1](states/scene-bicycle-number-s1.png) |
 | scene-bicycle-number-s2 | OK | ![scene-bicycle-number-s2](states/scene-bicycle-number-s2.png) |
 | scene-bicycle-number-s3 | OK | ![scene-bicycle-number-s3](states/scene-bicycle-number-s3.png) |
+| scene-kettle-explore-s1 | OK | ![scene-kettle-explore-s1](states/scene-kettle-explore-s1.png) |
+| scene-kettle-explore-s2 | OK | ![scene-kettle-explore-s2](states/scene-kettle-explore-s2.png) |
+| scene-kettle-explore-s3 | OK | ![scene-kettle-explore-s3](states/scene-kettle-explore-s3.png) |
+| scene-kettle-explore-s4 | OK | ![scene-kettle-explore-s4](states/scene-kettle-explore-s4.png) |
+| scene-kettle-explore-s5 | OK | ![scene-kettle-explore-s5](states/scene-kettle-explore-s5.png) |
+| scene-kettle-explore-s6 | OK | ![scene-kettle-explore-s6](states/scene-kettle-explore-s6.png) |
 | scene-kettle-motion-s1 | OK | ![scene-kettle-motion-s1](states/scene-kettle-motion-s1.png) |
 | scene-kettle-motion-s2 | OK | ![scene-kettle-motion-s2](states/scene-kettle-motion-s2.png) |
 | scene-kettle-motion-s3 | OK | ![scene-kettle-motion-s3](states/scene-kettle-motion-s3.png) |

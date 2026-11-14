@@ -1,0 +1,31 @@
+{
+  "objectId": "fixture3d",
+  "lenses": {
+    "fixture3d.explore": {
+      "kind": "explore",
+      "title": "How it works",
+      "beats": [
+        {
+          "clip": "explore/b1.mp4",
+          "clean": "explore/c1.png"
+        },
+        {
+          "clip": "explore/b2.mp4",
+          "clean": "explore/c2.png"
+        },
+        {
+          "clip": "explore/b3.mp4",
+          "clean": "explore/c3.png"
+        }
+      ],
+      "clean": [
+        "explore/c1.png",
+        "explore/c2.png",
+        "explore/c3.png"
+      ],
+      "tracks": "explore/tracks.json",
+      "size": 600,
+      "fps": 30
+    }
+  }
+}

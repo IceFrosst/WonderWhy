@@ -352,3 +352,200 @@ body {
   font-size: 16px;
   line-height: 20px;
 }
+
+.ex-lens-dot--explore {
+  border-radius: 2px;
+  transform: rotate(45deg) scale(0.86);
+}
+
+/* Explore lens (shared/MODEL3D.md): the beat video fills the frame; text sits on top of it. */
+.xp {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+.xp-stage {
+  position: absolute;
+  inset: 0;
+  outline: none;
+}
+
+.xp-media {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.xp-media.is-on {
+  opacity: 1;
+  z-index: 1;
+}
+
+.xp-still.is-on {
+  z-index: 2;
+}
+
+.xp-overlay {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.xp-top {
+  position: absolute;
+  inset-block-start: 24px;
+  inset-inline: 24px;
+  block-size: 30px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.xp-name {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  overflow: hidden;
+  color: #c9d4ff;
+  font-size: 18px;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xp-tag {
+  flex: 0 0 auto;
+}
+
+.xp-beats {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-inline-start: auto;
+  padding-block-start: 8px;
+}
+
+.xp-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.xp-dot {
+  inline-size: 10px;
+  block-size: 10px;
+  border: 2px solid rgba(201, 212, 255, 0.55);
+  border-radius: 50%;
+}
+
+.xp-dot--past {
+  border-color: #c9d4ff;
+  background: rgba(201, 212, 255, 0.55);
+}
+
+.xp-dot--current {
+  border-color: #ffffff;
+  background: #ffffff;
+}
+
+.xp-progress {
+  position: relative;
+  block-size: 2px;
+  overflow: hidden;
+}
+
+.xp-progress-fill {
+  position: absolute;
+  inset: 0;
+  background: #c9d4ff;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: opacity 200ms ease;
+}
+
+.xp-bottom {
+  position: absolute;
+  inset-inline: 24px;
+  inset-block-end: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.xp-number,
+.xp-caption {
+  animation: xp-in 250ms ease-out;
+}
+
+.xp-number {
+  display: flex;
+  flex-direction: column;
+  max-inline-size: 60%;
+}
+
+.xp-number-value {
+  color: #6dff9c;
+  font-size: 44px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 48px;
+  white-space: nowrap;
+}
+
+.xp-number-unit {
+  margin-inline-start: 8px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.xp-number-label {
+  color: #c9d4ff;
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.xp-caption {
+  inline-size: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 26px;
+}
+
+@keyframes xp-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.xp-follow-up {
+  display: -webkit-box;
+  inline-size: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 20px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}

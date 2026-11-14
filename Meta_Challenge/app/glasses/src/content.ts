@@ -85,8 +85,8 @@ export function mergeSpecText(spec: unknown, text: unknown): unknown {
   return merge(spec, text);
 }
 
-const SKETCH_LENSES = ['motion', 'inside', 'cutaway', 'flow', 'zoom', 'whatif', 'compare', 'number'];
-const SKETCH_SCENES = ['flow', 'number', 'curve'];
+const SKETCH_LENSES = ['explore', 'motion', 'inside', 'cutaway', 'flow', 'zoom', 'whatif', 'compare', 'number'];
+const SKETCH_SCENES = ['flow', 'number', 'curve', 'model3d'];
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -110,48 +110,61 @@ export function sketchToObject(sketch: unknown): ObjectInfo | null {
   const answer = capped(sketch.answer, 120, false);
   if (label === null || answer === null) return null;
   const rawChapters = sketch.chapters;
-  if (!Array.isArray(rawChapters) || rawChapters.length < 1 || rawChapters.length > 3) return null;
+  if (!Array.isArray(rawChapters) || rawChapters.length < 1 || rawChapters.length > 4) return null;
   const chapters: Chapter[] = [];
   for (const raw of rawChapters) {
-    if (!isRecord(raw)) return null;
-    if (typeof raw.lens !== 'string' || !SKETCH_LENSES.includes(raw.lens)) return null;
-    if (typeof raw.scene !== 'string' || !SKETCH_SCENES.includes(raw.scene)) return null;
-    const title = capped(raw.title, 40, true);
-    if (title === null) return null;
-    let lead: string | undefined;
-    if (raw.lead !== undefined && raw.lead !== null) {
-      const l = capped(raw.lead, 120, false);
-      if (l === null) return null;
-      lead = l || undefined;
+    // An Explore chapter that does not check out is dropped by itself (the 2D lenses still show).
+    const explore = isRecord(raw) && (raw.lens === 'explore' || raw.scene === 'model3d');
+    const chapter = sketchChapter(raw);
+    if (chapter === null) {
+      if (explore) continue;
+      return null;
     }
-    const rawCaptions = raw.captions;
-    if (!Array.isArray(rawCaptions) || rawCaptions.length < 1 || rawCaptions.length > 6) return null;
-    const captions: string[] = [];
-    for (const c of rawCaptions) {
-      const t = capped(c, 200, true);
-      if (t === null) return null;
-      captions.push(t);
-    }
-    let knobs: Array<Knob | null>;
-    if (raw.knobs === undefined || raw.knobs === null) {
-      knobs = captions.map(() => null);
-    } else {
-      if (!Array.isArray(raw.knobs) || raw.knobs.length !== captions.length) return null;
-      knobs = [];
-      for (const k of raw.knobs) {
-        if (k === null) {
-          knobs.push(null);
-          continue;
-        }
-        if (!isRecord(k) || (k.axis !== 'x' && k.axis !== 'y')) return null;
-        const kl = capped(k.label, 40, true);
-        if (kl === null) return null;
-        const usable = (raw.scene === 'curve' && k.axis === 'x')
-          || (raw.scene === 'number' && k.axis === 'x' && isRecord(raw.spec) && isRecord(raw.spec.knob));
-        knobs.push(usable ? {axis: k.axis, label: kl} : null);
-      }
-    }
-    chapters.push({scene: raw.scene, lens: raw.lens, title, lead, hint: '', captions, knobs, spec: raw.spec});
+    if (explore && (chapters.length > 0 || chapter.lens !== 'explore' || chapter.scene !== 'model3d')) continue;
+    chapters.push(chapter);
   }
+  if (!chapters.length) return null;
   return {id: 'sketch', label, concept: '', tagline: '', answer, chapters, provenance: 'sketch'};
+}
+
+function sketchChapter(raw: unknown): Chapter | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw.lens !== 'string' || !SKETCH_LENSES.includes(raw.lens)) return null;
+  if (typeof raw.scene !== 'string' || !SKETCH_SCENES.includes(raw.scene)) return null;
+  const title = capped(raw.title, 40, true);
+  if (title === null) return null;
+  let lead: string | undefined;
+  if (raw.lead !== undefined && raw.lead !== null) {
+    const l = capped(raw.lead, 120, false);
+    if (l === null) return null;
+    lead = l || undefined;
+  }
+  const rawCaptions = raw.captions;
+  if (!Array.isArray(rawCaptions) || rawCaptions.length < 1 || rawCaptions.length > 6) return null;
+  const captions: string[] = [];
+  for (const c of rawCaptions) {
+    const t = capped(c, 200, true);
+    if (t === null) return null;
+    captions.push(t);
+  }
+  let knobs: Array<Knob | null>;
+  if (raw.knobs === undefined || raw.knobs === null) {
+    knobs = captions.map(() => null);
+  } else {
+    if (!Array.isArray(raw.knobs) || raw.knobs.length !== captions.length) return null;
+    knobs = [];
+    for (const k of raw.knobs) {
+      if (k === null) {
+        knobs.push(null);
+        continue;
+      }
+      if (!isRecord(k) || (k.axis !== 'x' && k.axis !== 'y')) return null;
+      const kl = capped(k.label, 40, true);
+      if (kl === null) return null;
+      const usable = (raw.scene === 'curve' && k.axis === 'x')
+        || (raw.scene === 'number' && k.axis === 'x' && isRecord(raw.spec) && isRecord(raw.spec.knob));
+      knobs.push(usable ? {axis: k.axis, label: kl} : null);
+    }
+  }
+  return {scene: raw.scene, lens: raw.lens, title, lead, hint: '', captions, knobs, spec: raw.spec};
 }

@@ -13,16 +13,17 @@ export interface ShowMsg {
   steps?: string[];
   lenses?: Array<{
     id: string;
-    kind: 'motion' | 'inside' | 'cutaway' | 'flow' | 'zoom' | 'whatif' | 'compare' | 'number';
+    kind: 'explore' | 'motion' | 'inside' | 'cutaway' | 'flow' | 'zoom' | 'whatif' | 'compare' | 'number';
     title: string;
     lead?: string;
     steps: string[];
     specText?: unknown;
     knobLabels?: Array<string | null>;
   }>;
+  /** Exported media under the bridge's `/media` (entries are untrusted; explore.ts validates them). */
   media?: {
     base: string;
-    lenses: Record<string, {stills?: string[]; clip?: string}>;
+    lenses: Record<string, Record<string, unknown>>;
   };
   replay?: boolean;
   ageMs?: number;
@@ -60,7 +61,7 @@ export type BridgeMsg =
 export const DEFAULT_BRIDGE = 'ws://localhost:8787/ws';
 
 const TEXT_LIMIT = 300;
-const LENS_KINDS = new Set(['motion', 'inside', 'cutaway', 'flow', 'zoom', 'whatif', 'compare', 'number']);
+const LENS_KINDS = new Set(['explore', 'motion', 'inside', 'cutaway', 'flow', 'zoom', 'whatif', 'compare', 'number']);
 const NAV_ACTIONS = new Set(['next', 'prev', 'deeper', 'done', 'left', 'right', 'up', 'down', 'demo']);
 const DEVICE_STATES = new Set([
   'donned',
@@ -79,6 +80,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function text(value: unknown): string | undefined {
   return typeof value === 'string' ? value.slice(0, TEXT_LIMIT) : undefined;
+}
+
+/** Keeps `media.base` and up to 16 lens entries as plain records; paths are checked where they are used. */
+function sanitiseMedia(value: unknown): ShowMsg['media'] | undefined {
+  if (!isRecord(value) || typeof value.base !== 'string' || value.base.length > 200 || !isRecord(value.lenses)) return undefined;
+  const lenses: Record<string, Record<string, unknown>> = {};
+  for (const [key, entry] of Object.entries(value.lenses).slice(0, 16)) {
+    if (key.length <= 80 && isRecord(entry)) lenses[key] = entry;
+  }
+  return {base: value.base, lenses};
 }
 
 function finite(value: unknown): number | undefined {
@@ -112,6 +123,8 @@ function sanitiseFrame(value: unknown): BridgeMsg | null {
     const ageMs = finite(value.ageMs);
     if (ageMs !== undefined) message.ageMs = ageMs;
     if (value.sketch !== undefined) message.sketch = value.sketch;
+    const media = sanitiseMedia(value.media);
+    if (media) message.media = media;
     if (isRecord(value.lensHint)) {
       const id = text(value.lensHint.id);
       const step = finite(value.lensHint.step);

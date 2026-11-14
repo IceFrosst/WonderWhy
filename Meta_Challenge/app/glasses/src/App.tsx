@@ -17,6 +17,8 @@ import {emitNav, onNav} from './bus';
 import {OBJECTS, findObject, mergeSpecText, sketchToObject} from './content';
 import type {ObjectInfo} from './content';
 import Explainer from './Explainer';
+import {arrangeExplore, bridgeHttpOrigin, exploreMediaFromShow, isExploreChapter, probeExploreMedia} from './explore';
+import type {ExploreMedia} from './explore';
 
 type View =
   | {k: 'home'}
@@ -27,6 +29,8 @@ type View =
       key: number;
       objectId: string;
       info: ObjectInfo;
+      /** Streamed media for the Explore lens (first chapter of `info` when set). */
+      explore?: ExploreMedia | null;
       label?: string;
       /** Ack target for `rendered`; undefined for replays. */
       reqId?: string;
@@ -65,11 +69,38 @@ const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/;
 
 declare global {
   interface Window {
-    __lensDebug?: {mergeSpecText: typeof mergeSpecText};
+    __lensDebug?: {
+      mergeSpecText: typeof mergeSpecText;
+      /** Test-only: add or replace a library object (the state check's Explore fixture). */
+      registerObject: (object: ObjectInfo) => void;
+      /** Test-only: open a library object the way the home buttons do. */
+      open?: (objectId: string) => void;
+    };
   }
 }
 
-if (navigator.webdriver) window.__lensDebug = {mergeSpecText};
+if (navigator.webdriver) {
+  window.__lensDebug = {
+    mergeSpecText,
+    registerObject: object => {
+      const index = OBJECTS.findIndex(item => item.id === object.id);
+      if (index >= 0) OBJECTS[index] = object;
+      else OBJECTS.push(object);
+    },
+  };
+}
+
+function exploreBeats(info: ObjectInfo): number {
+  return info.chapters.find(isExploreChapter)?.captions.length ?? 0;
+}
+
+/** A sketch's Explore chapter plays only when its rendered media came with it (`sketch.media`). */
+function arrangeSketch(info: ObjectInfo, raw: unknown, showMedia?: unknown): {info: ObjectInfo; explore: ExploreMedia | null} {
+  const own = typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as {media?: unknown}).media : undefined;
+  const origin = bridgeHttpOrigin();
+  const beats = exploreBeats(info);
+  return arrangeExplore(info, exploreMediaFromShow(own, beats, origin) ?? exploreMediaFromShow(showMedia, beats, origin));
+}
 
 /** Translated copy of a library object from a `show` (never mutates the library). */
 function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
@@ -311,6 +342,8 @@ function urlDemoSeconds(): number | null {
 export default function App() {
   const [view, setView] = useState<View>({k: 'home'});
   const [connected, setConnected] = useState(false);
+  const connectedRef = useRef(false);
+  const librarySeq = useRef(0);
   const [card, setCard] = useState<Card | null>(null);
   const [doffed, setDoffed] = useState(false);
   const [consentRequired, setConsentRequired] = useState(consentNeeded);
@@ -356,6 +389,23 @@ export default function App() {
     keyRef.current += 1;
     setViewNow({k: 'explain', key: keyRef.current, objectId, info: findObject(objectId), ...extra} as View);
   }, [setViewNow]);
+
+  // A library object opened on the glasses (home, demo): the bridge's media folder says whether
+  // its Explore beats exist. Without them the object opens on its next lens.
+  const openLibrary = useCallback((objectId: string, extra?: Partial<View & {k: 'explain'}>) => {
+    const base = findObject(objectId);
+    const beats = exploreBeats(base);
+    const seq = ++librarySeq.current;
+    if (!beats || !connectedRef.current) {
+      openObject(objectId, {...extra, ...arrangeExplore(base, null)});
+      return;
+    }
+    const before = viewRef.current;
+    void probeExploreMedia(objectId, beats).then(media => {
+      if (seq !== librarySeq.current || viewRef.current !== before) return;
+      openObject(objectId, {...extra, ...arrangeExplore(base, media)});
+    });
+  }, [openObject]);
 
   const clearDetectTimer = useCallback(() => {
     window.clearTimeout(detectTimer.current);
@@ -411,9 +461,9 @@ export default function App() {
     run.stepIndex = 0;
     run.phase = 'step';
     setDemoActive(true);
-    openObject(OBJECTS[0].id, {initialLens: 0, initialStep: 0});
+    openLibrary(OBJECTS[0].id, {initialLens: 0, initialStep: 0});
     scheduleDemo(run.stepMs);
-  }, [clearDemoTimer, openObject, scheduleDemo]);
+  }, [clearDemoTimer, openLibrary, scheduleDemo]);
 
   const advanceDemo = useCallback(() => {
     const run = demoRun.current;
@@ -423,13 +473,21 @@ export default function App() {
       run.lensIndex = 0;
       run.stepIndex = 0;
       run.phase = 'step';
-      openObject(OBJECTS[run.objectIndex].id, {initialLens: 0, initialStep: 0});
+      openLibrary(OBJECTS[run.objectIndex].id, {initialLens: 0, initialStep: 0});
       scheduleDemo(run.stepMs);
       return;
     }
 
-    const object = OBJECTS[run.objectIndex];
+    // Count the lenses the wearer actually sees (Explore only when its media is there).
+    const shown = viewRef.current;
+    const object = shown.k === 'explain' && shown.objectId === OBJECTS[run.objectIndex].id ? shown.info : OBJECTS[run.objectIndex];
     const chapter = object.chapters[run.lensIndex];
+    if (!chapter) {
+      run.phase = 'gap';
+      setViewNow({k: 'home'});
+      scheduleDemo(1500);
+      return;
+    }
     if (run.stepIndex + 1 < chapter.captions.length) {
       run.stepIndex += 1;
       emitNav('next');
@@ -447,7 +505,7 @@ export default function App() {
     run.phase = 'gap';
     setViewNow({k: 'home'});
     scheduleDemo(1500);
-  }, [openObject, scheduleDemo, setViewNow]);
+  }, [openLibrary, scheduleDemo, setViewNow]);
   demoAdvance.current = advanceDemo;
 
   useEffect(() => {
@@ -485,7 +543,7 @@ export default function App() {
       const sk = m.error === undefined && m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
       if (sk) {
         openObject('sketch', {
-          info: sk,
+          ...arrangeSketch(sk, m.sketch),
           label: sk.label,
           reqId: v.reqId,
           acked: v.acked,
@@ -563,7 +621,7 @@ export default function App() {
                 ? sketchToObject(sketchValue)
                 : null;
               if (sk) {
-                openObject('sketch', {...common, info: sk, label: sk.label, lang});
+                openObject('sketch', {...common, ...arrangeSketch(sk, sketchValue, m.media), label: sk.label, lang});
               } else {
                 const sketchState = early
                   ? 'failed'
@@ -583,8 +641,13 @@ export default function App() {
               }
               break;
             }
-            const base = findObject(m.objectId);
+            const library = findObject(m.objectId);
             const translated = lang !== undefined && lang !== 'en' && Array.isArray(m.lenses);
+            const arranged = arrangeExplore(
+              translated ? localise(library, m) : library,
+              exploreMediaFromShow(m.media, exploreBeats(library), bridgeHttpOrigin()),
+            );
+            const base = arranged.info;
             const hintLens =
               m.lensHint && typeof m.lensHint.id === 'string'
                 ? base.chapters.findIndex(chapter => `${base.id}.${chapter.lens ?? ''}` === m.lensHint?.id)
@@ -598,7 +661,8 @@ export default function App() {
               : 0;
             openObject(m.objectId, {
               ...common,
-              info: translated ? localise(base, m) : base,
+              info: base,
+              explore: arranged.explore,
               label: m.label,
               answer: m.answer,
               question: m.question,
@@ -663,6 +727,7 @@ export default function App() {
     const url = bridgeUrl();
     if (!url) return;
     const onStatus = (isConnected: boolean, closeCode?: number): void => {
+      connectedRef.current = isConnected;
       setConnected(isConnected);
       if (isConnected) {
         setDoffed(false);
@@ -691,6 +756,15 @@ export default function App() {
       window.cancelAnimationFrame(paintFrame.current ?? 0);
     };
   }, [openObject, flashCard, clearDetectTimer, clearSketchTimer, armSketchTimer, setViewNow, startDemo, stopDemo]);
+
+  useEffect(() => {
+    const debug = window.__lensDebug;
+    if (!debug) return;
+    debug.open = (objectId: string) => openLibrary(objectId);
+    return () => {
+      delete debug.open;
+    };
+  }, [openLibrary]);
 
   const acceptConsent = useCallback(() => {
     try {
@@ -798,6 +872,7 @@ export default function App() {
         <Explainer
           key={view.key}
           info={view.info}
+          explore={view.explore ?? null}
           label={view.label ?? view.info.label}
           answer={view.answer}
           question={view.question}
@@ -816,7 +891,7 @@ export default function App() {
       </Page>
     );
   } else {
-    body = <HomeScreen connected={connected} openObject={openObject} startDemo={startDemo} />;
+    body = <HomeScreen connected={connected} openObject={openLibrary} startDemo={startDemo} />;
   }
 
   if (consentRequired) body = <ConsentScreen onAccept={acceptConsent} />;

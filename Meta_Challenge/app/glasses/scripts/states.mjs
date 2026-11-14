@@ -1,3 +1,5 @@
+import {existsSync} from 'node:fs';
+import http from 'node:http';
 import {createRequire} from 'node:module';
 import {mkdir, readFile, readdir, stat, writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -5,6 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import {gzipSync} from 'node:zlib';
 import {chromium} from 'playwright';
+import sharp from 'sharp';
 import {build as viteBuild, preview as vitePreview} from 'vite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -15,6 +18,9 @@ const DIST = path.join(ROOT, 'node_modules', '.states-dist');
 const DOCS = path.join(ROOT, 'docs');
 const SCREENSHOTS = path.join(DOCS, 'states');
 const CONFIG = path.join(ROOT, 'vite.config.ts');
+const FIXTURE_MEDIA = path.join(ROOT, 'scripts', 'fixtures', 'explore-media');
+const BRIDGE_MEDIA = path.join(BRIDGE_ROOT, 'media');
+const MEDIA_TYPES = {'.mp4': 'video/mp4', '.png': 'image/png', '.json': 'application/json', '.jpg': 'image/jpeg', '.webp': 'image/webp'};
 const bridgeRequire = createRequire(path.join(BRIDGE_ROOT, 'package.json'));
 const {WebSocketServer} = bridgeRequire('ws');
 
@@ -96,13 +102,26 @@ async function launchBrowser(headed) {
     ['Microsoft Edge', {channel: 'msedge'}],
   ];
   const errors = [];
+  let fallback = null;
+  // The Explore lens streams H.264; open-source Chromium builds cannot decode it, so prefer a browser that can.
   for (const [name, launchOptions] of attempts) {
     try {
-      return await chromium.launch({headless: !headed, ...launchOptions});
+      const browser = await chromium.launch({headless: !headed, ...launchOptions});
+      const page = await browser.newPage();
+      const h264 = await page.evaluate(() => document.createElement('video').canPlayType('video/mp4; codecs="avc1.640028"') !== '');
+      await page.close();
+      browser.h264 = h264;
+      if (h264) {
+        if (fallback) await fallback.close().catch(() => {});
+        return browser;
+      }
+      if (fallback) await browser.close().catch(() => {});
+      else fallback = browser;
     } catch (error) {
       errors.push(`${name}: ${errorMessage(error).split('\n')[0]}`);
     }
   }
+  if (fallback) return fallback;
   throw new Error(`Could not launch a browser:\n${errors.join('\n')}`);
 }
 
@@ -115,10 +134,64 @@ class FakeBridge {
     this.waiters = new Set();
     this.closeNextHello = null;
     this.closeHelloCount = 0;
+    this.http = null;
+    this.mediaRequests = [];
+    this.mediaStall = null;
+    this.mediaMissing = null;
+  }
+
+  /** `/media/<id>/...` like the real bridge: the Explore fixture first, then the bridge's own exported media. */
+  async serveMedia(req, res) {
+    const headers = {'access-control-allow-origin': '*', 'cache-control': 'no-store'};
+    let rel;
+    try {
+      const url = new URL(req.url, 'http://localhost');
+      if (!url.pathname.startsWith('/media/')) throw new Error('not media');
+      rel = decodeURIComponent(url.pathname.slice('/media/'.length));
+    } catch {
+      res.writeHead(404, headers).end();
+      return;
+    }
+    const parts = rel.split('/');
+    if (parts.some(part => part === '' || part === '.' || part === '..' || part.includes('\\'))) {
+      res.writeHead(404, headers).end();
+      return;
+    }
+    this.mediaRequests.push(rel);
+    if (this.mediaStall?.test(rel)) return; // never answers: the player must give up by itself
+    const fixture = path.join(FIXTURE_MEDIA, ...parts);
+    const file = existsSync(fixture) ? fixture : path.join(BRIDGE_MEDIA, ...parts);
+    const type = MEDIA_TYPES[path.extname(file).toLowerCase()];
+    if (this.mediaMissing?.test(rel) || !type || !existsSync(file)) {
+      res.writeHead(404, headers).end();
+      return;
+    }
+    const data = await readFile(file);
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
+    if (range && type === 'video/mp4' && (range[1] !== '' || range[2] !== '')) {
+      const start = range[1] === '' ? Math.max(0, data.length - Number(range[2])) : Number(range[1]);
+      const end = range[1] !== '' && range[2] !== '' ? Math.min(Number(range[2]), data.length - 1) : data.length - 1;
+      if (start > end || start >= data.length) {
+        res.writeHead(416, {...headers, 'content-range': `bytes */${data.length}`}).end();
+        return;
+      }
+      res.writeHead(206, {...headers, 'content-type': type, 'accept-ranges': 'bytes',
+        'content-range': `bytes ${start}-${end}/${data.length}`, 'content-length': end - start + 1});
+      res.end(data.subarray(start, end + 1));
+      return;
+    }
+    res.writeHead(200, {...headers, 'content-type': type, 'content-length': data.length,
+      ...(type === 'video/mp4' ? {'accept-ranges': 'bytes'} : {})});
+    res.end(data);
   }
 
   async start() {
-    this.server = new WebSocketServer({port: 0, path: '/ws'});
+    this.http = http.createServer((req, res) => {
+      this.serveMedia(req, res).catch(() => {
+        if (!res.headersSent) res.writeHead(500).end();
+      });
+    });
+    this.server = new WebSocketServer({server: this.http, path: '/ws'});
     this.server.on('connection', socket => {
       this.connections.add(socket);
       socket.on('close', () => this.connections.delete(socket));
@@ -145,10 +218,10 @@ class FakeBridge {
       });
     });
     await new Promise((resolve, reject) => {
-      this.server.once('listening', resolve);
-      this.server.once('error', reject);
+      this.http.once('error', reject);
+      this.http.listen(0, resolve);
     });
-    const address = this.server.address();
+    const address = this.http.address();
     if (!address || typeof address === 'string') throw new Error('Fake bridge did not report its port');
     this.port = address.port;
   }
@@ -195,6 +268,11 @@ class FakeBridge {
     this.connections.clear();
     if (this.server) await new Promise(resolve => this.server.close(resolve));
     this.server = null;
+    if (this.http) {
+      this.http.closeAllConnections();
+      await new Promise(resolve => this.http.close(resolve));
+    }
+    this.http = null;
   }
 }
 
@@ -274,6 +352,10 @@ async function layoutOffenders(page) {
       '.consent-card > p',
       '.home-intro > p',
       'button [class*="titleLabel"]',
+      '.xp-name',
+      '.xp-caption',
+      '.xp-number-value',
+      '.xp-number-label',
     ];
     const elements = [...new Set(selectors.flatMap(selector => [...document.querySelectorAll(selector)]))]
       .filter(element => element instanceof HTMLElement && visible(element));
@@ -304,6 +386,130 @@ async function layoutOffenders(page) {
   });
 }
 
+// Explore lens (shared/MODEL3D.md): a fixture object whose first lens streams the beat videos in
+// scripts/fixtures/explore-media/fixture3d (made by scripts/fixtures/make-explore-fixture.mjs).
+const EXPLORE_STATES = [
+  'explore-plays', 'explore-labels', 'explore-autoplay', 'explore-input-pause', 'explore-preload',
+  'explore-number', 'explore-last-beat', 'explore-fallback', 'explore-missing', 'explore-finnish',
+  'explore-sketch', 'explore-home',
+];
+const FIXTURE_ID = 'fixture3d';
+const EXPLORE_CAPTIONS = [
+  'The ring circles the core while the camera settles on it.',
+  'The axle holds the ring on its path around the core.',
+  'The element turns 2000 W of electricity into heat.',
+];
+const EXPLORE_SPEC = {
+  parts: [
+    {id: 'ring', label: 'Ring', prim: 'torus', r: 6, tube: 0.5, pos: [0, 0, 0], rot: [90, 0, 0], role: 'actor', explode: [0, 0, 0]},
+    {id: 'core', label: 'Core', prim: 'box', size: [2, 2, 2], pos: [0, 0, 0], rot: [0, 0, 0], role: 'energy', explode: [0, 0, 0]},
+    {id: 'axle', label: 'Axle', prim: 'cylinder', r: 0.3, h: 8, pos: [0, 0, 0], rot: [0, 0, 0], role: 'object', explode: [0, 0, 0]},
+  ],
+  beats: [
+    {camera: {yaw: 30, pitch: 20, zoom: 1}, labels: ['ring', 'core'], focus: ['ring'], dur: 3},
+    {camera: {yaw: 35, pitch: 25, zoom: 0.9}, labels: ['axle', 'core'], dur: 3,
+      fx: [{type: 'dim', on: 'axle', text: '8 cm'}]},
+    {camera: {yaw: 20, pitch: 20, zoom: 1}, labels: ['ring', 'core'], focus: ['core'], dur: 3,
+      number: {value: '2000', unit: 'W', label: 'heating power'}},
+  ],
+};
+// Pixels inside the fixture's centre square that no label line or anchor dot crosses.
+const SQUARE_CLIP = {x: 304, y: 288, width: 8, height: 8};
+
+function exploreFixtureObject(flowChapter) {
+  return {
+    id: FIXTURE_ID,
+    label: 'Test cube',
+    short: 'Cube',
+    concept: '',
+    tagline: '',
+    answer: 'A ring turns around a cube.',
+    chapters: [
+      {scene: 'model3d', lens: 'explore', title: 'How it works', hint: '', captions: EXPLORE_CAPTIONS, spec: EXPLORE_SPEC},
+      flowChapter,
+    ],
+  };
+}
+
+function trackAnchor(samples, t) {
+  if (t <= samples[0][0]) return [samples[0][1], samples[0][2]];
+  const last = samples[samples.length - 1];
+  if (t >= last[0]) return [last[1], last[2]];
+  const index = samples.findIndex(sample => sample[0] > t);
+  const a = samples[index - 1];
+  const b = samples[index];
+  const k = (t - a[0]) / (b[0] - a[0]);
+  return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+}
+
+/** `show.media` for an object whose rendered Explore beats are in bridge/media/<id>/, or null. */
+async function realExploreMedia(objectId) {
+  try {
+    const manifest = JSON.parse(await readFile(path.join(BRIDGE_MEDIA, objectId, 'manifest.json'), 'utf8'));
+    const entry = manifest?.lenses?.[`${objectId}.explore`];
+    if (!entry) return null;
+    const first = [entry.videos, entry.clips, entry.beats].find(Array.isArray)?.[0];
+    const firstVideo = typeof first === 'string' ? first : first?.video ?? 'explore/b1.mp4';
+    if (!existsSync(path.join(BRIDGE_MEDIA, objectId, ...String(firstVideo).split('/')))) return null;
+    return {base: `/media/${objectId}`, lenses: manifest.lenses};
+  } catch {
+    return null;
+  }
+}
+
+/** Brightest channel value in a screenshot region (0 = black). */
+async function regionMax(page, clip) {
+  const png = await page.screenshot({clip});
+  const {data} = await sharp(png).removeAlpha().raw().toBuffer({resolveWithObject: true});
+  let max = 0;
+  for (const value of data) if (value > max) max = value;
+  return max;
+}
+
+/** Labels inside the safe margin, clear of the top line, the number and the caption, and of each other. */
+async function exploreLayoutProblems(page) {
+  return page.evaluate(() => {
+    const debug = window.__exploreDebug;
+    if (!debug) return ['no Explore debug state'];
+    const problems = [];
+    const rect = selector => document.querySelector(selector)?.getBoundingClientRect() ?? null;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const top = rect('.xp-top');
+    const caption = rect('.xp-caption');
+    const number = rect('.xp-number');
+    const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    const boxes = debug.labels.filter(label => label.alpha > 0).map(label => ({
+      text: label.text,
+      left: label.side === 'l' ? label.x : label.x - label.w,
+      right: label.side === 'l' ? label.x + label.w : label.x,
+      top: label.y - 11,
+      bottom: label.y + 11,
+    }));
+    for (const box of boxes) {
+      if (box.left < 23.5 || box.right > width - 23.5) problems.push(`label "${box.text}" leaves the 24 px margin`);
+      if (top && box.top < top.bottom) problems.push(`label "${box.text}" overlaps the top line`);
+      if (caption && hit(box, caption)) problems.push(`label "${box.text}" overlaps the caption`);
+      if (number && hit(box, number)) problems.push(`label "${box.text}" is under the number`);
+    }
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        if (hit(boxes[i], boxes[j])) problems.push(`labels "${boxes[i].text}" and "${boxes[j].text}" overlap`);
+      }
+    }
+    if (top && top.top < 23.5) problems.push('top line is inside the 24 px margin');
+    if (caption && (caption.bottom > height - 23.5 || caption.left < 23.5 || caption.right > width - 23.5)) {
+      problems.push('caption leaves the 24 px margin');
+    }
+    if (caption && caption.height > 2 * parseFloat(getComputedStyle(document.querySelector('.xp-caption')).lineHeight) + 1) {
+      problems.push('caption is longer than 2 lines');
+    }
+    if (number && caption && number.bottom > caption.top) problems.push('number overlaps the caption');
+    if (number && number.left < 23.5) problems.push('number leaves the 24 px margin');
+    return problems;
+  });
+}
+
 function stateFile(index, name) {
   return `${String(index).padStart(2, '0')}-${name}.png`;
 }
@@ -331,6 +537,7 @@ async function main() {
     'consent', 'consent-device-frame', 'follow-up', 'follow-up-bad-hint', 'demo', 'demo-button',
     'stale-request', 'sketch-immediate', 'malformed-frame', 'doffed-wake', 'demo-stops', 'flow-loss-clamp',
     'curve-bounds', 'token-foreign', 'reconnect-backoff',
+    ...EXPLORE_STATES,
   ];
   const isSceneName = value => /^scene-[^-]+-[^-]+-s\d+$/.test(value || '');
   if (options.only && !simpleNames.includes(options.only) && !objectIds.has(options.only) && !isSceneName(options.only)) {
@@ -724,7 +931,8 @@ async function main() {
 
     await simple('follow-up-bad-hint', {}, async session => {
       const kettle = objects.find(object => object.id === 'kettle');
-      const firstLens = kettle?.chapters[0];
+      // A show without Explore media opens on the first 2D lens.
+      const firstLens = kettle?.chapters.find(chapter => chapter.lens !== 'explore' && chapter.scene !== 'model3d');
       if (!kettle || !firstLens) throw new Error('kettle fixture is missing its first lens');
       send(session, {
         type: 'show',
@@ -1056,6 +1264,337 @@ async function main() {
       session.check((await visibleText(session.page)).includes('Huge curve'), 'huge curve range froze or blanked the app');
     });
 
+    // ---- Explore lens ----
+    const kettleFlow = objects.find(object => object.id === 'kettle')?.chapters.find(chapter => chapter.lens === 'flow');
+    if (!kettleFlow) throw new Error('kettle flow chapter is missing (the Explore fixture borrows it as its second lens)');
+    const fixtureDir = path.join(FIXTURE_MEDIA, FIXTURE_ID);
+    const fixtureManifest = JSON.parse(await readFile(path.join(fixtureDir, 'manifest.json'), 'utf8'));
+    const fixtureTracks = JSON.parse(await readFile(path.join(fixtureDir, 'explore', 'tracks.json'), 'utf8'));
+    const fixtureEntry = fixtureManifest.lenses[`${FIXTURE_ID}.explore`];
+    const exploreObject = exploreFixtureObject(kettleFlow);
+    const fixtureMedia = {base: `/media/${FIXTURE_ID}`, lenses: fixtureManifest.lenses};
+    const exploreShow = (reqId, extra = {}) => ({
+      type: 'show', reqId, objectId: FIXTURE_ID, label: exploreObject.label, media: fixtureMedia, ...extra,
+    });
+    const debugOf = page => page.evaluate(() => window.__exploreDebug ?? null);
+    const waitDebug = (page, predicate, arg = null, timeout = WAIT_MS) => page.waitForFunction(predicate, arg, {timeout});
+    const exploreState = (name, action) => simple(name, {}, async session => {
+      if (!browser.h264) {
+        session.result.skipped = 'this browser cannot decode H.264 video';
+        return;
+      }
+      await session.page.evaluate(object => window.__lensDebug?.registerObject(object), exploreObject);
+      await action(session);
+    });
+    const openExplore = async (session, reqId, extra) => {
+      send(session, exploreShow(reqId, extra));
+      await session.page.locator('.xp').waitFor({state: 'visible', timeout: WAIT_MS});
+      await waitDebug(session.page, () => window.__exploreDebug?.started === true && window.__exploreDebug.mode === 'video');
+    };
+    const checkExploreLayout = async session => {
+      for (const problem of await exploreLayoutProblems(session.page)) session.check(false, problem);
+    };
+    const shoot = async session => {
+      await captureScreenshot(session.page, path.join(SCREENSHOTS, session.result.screenshot.split('/').pop()));
+      session.result.screenshotCaptured = true;
+    };
+    const nextBeat = async (session, beat) => {
+      await session.page.keyboard.press('Enter');
+      await waitDebug(session.page, index => window.__exploreDebug?.beat === index && window.__exploreDebug.started, beat);
+    };
+
+    await exploreState('explore-plays', async session => {
+      const since = bridge.frames.length;
+      await openExplore(session, 'explore-1');
+      const state = await bridge.waitForMessage(message => message.type === 'state' && message.objectId === FIXTURE_ID &&
+        message.step === 1, {since, description: 'Explore state frame'});
+      session.check(state.message.lens === 'explore' && state.message.lensIndex === 0 && state.message.steps === 3,
+        `expected the Explore lens first with 3 beats, found ${JSON.stringify(state.message)}`);
+      const t1 = (await debugOf(session.page)).videoTime;
+      await session.page.waitForTimeout(600);
+      const t2 = (await debugOf(session.page)).videoTime;
+      session.check(t2 > t1 + 0.3, `video time did not advance: ${t1} -> ${t2}`);
+      try {
+        await bridge.waitForMessage(message => message.type === 'rendered' && message.reqId === 'explore-1', {
+          since, description: 'rendered acknowledgement for Explore',
+        });
+      } catch (error) {
+        session.check(false, errorMessage(error));
+      }
+      await waitDebug(session.page, () => window.__exploreDebug?.labels.some(label => label.alpha >= 1));
+      const overlayLit = await session.page.evaluate(() => {
+        const canvas = document.querySelector('.xp-overlay');
+        const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+        // Coloured pixels only: the black text bands are drawn on this canvas too.
+        for (let index = 0; index < pixels.length; index += 4) if (pixels[index] || pixels[index + 1] || pixels[index + 2]) return true;
+        return false;
+      });
+      session.check(overlayLit, 'label overlay canvas is empty');
+      const centre = await regionMax(session.page, SQUARE_CLIP);
+      session.check(centre > 60, `video frame is black where the fixture draws its square (max ${centre})`);
+      await session.expectText(EXPLORE_CAPTIONS[0], {exact: true});
+      await session.expectText('Cube', {exact: true});
+      session.check(await session.page.locator('.ex-dock').count() === 0, 'Explore lens shows a dock button');
+      await checkExploreLayout(session);
+    });
+
+    await exploreState('explore-labels', async session => {
+      send(session, exploreShow('explore-labels-1'));
+      await waitDebug(session.page, () => window.__exploreDebug?.started === true && window.__exploreDebug.videoTime < 0.6);
+      const early = await debugOf(session.page);
+      session.check(early.labels.length === 2 && early.labels.every(label => label.alpha === 0),
+        `labels must wait for the camera move; at ${early.videoTime.toFixed(2)} s found ${JSON.stringify(early.labels.map(label => [label.text, label.alpha]))}`);
+      await waitDebug(session.page, () => window.__exploreDebug?.videoTime > 1.2 &&
+        window.__exploreDebug.labels.length === 2 && window.__exploreDebug.labels.every(label => label.alpha >= 1));
+      const a = await debugOf(session.page);
+      await session.page.waitForTimeout(500);
+      const b = await debugOf(session.page);
+      const ringA = a.labels.find(label => label.part === 'ring');
+      const ringB = b.labels.find(label => label.part === 'ring');
+      const core = b.labels.find(label => label.part === 'core');
+      session.check(Boolean(ringA && ringB && core), `expected Ring and Core labels, found ${JSON.stringify(b.labels)}`);
+      if (ringA && ringB && core) {
+        session.check(Math.hypot(ringB.ax - ringA.ax, ringB.ay - ringA.ay) > 5,
+          `Ring leader did not follow its anchor: ${ringA.ax},${ringA.ay} -> ${ringB.ax},${ringB.ay}`);
+        const [ex, ey] = trackAnchor(fixtureTracks.beats[0].labels[0].anchor, b.videoTime);
+        session.check(Math.abs(ringB.ax - ex) < 4 && Math.abs(ringB.ay - ey) < 4,
+          `Ring anchor ${ringB.ax.toFixed(1)},${ringB.ay.toFixed(1)} is not the track position ${ex.toFixed(1)},${ey.toFixed(1)} at ${b.videoTime.toFixed(2)} s`);
+        session.check(ringB.text === 'Ring' && ringB.side === 'r' && ringB.x === 576 && ringB.focus,
+          `Ring label should be white in the right column at x 576: ${JSON.stringify(ringB)}`);
+        session.check(core.text === 'Core' && core.side === 'l' && core.x === 24 && !core.focus,
+          `Core label should be soft in the left column at x 24: ${JSON.stringify(core)}`);
+        session.check(Math.abs(ringB.y - ringA.y) < 0.5, 'label text moved while its anchor moved');
+      }
+      await checkExploreLayout(session);
+    });
+
+    await exploreState('explore-autoplay', async session => {
+      const since = bridge.frames.length;
+      await openExplore(session, 'explore-auto-1');
+      const started = Date.now() - (await debugOf(session.page)).videoTime * 1000;
+      try {
+        await bridge.waitForMessage(message => message.type === 'state' && message.objectId === FIXTURE_ID &&
+          message.lensIndex === 0 && message.step === 2, {since, timeout: 6000, description: 'auto-play to beat 2'});
+        const elapsed = Date.now() - started;
+        session.check(elapsed >= 2700, `auto-play left beat 1 after ${elapsed} ms, before its 3 s`);
+        await bridge.waitForMessage(message => message.type === 'state' && message.objectId === FIXTURE_ID &&
+          message.lensIndex === 0 && message.step === 3, {since, timeout: 6000, description: 'auto-play to beat 3'});
+      } catch (error) {
+        session.check(false, errorMessage(error));
+      }
+      const atLast = bridge.frames.length;
+      await session.page.waitForTimeout(4600);
+      const moved = bridge.frames.slice(atLast).filter(frame => frame.message.type === 'state');
+      session.check(moved.length === 0, `auto-play moved on from the last beat: ${JSON.stringify(moved.map(frame => frame.message))}`);
+      const last = await debugOf(session.page);
+      session.check(last.beat === 2 && last.loops >= 1 && last.videoTime >= 0.9 && last.mode === 'video',
+        `last beat should loop from loopFrom 1 s: ${JSON.stringify({beat: last.beat, loops: last.loops, t: last.videoTime, mode: last.mode})}`);
+      await checkExploreLayout(session);
+    });
+
+    await exploreState('explore-input-pause', async session => {
+      const since = bridge.frames.length;
+      await openExplore(session, 'explore-pause-1');
+      await waitDebug(session.page, () => window.__exploreDebug?.videoTime > 1.5 && window.__exploreDebug.labels.every(label => label.alpha >= 1));
+      // Up replays the beat: the video restarts and the labels wait for the camera move again.
+      await session.page.keyboard.press('ArrowUp');
+      try {
+        await waitDebug(session.page, () => window.__exploreDebug?.started === true && window.__exploreDebug.videoTime < 0.6 &&
+          window.__exploreDebug.labels.every(label => label.alpha === 0), null, 2000);
+      } catch {
+        session.check(false, `Up did not replay the beat: ${JSON.stringify(await debugOf(session.page))}`);
+      }
+      const after = await debugOf(session.page);
+      session.check(after.autoPausedMs > 15000, `input did not pause auto-play: ${after.autoPausedMs} ms`);
+      await session.page.waitForTimeout(4200);
+      const stepped = bridge.frames.slice(since).some(frame => frame.message.type === 'state' && frame.message.step === 2);
+      const now = await debugOf(session.page);
+      session.check(!stepped && now.beat === 0, `auto-play advanced during the 20 s input pause (beat ${now.beat + 1})`);
+      const progress = await session.page.locator('.xp-progress-fill').evaluate(element => getComputedStyle(element).opacity);
+      session.check(progress === '0', `progress line still shows while auto-play is paused (opacity ${progress})`);
+      await checkExploreLayout(session);
+    });
+
+    await exploreState('explore-preload', async session => {
+      await openExplore(session, 'explore-preload-1');
+      try {
+        await waitDebug(session.page, () => window.__exploreDebug?.nextSrc.endsWith('/b2.mp4') && window.__exploreDebug.nextReady >= 2);
+      } catch {
+        session.check(false, `beat 2 was not preloaded: ${JSON.stringify(await debugOf(session.page))}`);
+      }
+      const requestsBefore = bridge.mediaRequests.filter(item => item.endsWith('b2.mp4')).length;
+      const pressed = Date.now();
+      await session.page.keyboard.press('Enter');
+      const samples = [];
+      for (let index = 0; index < 4; index++) samples.push(await regionMax(session.page, SQUARE_CLIP));
+      session.check(samples.every(value => value > 60), `a black frame showed while switching beats: ${samples.join(', ')}`);
+      await waitDebug(session.page, () => window.__exploreDebug?.beat === 1 && window.__exploreDebug.mode === 'video' &&
+        window.__exploreDebug.activeSrc.endsWith('/b2.mp4'));
+      const swapMs = Date.now() - pressed;
+      session.check(swapMs < 1000, `preloaded beat took ${swapMs} ms to show`);
+      const square = await regionMax(session.page, SQUARE_CLIP);
+      session.check(square > 200, `beat 2 (white square) is not on screen: max ${square}`);
+      const requestsAfter = bridge.mediaRequests.filter(item => item.endsWith('b2.mp4')).length;
+      session.check(requestsBefore >= 1, 'beat 2 was never requested before the switch');
+      session.result.note = `b2 requests before/after switch: ${requestsBefore}/${requestsAfter}`;
+      await waitDebug(session.page, () => window.__exploreDebug?.labels.some(label => label.alpha >= 1));
+      const dims = (await debugOf(session.page)).dims;
+      session.check(dims.length === 1 && dims[0].text === '8 cm' && dims[0].alpha >= 1 && Math.abs(dims[0].x - 300) < 1 && dims[0].y < 251,
+        `dimension text should sit above the line's middle: ${JSON.stringify(dims)}`);
+      await checkExploreLayout(session);
+    });
+
+    await exploreState('explore-number', async session => {
+      await openExplore(session, 'explore-number-1');
+      await nextBeat(session, 1);
+      await nextBeat(session, 2);
+      await waitDebug(session.page, () => window.__exploreDebug?.labels.length === 2 && window.__exploreDebug.labels.every(label => label.alpha >= 1));
+      const value = await session.page.locator('.xp-number-value').innerText().catch(() => '');
+      const unit = await session.page.locator('.xp-number-unit').innerText().catch(() => '');
+      session.check(value.includes('2000') && unit === 'W', `expected the number 2000 W, found ${JSON.stringify([value, unit])}`);
+      await session.expectText('heating power', {exact: true});
+      const colour = await session.page.locator('.xp-number-value').evaluate(element => getComputedStyle(element).color);
+      session.check(colour === 'rgb(109, 255, 156)', `number is not green: ${colour}`);
+      const size = await session.page.locator('.xp-number-value').evaluate(element => getComputedStyle(element).fontSize);
+      session.check(size === '44px', `number value is ${size}, expected 44px`);
+      await checkExploreLayout(session);
+    });
+
+    await exploreState('explore-last-beat', async session => {
+      await openExplore(session, 'explore-last-1');
+      await nextBeat(session, 1);
+      await nextBeat(session, 2);
+      const since = bridge.frames.length;
+      await session.page.keyboard.press('Enter');
+      try {
+        const state = await bridge.waitForMessage(message => message.type === 'state' && message.objectId === FIXTURE_ID &&
+          message.lensIndex === 1, {since, description: 'next lens after the last beat'});
+        session.check(state.message.lens === 'flow' && state.message.step === 1,
+          `pinch on the last beat should open the flow lens at step 1: ${JSON.stringify(state.message)}`);
+      } catch (error) {
+        session.check(false, errorMessage(error));
+      }
+      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+      session.check(await session.page.locator('.xp').count() === 0, 'Explore view stayed after leaving the lens');
+      session.check(await session.page.locator('.ex-lens-dot--explore').count() === 1, 'lens bar has no Explore mark');
+      await session.page.waitForTimeout(300);
+    });
+
+    await exploreState('explore-fallback', async session => {
+      bridge.mediaStall = new RegExp(`^${FIXTURE_ID}/explore/b1\\.mp4$`);
+      try {
+        const sent = Date.now();
+        send(session, exploreShow('explore-fallback-1'));
+        try {
+          await waitDebug(session.page, () => window.__exploreDebug?.mode === 'still', null, 3000);
+        } catch {
+          session.check(false, `still did not replace the stalled video: ${JSON.stringify(await debugOf(session.page))}`);
+        }
+        const elapsed = Date.now() - sent;
+        session.check(elapsed >= 1400 && elapsed <= 2100, `fallback took ${elapsed} ms (expected about 1.5 s)`);
+        const still = await debugOf(session.page);
+        session.check(still?.stillSrc.endsWith('/c1.png'), `expected c1.png, found ${JSON.stringify(still?.stillSrc)}`);
+        await waitDebug(session.page, () => window.__exploreDebug?.labels.length === 2 && window.__exploreDebug.labels.every(label => label.alpha >= 1));
+        const labels = (await debugOf(session.page)).labels;
+        const ring = labels.find(label => label.part === 'ring');
+        const [restX, restY] = trackAnchor(fixtureTracks.beats[0].labels[0].anchor, fixtureTracks.beats[0].loopFrom);
+        session.check(ring && Math.abs(ring.ax - restX) < 2 && Math.abs(ring.ay - restY) < 2,
+          `labels on the still (the frame at loopFrom) must use that anchor ${restX},${restY}: ${JSON.stringify(ring)}`);
+        const square = await regionMax(session.page, SQUARE_CLIP);
+        session.check(square > 60, `still is not on screen (max ${square})`);
+        await checkExploreLayout(session);
+        await shoot(session);
+      } finally {
+        bridge.mediaStall = null;
+      }
+      await nextBeat(session, 1);
+      const next = await debugOf(session.page);
+      session.check(next.mode === 'video', `beat 2 should play its video after a stalled beat 1: ${next.mode}`);
+    });
+
+    await exploreState('explore-missing', async session => {
+      for (const [reqId, extra] of [['explore-none-1', {media: undefined}], ['explore-none-2', {media: {base: `/media/${FIXTURE_ID}`, lenses: {}}}],
+        ['explore-none-3', {media: {base: '../../etc', lenses: fixtureManifest.lenses}}]]) {
+        const since = bridge.frames.length;
+        send(session, exploreShow(reqId, extra));
+        try {
+          const state = await bridge.waitForMessage(message => message.type === 'state' && message.objectId === FIXTURE_ID &&
+            message.step === 1, {since, description: `${reqId} state`});
+          session.check(state.message.lens === 'flow' && state.message.lensIndex === 0 && state.message.steps === kettleFlow.captions.length,
+            `${reqId}: without Explore media the object must open on its next lens: ${JSON.stringify(state.message)}`);
+        } catch (error) {
+          session.check(false, errorMessage(error));
+        }
+        await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+        session.check(await session.page.locator('.xp, .ex-lens-dot--explore').count() === 0, `${reqId}: Explore still shows`);
+      }
+      await session.expectText(kettleFlow.captions[0], {exact: false});
+    });
+
+    await exploreState('explore-finnish', async session => {
+      const fiCaptions = [
+        'Rengas kiert\u00e4\u00e4 ydint\u00e4, kun kamera asettuu.',
+        'Akseli pit\u00e4\u00e4 renkaan radallaan ytimen ymp\u00e4rill\u00e4.',
+        'Vastus muuttaa 2000 W s\u00e4hk\u00f6\u00e4 l\u00e4mm\u00f6ksi.',
+      ];
+      await openExplore(session, 'explore-fi-1', {
+        lang: 'fi',
+        label: 'Testikuutio',
+        lenses: [{
+          id: `${FIXTURE_ID}.explore`,
+          kind: 'explore',
+          title: 'Miten se toimii',
+          steps: fiCaptions,
+          specText: {
+            parts: [{label: 'Rengas'}, {label: 'Ydin'}, {label: 'Akseli'}],
+            beats: [null, null, {number: {label: 'l\u00e4mmitysteho'}}],
+          },
+        }],
+      });
+      await waitDebug(session.page, () => window.__exploreDebug?.labels.length === 2 && window.__exploreDebug.labels.every(label => label.alpha >= 1));
+      const texts = (await debugOf(session.page)).labels.map(label => label.text).sort();
+      session.check(JSON.stringify(texts) === JSON.stringify(['Rengas', 'Ydin']), `expected Finnish label text, found ${JSON.stringify(texts)}`);
+      await session.expectText(fiCaptions[0], {exact: true});
+      const lang = await session.page.locator('.xp').getAttribute('lang');
+      session.check(lang === 'fi', `Explore root lang is ${JSON.stringify(lang)}`);
+      await checkExploreLayout(session);
+      await shoot(session);
+      await nextBeat(session, 1);
+      await nextBeat(session, 2);
+      await session.expectText('l\u00e4mmitysteho', {exact: true});
+    });
+
+    await exploreState('explore-sketch', async session => {
+      const sketch = {
+        label: 'Test cube',
+        answer: 'A ring turns around a cube.',
+        chapters: [
+          {lens: 'explore', scene: 'model3d', title: 'How it works', captions: EXPLORE_CAPTIONS, spec: EXPLORE_SPEC},
+          flowSketch.chapters[0],
+        ],
+      };
+      send(session, {type: 'show', reqId: 'explore-sketch-1', objectId: 'unknown', label: 'Test cube',
+        sketch: {...sketch, media: {base: `/media/${FIXTURE_ID}`, lenses: {'sketch.explore': fixtureEntry}}}});
+      await session.page.locator('.xp').waitFor({state: 'visible', timeout: WAIT_MS});
+      await waitDebug(session.page, () => window.__exploreDebug?.labels.length === 2 && window.__exploreDebug.labels.every(label => label.alpha >= 1));
+      const tag = await session.page.locator('.xp-top .ex-tag--hot').innerText().catch(() => '');
+      session.check(tag === 'Sketch \u00b7 unverified', `Explore sketch tag is ${JSON.stringify(tag)}`);
+      await checkExploreLayout(session);
+      await shoot(session);
+      send(session, {type: 'show', reqId: 'explore-sketch-2', objectId: 'unknown', label: 'Test cube', sketch});
+      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+      session.check(await session.page.locator('.xp').count() === 0, 'sketch without rendered media still opened the Explore lens');
+      await session.expectText('Sketch \u00b7 unverified', {exact: true});
+    });
+
+    await exploreState('explore-home', async session => {
+      const before = bridge.mediaRequests.length;
+      await session.page.evaluate(id => window.__lensDebug?.open?.(id), FIXTURE_ID);
+      await session.page.locator('.xp').waitFor({state: 'visible', timeout: WAIT_MS});
+      session.check(bridge.mediaRequests.slice(before).includes(`${FIXTURE_ID}/manifest.json`), 'home open did not ask the bridge for the manifest');
+      await waitDebug(session.page, () => window.__exploreDebug?.started === true);
+    });
+
     const selectedObjects = options.only && objectIds.has(options.only)
       ? objects.filter(object => object.id === options.only)
       : objects;
@@ -1066,12 +1605,20 @@ async function main() {
       try {
         session = await openPage();
         const sceneFrameStart = bridge.frames.length;
-        bridge.send(session.socket, {type: 'show', reqId: `scene-${object.id}`, objectId: object.id, label: object.label});
+        // The Explore lens is walked only when its rendered media is in bridge/media/<id>/ (served by
+        // the scripted bridge); otherwise the app skips it, and so does the walk.
+        const isExplore = chapter => chapter.lens === 'explore' || chapter.scene === 'model3d';
+        const exploreMedia = browser.h264 && object.chapters.some(isExplore) ? await realExploreMedia(object.id) : null;
+        const walkChapters = exploreMedia
+          ? [...object.chapters.filter(isExplore).slice(0, 1), ...object.chapters.filter(chapter => !isExplore(chapter))]
+          : object.chapters.filter(chapter => !isExplore(chapter));
+        bridge.send(session.socket, {type: 'show', reqId: `scene-${object.id}`, objectId: object.id, label: object.label,
+          ...(exploreMedia ? {media: exploreMedia} : {})});
         let knobChecked = false;
         let consoleCursor = 0;
 
-        for (let lensIndex = 0; lensIndex < object.chapters.length; lensIndex++) {
-          const chapter = object.chapters[lensIndex];
+        for (let lensIndex = 0; lensIndex < walkChapters.length; lensIndex++) {
+          const chapter = walkChapters[lensIndex];
           const lensKey = `${object.id}.${chapter.lens}`;
           const samples = [];
           const lensResults = [];
@@ -1080,7 +1627,7 @@ async function main() {
             const name = `scene-${object.id}-${chapter.lens}-s${stepIndex + 1}`;
             if (options.only && isSceneName(options.only) && options.only !== name) {
               if (stepIndex + 1 < chapter.captions.length) {
-                await session.page.locator('.ex-caption').waitFor({state: 'visible', timeout: WAIT_MS});
+                await session.page.locator('.ex-caption, .xp-caption').first().waitFor({state: 'visible', timeout: WAIT_MS});
                 await session.page.keyboard.press('Enter');
               }
               continue;
@@ -1089,6 +1636,12 @@ async function main() {
             const result = {name, ok: false, screenshot: `states/${filename}`, failures: []};
             lensResults.push(result);
             const consoleStart = consoleCursor;
+            // Long walks (the kettle has six lenses) outlast the app's 25 s link timeout: keep it fresh.
+            const liveSocket = [...bridge.frames].reverse().find(frame => frame.message.type === 'hello' && frame.socket?.readyState === 1)?.socket;
+            if (liveSocket) {
+              session.socket = liveSocket;
+              bridge.send(liveSocket, {type: 'ping', t_sent: Date.now()});
+            }
             try {
               try {
                 await session.page.getByText(chapter.captions[stepIndex], {exact: false}).first().waitFor({state: 'visible', timeout: WAIT_MS});
@@ -1115,8 +1668,21 @@ async function main() {
                 }
               }
 
-              const canvasCount = await session.page.locator('.ex-canvas').count();
-              if (!canvasCount && chapter.lens === 'whatif') {
+              const exploreLens = chapter.lens === 'explore';
+              const canvasCount = exploreLens ? 0 : await session.page.locator('.ex-canvas').count();
+              if (exploreLens) {
+                // Real rendered beats: wait for the picture and the labels' fade, then check the layout.
+                try {
+                  await session.page.waitForFunction(index => window.__exploreDebug?.beat === index &&
+                    window.__exploreDebug.started, stepIndex, {timeout: WAIT_MS});
+                  await session.page.waitForTimeout(1500);
+                  const debug = await session.page.evaluate(() => window.__exploreDebug);
+                  if (debug.mode !== 'video') addFailure(result, `beat ${stepIndex + 1} shows ${debug.mode}, not its video`);
+                } catch (error) {
+                  addFailure(result, `Explore beat did not start: ${errorMessage(error)}`);
+                }
+                for (const problem of await exploreLayoutProblems(session.page)) addFailure(result, problem);
+              } else if (!canvasCount && chapter.lens === 'whatif') {
                 result.skipped = 'curve scene not built yet';
               } else if (!canvasCount) {
                 addFailure(result, `expected a canvas for ${chapter.scene}, found none`);
@@ -1247,7 +1813,7 @@ async function main() {
             }
           }
           for (const result of lensResults) recordResult(result);
-          if (lensIndex + 1 < object.chapters.length) {
+          if (lensIndex + 1 < walkChapters.length) {
             const navSince = bridge.frames.length;
             await session.page.keyboard.press('ArrowRight');
             try {
@@ -1269,7 +1835,7 @@ async function main() {
         }
 
         // Only objects that have a knob on some step must show a changed param (the spoon has none).
-        const hasKnob = object.chapters.some(chapter => chapter.knobs === undefined || chapter.knobs.some(Boolean));
+        const hasKnob = walkChapters.some(chapter => !isExplore(chapter) && (chapter.knobs === undefined || chapter.knobs.some(Boolean)));
         if (hasKnob && !knobChecked && (!options.only || objectIds.has(options.only))) {
           failures.push(`${object.id}: no knob step produced a changed param state frame`);
         }
