@@ -1,6 +1,69 @@
 {
   "objectId": "phone",
   "lenses": {
+    "phone.explore": {
+      "kind": "explore",
+      "title": "How it works",
+      "beats": [
+        {
+          "clip": "explore/b1.mp4",
+          "still": "explore/s1.png",
+          "clean": "explore/c1.png"
+        },
+        {
+          "clip": "explore/b2.mp4",
+          "still": "explore/s2.png",
+          "clean": "explore/c2.png"
+        },
+        {
+          "clip": "explore/b3.mp4",
+          "still": "explore/s3.png",
+          "clean": "explore/c3.png"
+        },
+        {
+          "clip": "explore/b4.mp4",
+          "still": "explore/s4.png",
+          "clean": "explore/c4.png"
+        },
+        {
+          "clip": "explore/b5.mp4",
+          "still": "explore/s5.png",
+          "clean": "explore/c5.png"
+        },
+        {
+          "clip": "explore/b6.mp4",
+          "still": "explore/s6.png",
+          "clean": "explore/c6.png"
+        }
+      ],
+      "stills": [
+        "explore/s1.png",
+        "explore/s2.png",
+        "explore/s3.png",
+        "explore/s4.png",
+        "explore/s5.png",
+        "explore/s6.png"
+      ],
+      "clean": [
+        "explore/c1.png",
+        "explore/c2.png",
+        "explore/c3.png",
+        "explore/c4.png",
+        "explore/c5.png",
+        "explore/c6.png"
+      ],
+      "tracks": "explore/tracks.json",
+      "captions": [
+        "A phone packs a computer, a radio and a battery into under a centimetre.",
+        "Under the glass: a touch grid, a light-making display, a circuit board and a battery.",
+        "Your finger changes the electric field at the grid's crossing wires, so the phone knows where.",
+        "Each OLED pixel makes its own light; a black pixel is simply switched off.",
+        "Lithium ions move inside the battery and push current through the chips.",
+        "15 watt-hours in a full battery: a 2 kW kettle uses that in 28 seconds."
+      ],
+      "size": 600,
+      "fps": 30
+    },
     "phone.inside": {
       "kind": "inside",
       "title": "Layers",

@@ -1,6 +1,69 @@
 {
   "objectId": "guitar",
   "lenses": {
+    "guitar.explore": {
+      "kind": "explore",
+      "title": "How it works",
+      "beats": [
+        {
+          "clip": "explore/b1.mp4",
+          "still": "explore/s1.png",
+          "clean": "explore/c1.png"
+        },
+        {
+          "clip": "explore/b2.mp4",
+          "still": "explore/s2.png",
+          "clean": "explore/c2.png"
+        },
+        {
+          "clip": "explore/b3.mp4",
+          "still": "explore/s3.png",
+          "clean": "explore/c3.png"
+        },
+        {
+          "clip": "explore/b4.mp4",
+          "still": "explore/s4.png",
+          "clean": "explore/c4.png"
+        },
+        {
+          "clip": "explore/b5.mp4",
+          "still": "explore/s5.png",
+          "clean": "explore/c5.png"
+        },
+        {
+          "clip": "explore/b6.mp4",
+          "still": "explore/s6.png",
+          "clean": "explore/c6.png"
+        }
+      ],
+      "stills": [
+        "explore/s1.png",
+        "explore/s2.png",
+        "explore/s3.png",
+        "explore/s4.png",
+        "explore/s5.png",
+        "explore/s6.png"
+      ],
+      "clean": [
+        "explore/c1.png",
+        "explore/c2.png",
+        "explore/c3.png",
+        "explore/c4.png",
+        "explore/c5.png",
+        "explore/c6.png"
+      ],
+      "tracks": "explore/tracks.json",
+      "captions": [
+        "Pluck one string and the whole guitar sings. The sound starts in the string.",
+        "A guitar is six strings over a hollow wooden box with a thin top.",
+        "A plucked string swings back and forth hundreds of times a second, but moves little air.",
+        "The string shakes the bridge, the bridge shakes the wide top, and the top pushes air.",
+        "Pressing a fret shortens the string, so it swings faster and the note rises.",
+        "110 swings every second: the open A string. Fret 12 halves it to 220."
+      ],
+      "size": 600,
+      "fps": 30
+    },
     "guitar.motion": {
       "kind": "motion",
       "title": "Standing waves",
