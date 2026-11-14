@@ -10,7 +10,7 @@ import type {Scene} from './types';
 
 export type {Readout, Scene, Step} from './types';
 
-const FACTORIES: Record<string, () => Scene> = {
+const FACTORIES: Record<string, (spec?: unknown) => Scene | null> = {
   ball: () => new BallScene(),
   guitar: () => new GuitarScene(),
   bicycle: () => new BicycleScene(),
@@ -20,8 +20,12 @@ const FACTORIES: Record<string, () => Scene> = {
   'phone-exploded': () => new ExplodedScene(PHONE_SPEC),
 };
 
-/** Scene factory id (see Chapter.scene). Returns null for unknown ids. */
-export function createScene(id: string): Scene | null {
+/**
+ * Scene factory id (see Chapter.scene). `spec` is the chapter's drawing data from
+ * shared/objects.json for data-driven scenes (flow, number); hand-written scenes ignore it.
+ * Returns null for unknown ids or a spec that does not validate.
+ */
+export function createScene(id: string, spec?: unknown): Scene | null {
   const f = FACTORIES[id];
-  return f ? f() : null;
+  return f ? f(spec) : null;
 }
