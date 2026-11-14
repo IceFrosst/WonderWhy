@@ -26,7 +26,8 @@ function librarySketch() {
 
 test('validateSketch accepts the fixture and reusable library chapters', () => {
   const stapler = validateSketch(fixture);
-  assert.ok(stapler); assert.equal(stapler.verified, false); assert.equal(stapler.chapters.length, 2);
+  assert.ok(stapler); assert.equal(stapler.verified, false); assert.equal(stapler.chapters.length, 3);
+  assert.deepEqual(stapler.chapters.map((item) => item.lens), ['explore', 'flow', 'number']);
   const library = validateSketch(librarySketch());
   assert.ok(library); assert.equal(library.verified, false); assert.deepEqual(library.chapters.map((item) => item.scene), ['flow', 'number', 'curve']);
   assert.equal('hint' in library.chapters[0], false);
@@ -35,12 +36,12 @@ test('validateSketch accepts the fixture and reusable library chapters', () => {
 test('validateSketch cleans text, forces unverified, and drops unknown fields', () => {
   const value = clone(fixture);
   value.label = `  ${'L'.repeat(60)}  `; value.answer = `  ${'A'.repeat(150)}  `; value.verified = true; value.extra = 'drop';
-  value.chapters[0].title = ` ${'T'.repeat(50)} `; value.chapters[0].captions[0] = ` ${'C'.repeat(220)} `;
-  value.chapters[0].knobs[0] = { axis: 'x', label: 'K'.repeat(30), extra: true };
+  value.chapters[1].title = ` ${'T'.repeat(50)} `; value.chapters[1].captions[0] = ` ${'C'.repeat(220)} `;
+  value.chapters[1].knobs[0] = { axis: 'x', label: 'K'.repeat(30), extra: true };
   const clean = validateSketch(value);
   assert.equal(clean.label.length, 40); assert.equal(clean.answer.length, 120); assert.equal(clean.verified, false);
-  assert.equal(clean.chapters[0].title.length, 40); assert.equal(clean.chapters[0].captions[0].length, 200);
-  assert.deepEqual(clean.chapters[0].knobs[0], { axis: 'x', label: 'K'.repeat(23) + '\u2026' });
+  assert.equal(clean.chapters[1].title.length, 40); assert.equal(clean.chapters[1].captions[0].length, 200);
+  assert.deepEqual(clean.chapters[1].knobs[0], { axis: 'x', label: 'K'.repeat(23) + '\u2026' });
   assert.equal('extra' in clean, false);
 });
 
@@ -60,16 +61,16 @@ test('validateSketch bounds curve numbers, cleans text, caps words, and requires
   assert.deepEqual(cleanCurve.spec.series[0].points, [[-1e9, -1e9], [0, 0], [1e9, 1e9]]);
   assert.deepEqual(cleanCurve.spec.marks, [{ x: 1e9, label: 'high mark' }]);
 
-  const duplicate = clone(fixture); duplicate.chapters[1] = clone(duplicate.chapters[0]);
+  const duplicate = clone(fixture); duplicate.chapters[2] = clone(duplicate.chapters[1]);
   assert.equal(validateSketch(duplicate), null);
 });
 
 test('validateSketch caps collection work before iterating untrusted arrays', () => {
   const value = clone(fixture);
-  value.chapters[0].spec.nodes.push(...Array(1000).fill({ id: 'ignored', label: 'ignored' }));
-  value.chapters[0].spec.losses.push(...Array(1000).fill({ at: value.chapters[0].spec.nodes[0].id, label: 'ignored', share: 1 }));
+  value.chapters[1].spec.nodes.push(...Array(1000).fill({ id: 'ignored', label: 'ignored' }));
+  value.chapters[1].spec.losses.push(...Array(1000).fill({ at: value.chapters[1].spec.nodes[0].id, label: 'ignored', share: 1 }));
   const clean = validateSketch(value);
-  assert.ok(clean); assert.equal(clean.chapters[0].spec.nodes.length, 6); assert.equal(clean.chapters[0].spec.losses.length, 3);
+  assert.ok(clean); assert.equal(clean.chapters[1].spec.nodes.length, 6); assert.equal(clean.chapters[1].spec.losses.length, 3);
 });
 
 test('validateSketch rejects malformed sketches without throwing', () => {
@@ -78,23 +79,23 @@ test('validateSketch rejects malformed sketches without throwing', () => {
     { ...clone(fixture), label: ' ' },
     { ...clone(fixture), answer: '' },
     { ...clone(fixture), chapters: [] },
-    { ...clone(fixture), chapters: [fixture.chapters[0], fixture.chapters[0], fixture.chapters[0], fixture.chapters[0]] },
-    (() => { const x = clone(fixture); x.chapters[0].lens = 'inside'; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].scene = 'number'; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].captions = []; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].captions = Array(7).fill('caption'); x.chapters[0].spec.steps = Array(7).fill(x.chapters[0].spec.steps[0]); return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].captions.pop(); x.chapters[0].knobs.pop(); return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].knobs.pop(); return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].spec.losses[0].at = 'missing'; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].spec.nodes[1].id = 'hand'; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].spec.kind = 'motion'; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].spec.nodes = [x.chapters[0].spec.nodes[0]]; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[0].spec.steps[0].upTo = Infinity; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[1].spec.headline.value = NaN; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[1].spec.steps[0].show = 'other'; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[1].spec.steps[0].show = 'compare'; return x; })(),
-    (() => { const x = clone(fixture); x.chapters[1].captions.pop(); return x; })(),
-    (() => { const x = clone(fixture); x.chapters[1].spec.knob = { label: 'x', unit: 'm', min: 2, max: 1, step: 1, value: 1 }; return x; })(),
+    { ...clone(fixture), chapters: [...clone(fixture).chapters, clone(fixture).chapters[1], clone(fixture).chapters[2]] },
+    (() => { const x = clone(fixture); x.chapters[1].lens = 'inside'; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].scene = 'number'; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].captions = []; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].captions = Array(7).fill('caption'); x.chapters[1].spec.steps = Array(7).fill(x.chapters[1].spec.steps[0]); return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].captions.pop(); x.chapters[1].knobs.pop(); return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].knobs.pop(); return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].spec.losses[0].at = 'missing'; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].spec.nodes[1].id = 'hand'; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].spec.kind = 'motion'; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].spec.nodes = [x.chapters[1].spec.nodes[0]]; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[1].spec.steps[0].upTo = Infinity; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[2].spec.headline.value = NaN; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[2].spec.steps[0].show = 'other'; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[2].spec.steps[0].show = 'compare'; return x; })(),
+    (() => { const x = clone(fixture); x.chapters[2].captions.pop(); return x; })(),
+    (() => { const x = clone(fixture); x.chapters[2].spec.knob = { label: 'x', unit: 'm', min: 2, max: 1, step: 1, value: 1 }; return x; })(),
     (() => { const x = librarySketch(); x.chapters[2].spec.series[0].points[1][0] = x.chapters[2].spec.series[0].points[0][0]; return x; })(),
     (() => { const x = librarySketch(); x.chapters[2].spec.series[1].role = 'main'; return x; })(),
     (() => { const x = librarySketch(); x.chapters[2].spec.series[0].role = 'other'; x.chapters[2].spec.series.pop(); return x; })(),
@@ -113,10 +114,10 @@ test('parseSketchReply handles fences, prose, none, and garbage', () => {
   assert.equal(parseSketchReply('{bad json}'), null);
 });
 
-test('buildSketchPrompt names the language and includes the real kettle example', () => {
+test('buildSketchPrompt names the language and includes the compact 3D lamp example', () => {
   const prompt = buildSketchPrompt({ objects, lang: 'fi', hint: 'metal object' });
-  assert.match(prompt, /Finnish/); assert.match(prompt, /Boiling kettle/); assert.match(prompt, /Heating element/);
-  assert.match(prompt, /0\.11/); assert.match(prompt, /metal object/); assert.match(prompt, /\{"none":true\}/);
+  assert.match(prompt, /Finnish/); assert.match(prompt, /desk lamp/); assert.match(prompt, /lower_arm/);
+  assert.match(prompt, /Explore beat plan/); assert.match(prompt, /metal object/); assert.match(prompt, /\{"none":true\}/);
 });
 
 test('classifier provider request stays byte-identical and sketch gets a larger output limit', async () => {

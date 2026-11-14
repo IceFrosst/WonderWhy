@@ -4,6 +4,642 @@
   "verified": false,
   "chapters": [
     {
+      "lens": "explore",
+      "scene": "model3d",
+      "title": "How a stapler works",
+      "lead": "A lever concentrates your hand force at one narrow steel blade.",
+      "captions": [
+        "A stapler uses a long top arm to drive and close one metal staple.",
+        "The top arm, pusher spring, and anvil separate to reveal the staple path.",
+        "Your hand rotates the top arm, so the striker drives one staple downward.",
+        "The anvil turns both staple legs inward, so they clamp the paper.",
+        "The same push on two thin staple tips is about 200 times your thumb's pressure."
+      ],
+      "spec": {
+        "parts": [
+          {
+            "id": "base_plate",
+            "label": "Base plate",
+            "prim": "box",
+            "size": [
+              18,
+              0.7,
+              4
+            ],
+            "round": 0.35,
+            "pos": [
+              0,
+              0.35,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "object",
+            "explode": [
+              0,
+              -3,
+              0
+            ]
+          },
+          {
+            "id": "anvil",
+            "label": "Anvil",
+            "prim": "box",
+            "size": [
+              3.2,
+              0.3,
+              2.8
+            ],
+            "round": 0.15,
+            "pos": [
+              5.8,
+              0.85,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "actor",
+            "explode": [
+              5,
+              -1,
+              0
+            ]
+          },
+          {
+            "id": "magazine",
+            "label": "Staple channel",
+            "prim": "box",
+            "size": [
+              13.5,
+              0.65,
+              2.5
+            ],
+            "round": 0.2,
+            "pos": [
+              -0.4,
+              1.45,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "object",
+            "explode": [
+              0,
+              2,
+              0
+            ]
+          },
+          {
+            "id": "pusher",
+            "label": "Staple pusher",
+            "prim": "box",
+            "size": [
+              1,
+              1,
+              2
+            ],
+            "round": 0.15,
+            "pos": [
+              -4.8,
+              2.05,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "actor",
+            "explode": [
+              -3,
+              3,
+              0
+            ]
+          },
+          {
+            "id": "pusher_spring",
+            "label": "Pusher spring",
+            "prim": "helix",
+            "r": 0.35,
+            "h": 6,
+            "turns": 10,
+            "tube": 0.08,
+            "pos": [
+              -3.2,
+              2.05,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              90
+            ],
+            "scale": 1,
+            "role": "energy",
+            "explode": [
+              -5,
+              4,
+              0
+            ]
+          },
+          {
+            "id": "hinge_pin",
+            "label": "Hinge pin",
+            "prim": "cylinder",
+            "r": 0.55,
+            "h": 4,
+            "segments": 24,
+            "pos": [
+              -7.2,
+              3.15,
+              0
+            ],
+            "rot": [
+              90,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "actor",
+            "explode": [
+              -5,
+              2,
+              0
+            ]
+          },
+          {
+            "id": "top_arm",
+            "label": "Top arm",
+            "prim": "box",
+            "size": [
+              15.5,
+              1.25,
+              3.4
+            ],
+            "round": 0.5,
+            "pos": [
+              -0.25,
+              4.05,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              -3
+            ],
+            "scale": 1,
+            "role": "object",
+            "explode": [
+              0,
+              6,
+              0
+            ],
+            "anim": {
+              "swing": {
+                "axis": [
+                  0,
+                  0,
+                  1
+                ],
+                "deg": 12,
+                "hz": 0.25
+              }
+            }
+          },
+          {
+            "id": "striker",
+            "label": "Striker blade",
+            "prim": "box",
+            "size": [
+              0.35,
+              2.5,
+              2
+            ],
+            "pos": [
+              6.7,
+              2.75,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "energy",
+            "explode": [
+              4,
+              3,
+              0
+            ],
+            "anim": {
+              "shake": {
+                "axis": [
+                  0,
+                  -1,
+                  0
+                ],
+                "amp": 0.45,
+                "hz": 1
+              }
+            }
+          },
+          {
+            "id": "staple_1",
+            "label": "Staple strip",
+            "prim": "tube",
+            "path": [
+              [
+                0,
+                -0.7,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                0.85
+              ],
+              [
+                0,
+                -0.7,
+                0.85
+              ]
+            ],
+            "r": 0.08,
+            "pos": [
+              -1.5,
+              2.25,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "object",
+            "explode": [
+              0,
+              3,
+              3
+            ]
+          },
+          {
+            "id": "staple_2",
+            "label": "Staple strip",
+            "prim": "tube",
+            "path": [
+              [
+                0,
+                -0.7,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                0.85
+              ],
+              [
+                0,
+                -0.7,
+                0.85
+              ]
+            ],
+            "r": 0.08,
+            "pos": [
+              -0.9,
+              2.25,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "object",
+            "explode": [
+              0,
+              3,
+              3
+            ]
+          },
+          {
+            "id": "staple_3",
+            "label": "Staple strip",
+            "prim": "tube",
+            "path": [
+              [
+                0,
+                -0.7,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                0.85
+              ],
+              [
+                0,
+                -0.7,
+                0.85
+              ]
+            ],
+            "r": 0.08,
+            "pos": [
+              -0.3,
+              2.25,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "object",
+            "explode": [
+              0,
+              3,
+              3
+            ]
+          },
+          {
+            "id": "staple_4",
+            "label": "Staple strip",
+            "prim": "tube",
+            "path": [
+              [
+                0,
+                -0.7,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                0.85
+              ],
+              [
+                0,
+                -0.7,
+                0.85
+              ]
+            ],
+            "r": 0.08,
+            "pos": [
+              0.3,
+              2.25,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "object",
+            "explode": [
+              0,
+              3,
+              3
+            ]
+          },
+          {
+            "id": "active_staple",
+            "label": "Driven staple",
+            "prim": "tube",
+            "path": [
+              [
+                0,
+                -0.8,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                -0.85
+              ],
+              [
+                0,
+                0,
+                0.85
+              ],
+              [
+                0,
+                -0.8,
+                0.85
+              ]
+            ],
+            "r": 0.09,
+            "pos": [
+              6.65,
+              2.2,
+              0
+            ],
+            "rot": [
+              0,
+              0,
+              0
+            ],
+            "scale": 1,
+            "role": "energy",
+            "explode": [
+              3,
+              1,
+              0
+            ],
+            "anim": {
+              "shake": {
+                "axis": [
+                  0,
+                  -1,
+                  0
+                ],
+                "amp": 0.35,
+                "hz": 1
+              }
+            }
+          }
+        ],
+        "beats": [
+          {
+            "camera": {
+              "yaw": 32,
+              "pitch": 20,
+              "zoom": 1,
+              "target": null
+            },
+            "turn": 7,
+            "dur": 6
+          },
+          {
+            "camera": {
+              "yaw": 35,
+              "pitch": 22,
+              "zoom": 0.8,
+              "target": null
+            },
+            "explode": 1,
+            "labels": [
+              "top_arm",
+              "pusher_spring",
+              "anvil"
+            ],
+            "dur": 7
+          },
+          {
+            "camera": {
+              "yaw": 28,
+              "pitch": 15,
+              "zoom": 1.7,
+              "target": "striker"
+            },
+            "focus": [
+              "top_arm",
+              "striker",
+              "active_staple"
+            ],
+            "ghost": [
+              "magazine"
+            ],
+            "play": [
+              "top_arm",
+              "striker",
+              "active_staple"
+            ],
+            "fx": [
+              {
+                "type": "arrow",
+                "from": "top_arm",
+                "dir": [
+                  0,
+                  -1,
+                  0
+                ],
+                "len": 2.5,
+                "role": "energy",
+                "label": "hand force"
+              },
+              {
+                "type": "arrow",
+                "from": "striker",
+                "dir": [
+                  0,
+                  -1,
+                  0
+                ],
+                "len": 2,
+                "role": "energy",
+                "label": "striker force"
+              }
+            ],
+            "dur": 6
+          },
+          {
+            "camera": {
+              "yaw": 20,
+              "pitch": 12,
+              "zoom": 2.6,
+              "target": "anvil"
+            },
+            "focus": [
+              "anvil",
+              "active_staple"
+            ],
+            "ghost": [
+              "base_plate"
+            ],
+            "fx": [
+              {
+                "type": "arrow",
+                "from": [
+                  6.65,
+                  0.9,
+                  -0.85
+                ],
+                "dir": [
+                  0,
+                  0,
+                  1
+                ],
+                "len": 0.7,
+                "role": "actor",
+                "label": "leg bends inward"
+              },
+              {
+                "type": "arrow",
+                "from": [
+                  6.65,
+                  0.9,
+                  0.85
+                ],
+                "dir": [
+                  0,
+                  0,
+                  -1
+                ],
+                "len": 0.7,
+                "role": "actor",
+                "label": "leg bends inward"
+              }
+            ],
+            "dur": 6
+          },
+          {
+            "camera": {
+              "yaw": 28,
+              "pitch": 18,
+              "zoom": 1.5,
+              "target": "striker"
+            },
+            "focus": [
+              "top_arm",
+              "striker"
+            ],
+            "number": {
+              "value": "200",
+              "unit": "x",
+              "label": "pressure at the tips"
+            },
+            "dur": 6
+          }
+        ]
+      }
+    },
+    {
       "lens": "flow",
       "scene": "flow",
       "title": "Follow the force",
@@ -14,25 +650,88 @@
         "The blade drives the staple legs through the paper with roughly 100 N.",
         "The anvil bends the 6 mm legs inward, clamping about 20 sheets."
       ],
-      "knobs": [null, null, null, null],
+      "knobs": [
+        null,
+        null,
+        null,
+        null
+      ],
       "spec": {
         "kind": "force",
         "nodes": [
-          { "id": "hand", "label": "Hand", "sub": "10 to 30 N" },
-          { "id": "lever", "label": "Lever arm", "sub": "about 4 to 1" },
-          { "id": "driver", "label": "Driver blade", "sub": "roughly 100 N" },
-          { "id": "staple", "label": "Staple", "sub": "6 mm legs" },
-          { "id": "paper", "label": "Paper", "sub": "up to 20 sheets" },
-          { "id": "anvil", "label": "Anvil", "sub": "bends legs inward" }
+          {
+            "id": "hand",
+            "label": "Hand",
+            "sub": "10 to 30 N"
+          },
+          {
+            "id": "lever",
+            "label": "Lever arm",
+            "sub": "about 4 to 1"
+          },
+          {
+            "id": "driver",
+            "label": "Driver blade",
+            "sub": "roughly 100 N"
+          },
+          {
+            "id": "staple",
+            "label": "Staple",
+            "sub": "6 mm legs"
+          },
+          {
+            "id": "paper",
+            "label": "Paper",
+            "sub": "up to 20 sheets"
+          },
+          {
+            "id": "anvil",
+            "label": "Anvil",
+            "sub": "bends legs inward"
+          }
         ],
         "losses": [
-          { "at": "lever", "label": "Pivot friction and flex", "share": 0.1 }
+          {
+            "at": "lever",
+            "label": "Pivot friction and flex",
+            "share": 0.1
+          }
         ],
         "steps": [
-          { "upTo": 2, "focus": ["hand", "lever"], "losses": false },
-          { "upTo": 3, "focus": ["lever", "driver"], "losses": true },
-          { "upTo": 5, "focus": ["driver", "staple", "paper"], "losses": true },
-          { "upTo": 6, "focus": ["staple", "paper", "anvil"], "losses": true }
+          {
+            "upTo": 2,
+            "focus": [
+              "hand",
+              "lever"
+            ],
+            "losses": false
+          },
+          {
+            "upTo": 3,
+            "focus": [
+              "lever",
+              "driver"
+            ],
+            "losses": true
+          },
+          {
+            "upTo": 5,
+            "focus": [
+              "driver",
+              "staple",
+              "paper"
+            ],
+            "losses": true
+          },
+          {
+            "upTo": 6,
+            "focus": [
+              "staple",
+              "paper",
+              "anvil"
+            ],
+            "losses": true
+          }
         ]
       }
     },
@@ -47,17 +746,52 @@
         "Standard 6 mm staple legs usually fasten up to about 20 sheets."
       ],
       "spec": {
-        "headline": { "value": 4, "unit": "to 1", "label": "typical lever advantage", "decimals": 0 },
+        "headline": {
+          "value": 4,
+          "unit": "to 1",
+          "label": "typical lever advantage",
+          "decimals": 0
+        },
         "rows": [
-          { "value": 20, "unit": "N", "label": "typical hand push", "decimals": 0, "scales": false },
-          { "value": 100, "unit": "N", "label": "force at the staple", "decimals": 0, "scales": false },
-          { "value": 6, "unit": "mm", "label": "standard staple leg", "decimals": 0, "scales": false },
-          { "value": 20, "unit": "sheets", "label": "typical capacity", "decimals": 0, "scales": false }
+          {
+            "value": 20,
+            "unit": "N",
+            "label": "typical hand push",
+            "decimals": 0,
+            "scales": false
+          },
+          {
+            "value": 100,
+            "unit": "N",
+            "label": "force at the staple",
+            "decimals": 0,
+            "scales": false
+          },
+          {
+            "value": 6,
+            "unit": "mm",
+            "label": "standard staple leg",
+            "decimals": 0,
+            "scales": false
+          },
+          {
+            "value": 20,
+            "unit": "sheets",
+            "label": "typical capacity",
+            "decimals": 0,
+            "scales": false
+          }
         ],
         "steps": [
-          { "show": "headline" },
-          { "show": "rows" },
-          { "show": "rows" }
+          {
+            "show": "headline"
+          },
+          {
+            "show": "rows"
+          },
+          {
+            "show": "rows"
+          }
         ]
       }
     }

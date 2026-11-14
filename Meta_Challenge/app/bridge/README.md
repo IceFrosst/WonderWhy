@@ -52,6 +52,8 @@ Localized `show.lenses` may include `specText` and `knobLabels` for text drawn i
 ## Sketches
 
 Set `SKETCH_PROVIDER=fixture` for the recorded stapler demo or `SKETCH_PROVIDER=auto` to generate explanations for unknown real photos. Auto mode costs one extra model call for each unknown object. Every generated sketch is marked `verified: false`; its numbers are estimates and are not checked facts.
+Generated sketches begin with an `explore` / `model3d` chapter that turns, separates, and annotates the unknown object in 3D.
+The bridge sanitizes its parts, beats, camera, animation, and effects before forwarding it; an invalid Explore chapter is dropped by itself.
 
 ## Follow-up questions
 

@@ -1,12 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { validateModel3d } from './model3d.js';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const OBJECTS_PATH = path.join(here, '..', 'shared', 'objects.json');
 const FLOW_KINDS = new Set(['energy', 'water', 'signal', 'force']);
 const NUMBER_SHOWS = new Set(['headline', 'rows', 'compare']);
-const PAIRS = { flow: 'flow', number: 'number', whatif: 'curve' };
+const PAIRS = { explore: 'model3d', flow: 'flow', number: 'number', whatif: 'curve' };
 const LANGUAGE_NAMES = { en: 'English', fi: 'Finnish', sv: 'Swedish', de: 'German', es: 'Spanish', fr: 'French' };
 const MAX_VALUE = 1_000_000_000;
 
@@ -229,8 +225,10 @@ function chapter(value) {
   const title = text(value.title, 40);
   const lead = value.lead === undefined ? null : text(value.lead, 120, true);
   if (!title || (value.lead !== undefined && lead === null)) return null;
-  if (!Array.isArray(value.captions) || value.captions.length < 1 || value.captions.length > 6) return null;
-  const captions = value.captions.slice(0, 6).map((caption) => text(caption, 200, false, 24));
+  const isExplore = value.scene === 'model3d';
+  const minCaptions = isExplore ? 4 : 1;
+  if (!Array.isArray(value.captions) || value.captions.length < minCaptions || value.captions.length > 6) return null;
+  const captions = value.captions.slice(0, 6).map((caption) => text(caption, 200, false, isExplore ? 16 : 24));
   if (captions.some((caption) => caption === null)) return null;
 
   let knobs;
@@ -246,8 +244,10 @@ function chapter(value) {
     }
   }
 
-  const spec = value.scene === 'flow' ? flowSpec(value.spec) : value.scene === 'number' ? numberSpec(value.spec) : curveSpec(value.spec);
-  if (!spec || !Array.isArray(spec.steps) || spec.steps.length !== captions.length) return null;
+  const spec = value.scene === 'model3d'
+    ? validateModel3d(value.spec, captions.length)
+    : value.scene === 'flow' ? flowSpec(value.spec) : value.scene === 'number' ? numberSpec(value.spec) : curveSpec(value.spec);
+  if (!spec || (!isExplore && (!Array.isArray(spec.steps) || spec.steps.length !== captions.length))) return null;
   if (value.scene === 'number' && captions.length !== 3) return null;
   return {
     lens: value.lens,
@@ -266,9 +266,19 @@ export function validateSketch(value) {
     if (!record(value)) return null;
     const label = text(value.label, 40);
     const answer = text(value.answer, 120, false, 12);
-    if (!label || !answer || !Array.isArray(value.chapters) || value.chapters.length < 1 || value.chapters.length > 3) return null;
-    const chapters = value.chapters.slice(0, 3).map(chapter);
-    if (chapters.some((item) => item === null)) return null;
+    if (!label || !answer || !Array.isArray(value.chapters) || value.chapters.length < 1 || value.chapters.length > 4) return null;
+    const chapters = [];
+    for (const source of value.chapters.slice(0, 4)) {
+      const item = chapter(source);
+      const intendedExplore = record(source) && (source.lens === 'explore' || source.scene === 'model3d');
+      if (!item) {
+        if (intendedExplore) continue;
+        return null;
+      }
+      if (item.lens === 'explore' && chapters.length !== 0) continue;
+      chapters.push(item);
+    }
+    if (!chapters.length) return null;
     if (new Set(chapters.map((item) => item.lens)).size !== chapters.length) return null;
     return { label, answer, verified: false, chapters };
   } catch {
@@ -276,40 +286,30 @@ export function validateSketch(value) {
   }
 }
 
-function promptObjects(objects) {
-  if (Array.isArray(objects) && objects.some((item) => item?.id === 'kettle')) return objects;
-  try { return JSON.parse(readFileSync(OBJECTS_PATH, 'utf8')).objects; } catch { return Array.isArray(objects) ? objects : []; }
-}
-
 /** Build the JSON-only multimodal request for a generated unknown-object sketch. */
-export function buildSketchPrompt({ objects, lang = 'en', hint = '' } = {}) {
-  const kettle = promptObjects(objects).find((item) => item?.id === 'kettle');
-  const chapters = Array.isArray(kettle?.chapters)
-    ? kettle.chapters.filter((item) => item.lens === 'flow' || item.lens === 'number').map(({ hint: _hint, ...item }) => item)
-    : [];
-  const example = { label: kettle?.label || 'Boiling kettle', answer: kettle?.answer || 'Hot water rises, cool water sinks, bubbles are vapour.', verified: false, chapters };
+export function buildSketchPrompt({ lang = 'en', hint = '' } = {}) {
   const language = LANGUAGE_NAMES[lang] || LANGUAGE_NAMES.en;
-  return `Explain the main unknown object in the photo as a small reusable physics sketch. Reply with one strict JSON object only, with no markdown or prose.
+  return `Explain the main unknown object in the photo as a reusable physics sketch. Reply with one strict JSON object only: no markdown or prose.
 
-Output shape:
-{"label":"1 to 3 words","answer":"one sentence","verified":false,"chapters":[{"lens":"flow","scene":"flow","title":"...","lead":"...","captions":["..."],"knobs":[null],"spec":{"kind":"energy|water|signal|force","nodes":[{"id":"english_id","label":"...","sub":"..."}],"losses":[{"at":"english_id","label":"...","share":0.1}],"steps":[{"upTo":2,"focus":["english_id"],"losses":false}]}},{"lens":"number","scene":"number","title":"...","lead":"...","captions":["...","...","..."],"spec":{"headline":{"value":1,"unit":"...","label":"...","decimals":0},"rows":[],"compare":{"value":1,"unit":"...","label":"..."},"knob":{"label":"...","unit":"...","min":1,"max":2,"step":1,"value":1},"steps":[{"show":"headline"},{"show":"rows"},{"show":"compare"}]}},{"lens":"whatif","scene":"curve","title":"...","lead":"...","captions":["..."],"knobs":[{"axis":"x","label":"..."}],"spec":{"x":{"label":"...","unit":"...","min":0,"max":1,"step":0.1,"value":0.5},"y":{"label":"...","unit":"..."},"series":[{"name":"Main","role":"main","points":[[0,0],[1,1]]}],"marks":[],"steps":[{"series":["Main"]}]}}]}.
+Return {"label":"1 to 3 words","answer":"one sentence","verified":false,"chapters":[...]}. Chapters must be ordered: (1) explore, (2) flow, (3) number, then optional (4) whatif.
 
-Include exactly one flow chapter and one number chapter. A whatif curve chapter is optional. Use 1 to 3 chapters total. Each chapter needs 1 to 6 captions and exactly as many spec steps; the number chapter needs exactly 3 captions. Knobs, when present, must match the captions in length. Use 2 to 6 unique flow nodes and 0 to 3 real losses. Use 0 to 4 number rows. A curve has 1 or 2 series, 2 to 64 points per series in strictly ascending x order, and 0 to 3 marks.
+Explore chapter: {"lens":"explore","scene":"model3d","title":"How it works","captions":[4 to 6 strings],"spec":{"parts":[...],"beats":[...]}}. Model the object recognisably with 6 to 20 parts and real proportions in centimetres. y is up. Every part has id, label, prim, pos:[x,y,z], rot:[x,y,z], scale:number or [x,y,z], role, explode:[x,y,z], plus primitive fields:
+box size:[x,y,z], round?; cylinder r,h,r2?,segments; sphere r; torus r,tube; lathe profile:[[radius,y]]; extrude shape:[[x,z]],h; tube path:[[x,y,z]],r,closed?; gear teeth,r,h,toothDepth?; helix r,h,turns,tube.
+Ids match [a-z0-9_-]{1,32}; labels are at most 24 characters. Roles: object, actor, energy, loss, answer, other. Optional parent names an earlier part. Optional anim is {"spin":{"axis":[...],"rpm":30}}, {"swing":{"axis":[...],"deg":20,"hz":0.5}}, or {"shake":{"axis":[...],"amp":0.3,"hz":4}}.
+Each beat has camera:{yaw,pitch,zoom,target?}, and may have turn, explode, focus, ghost, labels, play, dur, number:{value:string,unit,label}, and fx. Fx: arrow {from,dir,len,role,label}; flow {path,role,speed,count,label,closed}; heat {on,role}; waves {at,role,hz}; trail {on}; dim {on,text}. from/at/target may be a part id or point. Limits: 32 parts, 6 beats, 4 fx/beat, 64 path/profile/shape points, 3 labels/beat, all numbers finite within +/-10000, positive sizes/radii, segments 6..48, teeth 6..80, turns <=40, pitch -89..89, zoom 0.3..6, turn 0..20, explode 0..1, dur 3..12.
 
-Rules:
-- Use plain words a 15-year-old can understand.
-- Each caption has at most 24 words and explains one idea.
-- Use real, typical numbers with units; never invent precision.
-- The flow chain has 3 to 5 nodes in the order energy, material, or signal really travels. Add a loss only where one really exists.
-- The label names the object in 1 to 3 words.
-- The answer is one sentence of at most 12 words.
-- Write all human-readable text in ${language}. Keep JSON keys, lens, scene, and ids in English.
-- If the photo shows nothing explainable, reply exactly {"none":true}.
+Explore beat plan: meet it turning; take it apart with 2 or 3 labels; show the mechanism with focus/ghost/motion/fx; show one number; optionally explain why it matters. One present-tense concrete sentence per beat, at most 16 words. Name the highlighted part. Never say "as you can see". No formula in beats 1 or 2; the number beat has one number, never a formula. State cause then effect, at high-school level, with no hedging. Cut any beat that adds nothing.
 
-The classifier's existing hint is: ${JSON.stringify(typeof hint === 'string' ? hint : '')}
+Tiny complete explore example (desk lamp):
+{"lens":"explore","scene":"model3d","title":"How it works","captions":["The lamp holds an LED above the desk and aims its light downward.","The base, two arms, head, and bulb separate around the joint.","Current heats the bulb's LED, so electrical energy becomes light.","A 9 W LED lights a desk while wasting little energy."],"spec":{"parts":[{"id":"base","label":"Base","prim":"cylinder","r":8,"h":2,"segments":24,"pos":[0,1,0],"rot":[0,0,0],"scale":1,"role":"object","explode":[0,-3,0]},{"id":"lower_arm","label":"Lower arm","prim":"tube","path":[[0,0,0],[0,18,0]],"r":1,"pos":[0,2,0],"rot":[0,0,0],"scale":1,"role":"object","explode":[-5,0,0]},{"id":"joint","label":"Joint","prim":"sphere","r":1.5,"pos":[0,20,0],"rot":[0,0,0],"scale":1,"role":"actor","explode":[0,3,0]},{"id":"upper_arm","label":"Upper arm","prim":"tube","path":[[0,0,0],[12,8,0]],"r":1,"pos":[0,20,0],"rot":[0,0,0],"scale":1,"role":"object","explode":[3,3,0]},{"id":"head","label":"Lamp head","prim":"cylinder","r":5,"r2":0.2,"h":7,"segments":24,"pos":[12,28,0],"rot":[0,0,-55],"scale":1,"role":"object","explode":[6,3,0]},{"id":"bulb","label":"LED bulb","prim":"sphere","r":3,"pos":[14,25,0],"rot":[0,0,0],"scale":1,"role":"energy","explode":[7,-1,0]}],"beats":[{"camera":{"yaw":30,"pitch":15,"zoom":1,"target":null},"turn":8,"dur":6},{"camera":{"yaw":35,"pitch":20,"zoom":0.8},"explode":1,"labels":["base","lower_arm","head"],"dur":6},{"camera":{"yaw":25,"pitch":15,"zoom":2,"target":"bulb"},"focus":["bulb"],"ghost":["head"],"fx":[{"type":"heat","on":"bulb","role":"energy"}],"dur":6},{"camera":{"yaw":25,"pitch":15,"zoom":1.4,"target":"bulb"},"focus":["bulb"],"number":{"value":"9","unit":"W","label":"LED electrical power"},"dur":6}]}}.
 
-Worked example using the real kettle flow and number chapters:
-${JSON.stringify(example, null, 2)}`;
+Then include one flow chapter and one number chapter; whatif is optional. Flow: {"lens":"flow","scene":"flow","title":"...","lead":"...","captions":[...],"knobs":[null],"spec":{"kind":"energy|water|signal|force","nodes":[{"id":"english_id","label":"...","sub":"..."}],"losses":[{"at":"english_id","label":"...","share":0.1}],"steps":[{"upTo":2,"focus":["english_id"],"losses":false}]}}. Use 2 to 6 unique nodes, at most 3 real losses, and 1 to 6 captions with the same number of steps.
+Number: {"lens":"number","scene":"number","title":"...","lead":"...","captions":["...","...","..."],"spec":{"headline":{"value":1,"unit":"...","label":"...","decimals":0},"rows":[],"compare":{"value":1,"unit":"...","label":"..."},"steps":[{"show":"headline"},{"show":"rows"},{"show":"compare"}]}}. Use exactly 3 captions and 0 to 4 rows.
+Optional whatif: {"lens":"whatif","scene":"curve","title":"...","lead":"...","captions":["..."],"knobs":[{"axis":"x","label":"..."}],"spec":{"x":{"label":"...","unit":"...","min":0,"max":1,"step":0.1,"value":0.5},"y":{"label":"...","unit":"..."},"series":[{"name":"Main","role":"main","points":[[0,0],[1,1]]}],"marks":[],"steps":[{"series":["Main"]}]}}. Use 1 or 2 series, 2 to 64 ascending-x points, and at most 3 marks.
+
+For non-explore chapters, each caption has at most 24 words. Knobs, when present, match captions in length. Use real typical numbers with units and no invented precision. The flow follows the real energy, material, force, or signal path. The object answer is at most 12 words. Write all human-readable text in ${language}; keep JSON keys, lens, scene, and ids in English. If nothing is explainable, reply exactly {"none":true}.
+
+Classifier hint: ${JSON.stringify(typeof hint === 'string' ? hint : '')}`;
 }
 
 function jsonObjects(source) {
