@@ -47,6 +47,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -243,6 +244,10 @@ class GlassesController(
     )
     /** objectId -> tagline of the bundled English library, to tell an untranslated tagline. */
     private var englishTaglines: Map<String, String> = emptyMap()
+    /** The bundled English library: part ids and English labels of every Explore spec (`specText` has no ids). */
+    private var bundledLib: Map<String, OfflineObject>? = null
+    /** Explore beats (labels, number) of the lens on screen: (detection, lens id, beats). */
+    private var exploreCache: Triple<Detection, String, List<ExploreBeat>>? = null
 
     // ---- connect / disconnect ----
 
@@ -1192,6 +1197,7 @@ class GlassesController(
      */
     private suspend fun present(det: Detection, source: ResultSource, startedAt: Long? = null, openAt: Pair<Int, Int>? = null): Boolean {
         media.clear()
+        exploreCache = null
         current = det
         currentSaved = source == ResultSource.SAVED || source == ResultSource.REPLAY
         currentReplay = source == ResultSource.REPLAY
@@ -1262,11 +1268,15 @@ class GlassesController(
         media.prefetch(paths.filterNotNull())
         // The overview shows the first step's still of its lens.
         val path = paths.getOrNull(if (s.isOverview) 0 else s.step)
+        // Explore: the still needs its beat's labels and number too (cardStill is null until they are loaded).
+        val explore = Explore.isExplore(s.track.lensId)
         val cached = path?.let { cardStill(det, it, s) }
         val shown = show(explainerCard(det, s, cached))
         if (path != null && cached == null && !media.hasFailed(path)) {
             scope.launch {
+                val beats = if (explore) async { runCatching { exploreBeats(det, s.track) } } else null
                 val bmp = runCatching { media.get(path) }.getOrNull()
+                beats?.await()
                 // Only if the wearer is still on this card; a failed still keeps the text card.
                 if (bmp != null && explainer === s && current === det) show(explainerCard(det, s, cardStill(det, path, s)))
                 else if (bmp == null) log("Still unavailable: $path")
@@ -1275,12 +1285,61 @@ class GlassesController(
         return shown
     }
 
-    /** The still sized for this card: the more text, the lower the picture ([StillFrame.heightFor]). */
-    private fun cardStill(det: Detection, path: String, s: ExplainerState): Bitmap? =
-        media.forCard(path, StillFrame.heightFor(CardFit.height(explainerCard(det, s, null))))
+    /**
+     * The still sized for this card: the more text, the lower the picture ([StillFrame.heightFor]). An Explore
+     * beat: its whole still with the beat's labels and number drawn on it, null until those are loaded.
+     */
+    private fun cardStill(det: Detection, path: String, s: ExplainerState): Bitmap? {
+        val h = StillFrame.heightFor(CardFit.height(explainerCard(det, s, null)))
+        if (!Explore.isExplore(s.track.lensId)) return media.forCard(path, h)
+        val beats = cachedBeats(det, s.track) ?: return null
+        return media.exploreForCard(path, h, beats.getOrNull(beatIndex(s)))
+    }
+
+    /** The overview shows the first beat. */
+    private fun beatIndex(s: ExplainerState): Int = if (s.isOverview) 0 else s.step
+
+    private fun cachedBeats(det: Detection, track: Track): List<ExploreBeat>? =
+        exploreCache?.takeIf { it.first === det && it.second == track.lensId }?.third
+
+    /**
+     * Beats of an Explore lens: anchors from its `tracks.json` (bridge `/media`, or the APK's copy for saved
+     * cards) and the label and number text from its spec in the card's language: the bundled English spec
+     * (it has the part ids) with the lens's own text laid over it ([Lens.exploreText]). A sketch carries its
+     * own spec. Anything missing gives beats without labels, never an error.
+     */
+    private suspend fun exploreBeats(det: Detection, track: Track): List<ExploreBeat> {
+        val id = track.lensId ?: return emptyList()
+        cachedBeats(det, track)?.let { return it }
+        val lm = det.media?.lenses?.get(id)
+        val base = det.media?.base
+        val tracksText = lm?.tracks?.let { t -> base?.let { DetectionParser.stillPath(it, t) } }?.let { media.text(it) }
+        val sk = det.sketch?.takeIf { det.objectId == "unknown" }
+        val spec = if (sk != null) {
+            sk.chapters.firstOrNull { it.lens == Explore.KIND }?.exploreText
+        } else {
+            val text = det.lenses.firstOrNull { it.id == id }?.exploreText
+            val english = bundled()[det.objectId]?.lenses?.firstOrNull { it.id == id }?.explore
+            english?.overlay(text) ?: text?.takeIf { t -> t.partIds.any { it != null } }
+        }
+        val beats = Explore.beats(Explore.tracks(tracksText), spec, track.steps.size)
+        if (tracksText == null) log("Explore: no tracks.json for $id, beats without labels")
+        if (current === det) exploreCache = Triple(det, id, beats)
+        return beats
+    }
+
+    private suspend fun bundled(): Map<String, OfflineObject> {
+        bundledLib?.let { return it }
+        val lib = withContext(Dispatchers.IO) {
+            runCatching { ctx.assets.open(OfflineCards.ASSET_NAME).use { OfflineCards.load(it) } }.getOrDefault(emptyMap())
+        }
+        bundledLib = lib
+        return lib
+    }
 
     private fun explainerCard(det: Detection, s: ExplainerState, still: Bitmap?): CardSpec {
         val sk = det.sketch?.takeIf { det.objectId == "unknown" }
+        val alt = if (still != null && Explore.isExplore(s.track.lensId)) cachedBeats(det, s.track)?.getOrNull(beatIndex(s))?.alt else null
         return Cards.explainer(
             s = s,
             // A sketch: its own label and one-line answer (the model's photo answer is not about the sketch).
@@ -1292,6 +1351,7 @@ class GlassesController(
             saved = currentSaved && !currentReplay,
             sketch = sk != null,
             standIn = det.standIn,
+            stillAlt = alt,
         )
     }
 

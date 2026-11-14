@@ -10,7 +10,8 @@
     "zoom": "Zoom",
     "whatif": "Was wäre wenn",
     "compare": "Vergleich",
-    "number": "Die Zahl"
+    "number": "Die Zahl",
+    "explore": "Erkunden"
   },
   "objects": {
     "guitar": {
@@ -146,6 +147,125 @@
               "label": "Kammerton A, zwei Oktaven höher",
               "unit": "Hz"
             }
+          }
+        },
+        "explore": {
+          "title": "So funktioniert es",
+          "captions": [
+            "Eine Saite gezupft, und die ganze Gitarre klingt. Der Ton beginnt in der Saite.",
+            "Eine Gitarre: sechs Saiten über einem hohlen Holzkörper mit dünner Decke.",
+            "Eine gezupfte Saite schwingt hunderte Male pro Sekunde, bewegt aber kaum Luft.",
+            "Die Saite bewegt den Steg, der Steg die breite Decke, und die Decke schiebt Luft an.",
+            "Ein Griff auf den Bund kürzt die Saite: Sie schwingt schneller, der Ton steigt.",
+            "110 Schwingungen pro Sekunde: die leere A-Saite. Am 12. Bund sind es 220."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Hohlkörper"
+              },
+              {
+                "label": "Dünne Decke"
+              },
+              {
+                "label": "Schallloch"
+              },
+              {
+                "label": "Steg"
+              },
+              {
+                "label": "Hals"
+              },
+              {
+                "label": "Kopfplatte"
+              },
+              {
+                "label": "Sattel"
+              },
+              {
+                "label": "Stimmwirbel"
+              },
+              {
+                "label": "Stimmwirbel"
+              },
+              {
+                "label": "Stimmwirbel"
+              },
+              {
+                "label": "Stimmwirbel"
+              },
+              {
+                "label": "Stimmwirbel"
+              },
+              {
+                "label": "Stimmwirbel"
+              },
+              {
+                "label": "Bund 1"
+              },
+              {
+                "label": "Bund 2"
+              },
+              {
+                "label": "Bund 3"
+              },
+              {
+                "label": "Bund 4"
+              },
+              {
+                "label": "Bund 5"
+              },
+              {
+                "label": "Bund 6"
+              },
+              {
+                "label": "Bund 7"
+              },
+              {
+                "label": "Bund 8"
+              },
+              {
+                "label": "Bund 9"
+              },
+              {
+                "label": "Bund 10"
+              },
+              {
+                "label": "Bund 11"
+              },
+              {
+                "label": "Bund 12"
+              },
+              {
+                "label": "Sechs Saiten"
+              },
+              {
+                "label": "A-Saite"
+              },
+              {
+                "label": "Schwingender Teil"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {},
+                  {
+                    "text": "49 cm"
+                  }
+                ]
+              },
+              {
+                "number": {
+                  "label": "leere A-Saite",
+                  "unit": "Hz"
+                }
+              }
+            ]
           }
         }
       }
@@ -298,6 +418,109 @@
               "unit": "m"
             }
           }
+        },
+        "explore": {
+          "title": "So funktioniert es",
+          "captions": [
+            "Jeder geworfene Ball fällt im Bogen zurück. Zwei Kräfte formen den ganzen Flug.",
+            "Unter der Hülle: eine Gummiblase mit Luft, die über dem Außendruck steht.",
+            "Die Schwerkraft zieht ständig nach unten: Das Steigtempo schrumpft, stoppt und kehrt sich um.",
+            "Luft bremst die Bewegung und raubt Tempo, darum landet der echte Wurf kürzer.",
+            "Beim Aufprall wirkt die gepresste Luft wie eine Feder und wirft den Ball hoch.",
+            "Mit 10 Metern pro Sekunde und 45 Grad geworfen, landet er etwa 10 Meter weit weg."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Hülle"
+              },
+              {
+                "label": "Hülle"
+              },
+              {
+                "label": "Naht"
+              },
+              {
+                "label": "Ventil"
+              },
+              {
+                "label": "Naht"
+              },
+              {
+                "label": "Naht"
+              },
+              {
+                "label": "Naht"
+              },
+              {
+                "label": "Naht"
+              },
+              {
+                "label": "Naht"
+              },
+              {
+                "label": "Naht"
+              },
+              {
+                "label": "Gummiblase"
+              },
+              {
+                "label": "Boden"
+              },
+              {
+                "label": "Wurfweite"
+              },
+              {
+                "label": "Kontaktfläche"
+              },
+              {
+                "label": "Ball im Flug"
+              },
+              {
+                "label": "Ball im Flug"
+              },
+              {
+                "label": "Ohne Luft"
+              },
+              {
+                "label": "Landung"
+              },
+              {
+                "label": "Gepresste Luft"
+              },
+              {
+                "label": "Mit Luft"
+              },
+              {
+                "label": "Schwerkraft"
+              },
+              {
+                "label": "Geschwindigkeit"
+              },
+              {
+                "label": "Luftwiderstand"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "Weite bei 10 m/s, ohne Luft",
+                  "unit": "m"
+                },
+                "fx": [
+                  {
+                    "text": "10.2 m"
+                  },
+                  {}
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -434,6 +657,120 @@
               "label": "Kleiner Gang, 34 zu 34: dreifache Kraft, aber nur",
               "unit": "m/Umdrehung"
             }
+          }
+        },
+        "explore": {
+          "title": "So funktioniert es",
+          "captions": [
+            "Eine Pedalumdrehung kann ein Rad über sechs Meter weit tragen. Die Gänge entscheiden.",
+            "Die Pedale drehen das große Kettenblatt; die Kette gibt die Drehung ans kleine Ritzel.",
+            "48 Zähne vorn, 16 hinten: Das Hinterrad dreht sich dreimal pro Pedalumdrehung.",
+            "Der Preis: Das Rad dreht schneller, aber der Reifen drückt viel sanfter auf die Straße.",
+            "Eine Radumdrehung rollt etwa 2.1 Meter, eine Pedalumdrehung also 6.3 Meter.",
+            "Bei 80 Pedalumdrehungen pro Minute sind das 30 Kilometer pro Stunde."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Kettenblatt, 48 Zähne"
+              },
+              {
+                "label": "Tretlagerachse"
+              },
+              {
+                "label": "Kurbel"
+              },
+              {
+                "label": "Pedal"
+              },
+              {
+                "label": "Linke Kurbel"
+              },
+              {
+                "label": "Linkes Pedal"
+              },
+              {
+                "label": "Kette"
+              },
+              {
+                "label": "Ritzel, 16 Zähne"
+              },
+              {
+                "label": "Hinterrad"
+              },
+              {
+                "label": "Reifen"
+              },
+              {
+                "label": "Nabe"
+              },
+              {
+                "label": "Speiche"
+              },
+              {
+                "label": "Speiche"
+              },
+              {
+                "label": "Speiche"
+              },
+              {
+                "label": "Speiche"
+              },
+              {
+                "label": "Kettenstrebe"
+              },
+              {
+                "label": "Sitzstrebe"
+              },
+              {
+                "label": "Sitzrohr"
+              },
+              {
+                "label": "Oberrohr"
+              },
+              {
+                "label": "Unterrohr"
+              },
+              {
+                "label": "Gabel"
+              },
+              {
+                "label": "Lenker"
+              },
+              {
+                "label": "Sattel"
+              },
+              {
+                "label": "Vorderrad"
+              },
+              {
+                "label": "Vorderreifen"
+              },
+              {
+                "label": "2.1 m"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "eine Radumdrehung"
+                  },
+                  {},
+                  {}
+                ]
+              },
+              {
+                "number": {
+                  "label": "Vorwärts pro Pedalumdrehung",
+                  "unit": "m"
+                }
+              }
+            ]
           }
         }
       }
@@ -586,6 +923,76 @@
               "unit": "L"
             }
           }
+        },
+        "explore": {
+          "title": "So funktioniert es",
+          "captions": [
+            "Ein Wasserkocher bringt einen Liter Wasser in etwa drei Minuten zum Kochen.",
+            "Innen: ein Heizelement unter dem Boden, das Wasser und ein Dampfschalter.",
+            "Strom, der durch den Widerstand des Elements fließt, wird in Wärme umgewandelt.",
+            "Wasser am heißen Boden dehnt sich aus, wird leichter und steigt; kühleres sinkt.",
+            "Dampf trifft eine Bimetall-Scheibe, die sich heiß verbiegt und den Strom abschaltet.",
+            "2000 Joule pro Sekunde: genug, um einen Liter um ein halbes Grad zu erwärmen."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Stromsockel"
+              },
+              {
+                "label": "Stromkontakt"
+              },
+              {
+                "label": "Kabel"
+              },
+              {
+                "label": "Kessel"
+              },
+              {
+                "label": "Boden"
+              },
+              {
+                "label": "Heizelement"
+              },
+              {
+                "label": "Wasser"
+              },
+              {
+                "label": "Deckel"
+              },
+              {
+                "label": "Deckelknopf"
+              },
+              {
+                "label": "Ausguss"
+              },
+              {
+                "label": "Griff"
+              },
+              {
+                "label": "Dampfkanal"
+              },
+              {
+                "label": "Dampfschalter"
+              },
+              {
+                "label": "Bimetall-Scheibe"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "Heizleistung",
+                  "unit": "W"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -718,6 +1125,125 @@
               "label": "Dieselben Schlüssel schwingen auf dem Mond in",
               "unit": "s"
             }
+          }
+        },
+        "explore": {
+          "title": "So funktioniert es",
+          "captions": [
+            "Schlüssel an einem Band schwingen im gleichen Takt, ob weit oder kurz.",
+            "Nur drei Dinge zählen hier: der Drehpunkt, die Länge des Bandes und die Schwerkraft.",
+            "Die Schwerkraft zieht die Schlüssel zur Mitte zurück, beim Fallen werden sie schneller.",
+            "Unten sind sie am schnellsten, schwingen darüber hinaus und werden oben langsamer.",
+            "Schwerere Schlüssel schwingen gleich schnell; nur die Länge ändert den Takt.",
+            "25 cm Band: Ein Schwung hin und zurück dauert etwa eine Sekunde."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Wandhaken"
+              },
+              {
+                "label": "Drehpunkt"
+              },
+              {
+                "label": "Band"
+              },
+              {
+                "label": "Schlüsselring"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Wandhaken"
+              },
+              {
+                "label": "Drehpunkt"
+              },
+              {
+                "label": "Gleiche Länge"
+              },
+              {
+                "label": "Schlüsselring"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Schwerere Schlüssel"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Anhänger"
+              },
+              {
+                "label": "Band"
+              },
+              {
+                "label": "Schlüsselring"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Hier loslassen"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Band"
+              },
+              {
+                "label": "Schlüsselring"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Stoppt, kehrt um"
+              },
+              {
+                "label": "Schlüssel"
+              },
+              {
+                "label": "Schwingbahn"
+              }
+            ],
+            "beats": [
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "25 cm"
+                  },
+                  {}
+                ]
+              },
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "ein Schwung hin und zurück",
+                  "unit": "s"
+                }
+              }
+            ]
           }
         }
       }
@@ -862,6 +1388,118 @@
               "unit": "Sekunden"
             }
           }
+        },
+        "explore": {
+          "title": "So funktioniert es",
+          "captions": [
+            "Ein Handy packt Computer, Funk und Akku in weniger als einen Zentimeter.",
+            "Unter dem Glas: ein Touch-Raster, ein selbstleuchtendes Display, eine Platine, ein Akku.",
+            "Dein Finger verändert das elektrische Feld an den Kreuzungen des Rasters, so weiß das Handy, wo.",
+            "Jedes OLED-Pixel leuchtet selbst; ein schwarzes Pixel ist einfach ausgeschaltet.",
+            "Lithium-Ionen wandern im Akku und treiben Strom durch die Chips.",
+            "15 Wattstunden im vollen Akku: Ein 2-kW-Kocher braucht dafür 28 Sekunden."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Rückglas"
+              },
+              {
+                "label": "Kamera"
+              },
+              {
+                "label": "Kameralinse"
+              },
+              {
+                "label": "Kameralinse"
+              },
+              {
+                "label": "Ladespule"
+              },
+              {
+                "label": "Rahmen"
+              },
+              {
+                "label": "Lautstärketasten"
+              },
+              {
+                "label": "Lautstärketasten"
+              },
+              {
+                "label": "Akku"
+              },
+              {
+                "label": "Platine"
+              },
+              {
+                "label": "Prozessor"
+              },
+              {
+                "label": "Speicher"
+              },
+              {
+                "label": "Funkchip"
+              },
+              {
+                "label": "Display"
+              },
+              {
+                "label": "Leuchtendes Pixel"
+              },
+              {
+                "label": "Leuchtendes Pixel"
+              },
+              {
+                "label": "Leuchtendes Pixel"
+              },
+              {
+                "label": "Pixel aus"
+              },
+              {
+                "label": "Touch-Raster"
+              },
+              {
+                "label": "Touch-Raster"
+              },
+              {
+                "label": "Touch-Raster"
+              },
+              {
+                "label": "Touch-Raster"
+              },
+              {
+                "label": "Touch-Raster"
+              },
+              {
+                "label": "Touch-Raster"
+              },
+              {
+                "label": "Touch-Raster"
+              },
+              {
+                "label": "Deckglas"
+              },
+              {
+                "label": "Finger"
+              },
+              {
+                "label": "Fingernagel"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "Energie im vollen Akku",
+                  "unit": "Wh"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -982,6 +1620,88 @@
               "label": "Silber leitet Wärme besser als Stahl um",
               "unit": "Mal"
             }
+          }
+        },
+        "explore": {
+          "title": "So funktioniert es",
+          "captions": [
+            "Ein Metalllöffel im heißen Tee: Der Griff wird bald heiß.",
+            "Die Wärme muss vom Tee durch den Löffelkopf und den Griff hoch bis zu den Fingern.",
+            "Heißer Tee bringt die Atome des Metalls zum Zittern; freie Elektronen tragen es schnell weiter.",
+            "Holz hat keine freien Elektronen, die Wärme kriecht im Holzlöffel viel langsamer.",
+            "100 mal: So viel schneller leitet Stahl die Wärme als Holz.",
+            "Darum sind Pfannengriffe aus Holz oder Kunststoff, und gute Pfannen haben Kupferböden."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Tasse"
+              },
+              {
+                "label": "Tassengriff"
+              },
+              {
+                "label": "Heißer Tee"
+              },
+              {
+                "label": "Löffelkopf"
+              },
+              {
+                "label": "Stahl"
+              },
+              {
+                "label": "Griff"
+              },
+              {
+                "label": "Dein Finger"
+              },
+              {
+                "label": "Dein Finger"
+              },
+              {
+                "label": "Nagel"
+              },
+              {
+                "label": "Tasse"
+              },
+              {
+                "label": "Tassengriff"
+              },
+              {
+                "label": "Heißer Tee"
+              },
+              {
+                "label": "Holz-Löffelkopf"
+              },
+              {
+                "label": "Holz"
+              },
+              {
+                "label": "Kochtopf"
+              },
+              {
+                "label": "Kupferboden"
+              },
+              {
+                "label": "Stahlhalter"
+              },
+              {
+                "label": "Holzgriff"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "Stahl gegenüber Holz",
+                  "unit": "mal"
+                }
+              },
+              {}
+            ]
           }
         }
       }

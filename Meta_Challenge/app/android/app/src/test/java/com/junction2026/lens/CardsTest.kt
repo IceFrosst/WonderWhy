@@ -34,7 +34,11 @@ class CardsTest {
         return OfflineCards.parse(base.toString())
     }
 
-    private fun tracksOf(o: OfflineObject) = DetectionParser.tracks(OfflineConvert.toDetection(OfflineCards.toDetect(o)))
+    /** Tracks as a saved card opens them: with the bundled stills, so an Explore lens (when it has media) comes first. */
+    private fun tracksOf(o: OfflineObject): List<Track> {
+        val manifest = appFile("bridge/media").resolve("${o.id}/manifest.json").takeIf { it.isFile }?.readText()
+        return DetectionParser.tracks(OfflineConvert.toDetection(OfflineCards.toDetect(o), OfflineConvert.media(o.id, manifest)))
+    }
 
     @Test fun consentWordsWithinStateCardCaps() {
         for (tag in listOf("en", "fi")) {

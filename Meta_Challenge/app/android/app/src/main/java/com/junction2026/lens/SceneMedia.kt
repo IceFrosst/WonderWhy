@@ -26,6 +26,9 @@ class SceneMedia(
     private val frames = HashSet<String>()
     private val failed = HashSet<String>()
     private val inflight = HashMap<String, Deferred<Bitmap?>>()
+    /** Explore stills: the drawn box cut from the whole frame, and the frame's width (anchors are in it). */
+    private val whole = HashMap<String, Pair<CropBox, Int>>()
+    private val texts = HashMap<String, String?>()
 
     fun cached(path: String): Bitmap? = cache[path]
     fun hasFailed(path: String): Boolean = path in failed
@@ -37,11 +40,21 @@ class SceneMedia(
         val d = inflight.getOrPut(path) {
             scope.async {
                 var frame = false
+                var box: Pair<CropBox, Int>? = null
                 val bmp = try {
                     withContext(Dispatchers.IO) {
                         load(path)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.let { src ->
-                            frame = StillFrame.isFrame(src.width, src.height)
-                            if (frame) stage(src, headlineOnly(path)) else src
+                            if (StillFrame.isWhole(path)) {
+                                // Explore: the whole frame, only the black around the drawing goes.
+                                val px = IntArray(src.width * src.height)
+                                src.getPixels(px, 0, src.width, 0, 0, src.width, src.height)
+                                val c = StillFrame.drawnBox(px, src.width, src.height)
+                                box = c to src.width
+                                Bitmap.createBitmap(src, c.left, c.top, c.width, c.height)
+                            } else {
+                                frame = StillFrame.isFrame(src.width, src.height)
+                                if (frame) stage(src, headlineOnly(path)) else src
+                            }
                         }
                     }
                 } catch (e: CancellationException) {
@@ -50,7 +63,7 @@ class SceneMedia(
                     null
                 }
                 inflight.remove(path)
-                if (bmp != null) { cache[path] = bmp; if (frame) frames += path } else failed += path
+                if (bmp != null) { cache[path] = bmp; if (frame) frames += path; box?.let { whole[path] = it } } else failed += path
                 bmp
             }
         }
@@ -93,6 +106,30 @@ class SceneMedia(
         return out
     }
 
+    /**
+     * An Explore beat on the card: the whole still (black trimmed), with [beat]'s labels and number drawn
+     * over it, on a [CARD_PX]x[heightPx] band (shown 1:1, so text sizes are display px). Null until loaded.
+     */
+    fun exploreForCard(path: String, heightPx: Int, beat: ExploreBeat?): Bitmap? {
+        val piece = cache[path] ?: return null
+        val (box, size) = whole[path] ?: return null
+        return ExploreFrame.render(piece, box, size, CARD_PX, heightPx, beat)
+    }
+
+    /** A small text file (an Explore `tracks.json`) through the same loader, once; null when it cannot be read. */
+    suspend fun text(path: String): String? {
+        if (texts.containsKey(path)) return texts[path]
+        val t = try {
+            withContext(Dispatchers.IO) { load(path)?.toString(Charsets.UTF_8) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        texts[path] = t
+        return t
+    }
+
     private companion object { const val CARD_PX = 552 }
 
     /** Drop everything (new detection, disconnect). */
@@ -102,6 +139,8 @@ class SceneMedia(
         cache.clear()
         frames.clear()
         failed.clear()
+        whole.clear()
+        texts.clear()
     }
 }
 

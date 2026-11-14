@@ -59,8 +59,11 @@ class OfflinePickerTest {
             val v = DetectionParser.verdict(det)
             assertTrue("${o.id}: $v", v is Verdict.Explainer)
             val tracks = (v as Verdict.Explainer).tracks
-            assertEquals(o.lenses.size.coerceAtMost(DetectionParser.MAX_LENSES), tracks.size)
-            assertEquals(o.lenses.first().steps, tracks.first().steps)
+            // No media here: an Explore lens is skipped (as the Web App does), the 2D lenses follow in order.
+            val twoD = o.lenses.filter { it.kind != Explore.KIND }
+            assertEquals(twoD.size.coerceAtMost(DetectionParser.MAX_LENSES), tracks.size)
+            assertEquals(twoD.first().steps, tracks.first().steps)
+            assertTrue(tracks.none { Explore.isExplore(it.lensId) })
             // The explainer state machine accepts it and steps to the end.
             var s = ExplainerState(tracks)
             repeat(20) { s = s.next() }
@@ -68,14 +71,28 @@ class OfflinePickerTest {
         }
     }
 
-    /** Every track has a title; the ball keeps its first two lenses first; never more than 5 (DESIGN lens bar). */
+    /**
+     * Every track has a title; never more than 5 (DESIGN lens bar). Without media the ball opens on its first
+     * 2D lenses; with the bundled stills (the saved-card path) its Explore lens comes first, then those.
+     */
     @Test fun ballLensesHaveTitles() {
-        val det = OfflineConvert.toDetection(OfflineCards.toDetect(objs.getValue("ball")))
+        val ball = objs.getValue("ball")
+        val det = OfflineConvert.toDetection(OfflineCards.toDetect(ball))
         val tracks = DetectionParser.tracks(det)
         assertTrue(tracks.all { it.title.isNotBlank() })
         assertEquals(listOf("Projectile motion", "Bounce"), tracks.take(2).map { it.title })
         assertEquals(listOf("ball.motion", "ball.compare"), tracks.take(2).map { it.lensId })
         assertTrue(tracks.size in 2..DetectionParser.MAX_LENSES)
+
+        val media = OfflineConvert.media("ball", appFile("bridge/media/ball/manifest.json").readText())
+        val withMedia = DetectionParser.tracks(OfflineConvert.toDetection(OfflineCards.toDetect(ball), media))
+        assertTrue(withMedia.all { it.title.isNotBlank() })
+        assertTrue(withMedia.size in 3..DetectionParser.MAX_LENSES)
+        if (ball.lenses.first().kind == Explore.KIND) {
+            assertEquals("ball.explore", withMedia.first().lensId)
+            assertEquals(ball.lenses.first().title, withMedia.first().title)
+            assertEquals(listOf("ball.motion", "ball.compare"), withMedia.drop(1).take(2).map { it.lensId })
+        }
     }
 
     @Test fun blankLensTitleFallsBackToKindName() {

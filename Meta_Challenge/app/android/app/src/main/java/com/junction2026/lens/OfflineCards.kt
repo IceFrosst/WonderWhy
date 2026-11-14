@@ -11,6 +11,8 @@ data class OfflineLens(
     val title: String,
     val lead: String?,
     val steps: List<String>,
+    /** Explore chapter only: its spec's text (part ids and labels, beat numbers) in the library's language. */
+    val explore: ExploreSpec? = null,
 )
 
 /** One library object from the bundled objects.json. */
@@ -66,6 +68,7 @@ object OfflineCards {
                             title = c.optString("title"),
                             lead = c.optString("lead").ifEmpty { null },
                             steps = steps,
+                            explore = if (kind == Explore.KIND) Explore.specFromJson(c.optJSONObject("spec")?.toString()) else null,
                         )
                     )
                 }

@@ -141,6 +141,8 @@ object Cards {
         sketch: Boolean = false,
         /** Answer from a dev-only stand-in model (PROTOCOL `standIn`): tag on the overview. */
         standIn: Boolean = false,
+        /** Words drawn in [still] (an Explore beat's number and labels), for the phone's text mirror. */
+        stillAlt: String? = null,
     ): CardSpec {
         val primary = when {
             s.isOverview -> t(Lang.SHOW_STEPS)
@@ -156,12 +158,12 @@ object Cards {
             if (s.isOverview) {
                 if (saved) metaMuted(t(Lang.OFFLINE))
                 if (standIn) metaMuted(t(Lang.STAND_IN))
-                if (still != null) picture(still)
+                if (still != null) picture(still, stillAlt)
                 if (!summary.isNullOrBlank()) body(summary)
                 if (!answer.isNullOrBlank() && answer != summary) muted(answer)
                 metaMuted(overviewHint(s))
             } else {
-                if (still != null) picture(still)
+                if (still != null) picture(still, stillAlt)
                 // The counter is text, never colour alone; "Step 1/3" is the only counter on the card.
                 body(stepCaption(s))
                 if (many) metaMuted(lensBar(s))

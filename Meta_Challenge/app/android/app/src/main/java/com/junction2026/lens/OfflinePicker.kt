@@ -28,7 +28,8 @@ object OfflineConvert {
         summary = d.summary.ifBlank { null },
         steps = d.steps,
         lenses = d.lenses.map {
-            Lens(id = it.id, kind = it.kind, title = it.title.ifBlank { DetectionParser.kindName(it.kind) }, lead = it.lead, steps = it.steps)
+            Lens(id = it.id, kind = it.kind, title = it.title.ifBlank { DetectionParser.kindName(it.kind) }, lead = it.lead, steps = it.steps,
+                exploreText = it.explore)
         },
         media = media,
     )
@@ -36,15 +37,19 @@ object OfflineConvert {
     /**
      * Stills bundled in the APK (`assets/media/<id>/`, copied from `bridge/media/` at build time): the
      * object's `manifest.json` as a `media` block with base `/media/<id>`. Null when it has no stills.
+     * An Explore entry keeps its text-free stills (`clean`) and `tracks`; its clips are never bundled.
      */
     fun media(objectId: String, manifestText: String?): Media? {
         if (manifestText.isNullOrBlank()) return null
         val lenses = runCatching { org.json.JSONObject(manifestText).optJSONObject("lenses") }.getOrNull() ?: return null
         val out = LinkedHashMap<String, LensMedia>()
         for (key in lenses.keys()) {
-            val arr = lenses.optJSONObject(key)?.optJSONArray("stills") ?: continue
-            val stills = (0 until arr.length()).mapNotNull { arr.optString(it).trim().ifEmpty { null } }
-            if (stills.isNotEmpty()) out[key] = LensMedia(stills, null)
+            val lm = lenses.optJSONObject(key) ?: continue
+            fun list(name: String): List<String> = lm.optJSONArray(name)?.let { arr -> (0 until arr.length()).mapNotNull { arr.optString(it).trim().ifEmpty { null } } }.orEmpty()
+            val stills = list("stills")
+            val clean = if (Explore.isExplore(key)) list("clean") else emptyList()
+            val tracks = lm.optString("tracks").trim().ifEmpty { null }?.takeIf { Explore.isExplore(key) }
+            if (stills.isNotEmpty() || clean.isNotEmpty()) out[key] = LensMedia(stills, null, clean, tracks)
         }
         return if (out.isEmpty()) null else Media("/media/$objectId", out)
     }

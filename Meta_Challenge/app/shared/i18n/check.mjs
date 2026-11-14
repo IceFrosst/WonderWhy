@@ -11,7 +11,7 @@ const MAX_GROWTH = 1.4;
 const CAPTION_GROWTH = 1.3; // a caption may be at most 30% longer than the English
 const NUM = /\d+(?:\.\d+)?/g;
 const MOJIBAKE = ['Ã', 'Â', 'â€'];
-const LENSES = ['motion', 'inside', 'cutaway', 'flow', 'zoom', 'whatif', 'compare', 'number'];
+const LENSES = ['explore', 'motion', 'inside', 'cutaway', 'flow', 'zoom', 'whatif', 'compare', 'number'];
 
 let bad = 0;
 const files = readdirSync(dir).filter((f) => /^[a-z]{2,3}\.json$/.test(f)).sort();
@@ -97,6 +97,17 @@ for (const f of files) {
           x: { label: spec.x.label }, y: { label: spec.y.label },
           series: (spec.series || []).map((series) => ({ name: series.name })),
           marks: (spec.marks || []).map((mark) => ({ label: mark.label })),
+        };
+        if (Array.isArray(spec.parts) && Array.isArray(spec.beats)) return {
+          // model3d (Explore): only text the glasses show: part labels, the number's label and unit, dim text.
+          // Arrays keep the English positions (mergeSpecText merges by index); {} where there is no text.
+          parts: spec.parts.map((part) => (part.label ? { label: part.label } : {})),
+          beats: spec.beats.map((beat) => {
+            const result = {};
+            if (beat.number) result.number = Object.fromEntries(['label', 'unit'].filter((key) => beat.number[key]).map((key) => [key, beat.number[key]]));
+            if ((beat.fx || []).some((fx) => fx.type === 'dim' && fx.text)) result.fx = beat.fx.map((fx) => (fx.type === 'dim' && fx.text ? { text: fx.text } : {}));
+            return result;
+          }),
         };
         if (spec.levels) return {
           levels: spec.levels.map((level) => Object.fromEntries(['label', 'times'].filter((key) => key in level).map((key) => [key, level[key]]))),

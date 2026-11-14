@@ -10,7 +10,8 @@
     "zoom": "Zoom",
     "whatif": "Tänk om",
     "compare": "Jämför",
-    "number": "Talet"
+    "number": "Talet",
+    "explore": "Utforska"
   },
   "objects": {
     "guitar": {
@@ -146,6 +147,125 @@
               "label": "Stämton A, två oktaver upp",
               "unit": "Hz"
             }
+          }
+        },
+        "explore": {
+          "title": "Så fungerar det",
+          "captions": [
+            "Knäpp på en sträng så sjunger hela gitarren. Ljudet börjar i strängen.",
+            "En gitarr är sex strängar över en ihålig trälåda med tunt lock.",
+            "En knäppt sträng svänger hundratals gånger per sekund men rör lite luft.",
+            "Strängen skakar stallet, stallet skakar det stora locket, och locket knuffar luft.",
+            "Ett tryck på ett band gör strängen kortare, så den svänger fortare och tonen höjs.",
+            "110 svängningar per sekund: den öppna A-strängen. Band 12 halverar längden: 220."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Resonanslåda"
+              },
+              {
+                "label": "Tunt lock"
+              },
+              {
+                "label": "Ljudhål"
+              },
+              {
+                "label": "Stall"
+              },
+              {
+                "label": "Hals"
+              },
+              {
+                "label": "Huvud"
+              },
+              {
+                "label": "Kam"
+              },
+              {
+                "label": "Stämskruv"
+              },
+              {
+                "label": "Stämskruv"
+              },
+              {
+                "label": "Stämskruv"
+              },
+              {
+                "label": "Stämskruv"
+              },
+              {
+                "label": "Stämskruv"
+              },
+              {
+                "label": "Stämskruv"
+              },
+              {
+                "label": "Band 1"
+              },
+              {
+                "label": "Band 2"
+              },
+              {
+                "label": "Band 3"
+              },
+              {
+                "label": "Band 4"
+              },
+              {
+                "label": "Band 5"
+              },
+              {
+                "label": "Band 6"
+              },
+              {
+                "label": "Band 7"
+              },
+              {
+                "label": "Band 8"
+              },
+              {
+                "label": "Band 9"
+              },
+              {
+                "label": "Band 10"
+              },
+              {
+                "label": "Band 11"
+              },
+              {
+                "label": "Band 12"
+              },
+              {
+                "label": "Sex strängar"
+              },
+              {
+                "label": "A-sträng"
+              },
+              {
+                "label": "Svängande del"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {},
+                  {
+                    "text": "49 cm"
+                  }
+                ]
+              },
+              {
+                "number": {
+                  "label": "öppen A-sträng",
+                  "unit": "Hz"
+                }
+              }
+            ]
           }
         }
       }
@@ -298,6 +418,109 @@
               "unit": "m"
             }
           }
+        },
+        "explore": {
+          "title": "Så fungerar det",
+          "captions": [
+            "Varje kastad boll böjer ner mot marken. Två krafter formar hela flygningen.",
+            "Inuti skalet: en gummiblåsa med luft under högre tryck än omgivningen.",
+            "Tyngdkraften drar hela tiden nedåt, så uppåtfarten krymper, stannar och vänder.",
+            "Luften trycker mot rörelsen och stjäl fart, så ett verkligt kast landar kortare.",
+            "Vid studsen fungerar den hoptryckta luften som en fjäder och slår bollen uppåt.",
+            "Kastad med 10 meter per sekund och 45 grader landar den cirka 10 meter bort."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Skal"
+              },
+              {
+                "label": "Skal"
+              },
+              {
+                "label": "Söm"
+              },
+              {
+                "label": "Ventil"
+              },
+              {
+                "label": "Söm"
+              },
+              {
+                "label": "Söm"
+              },
+              {
+                "label": "Söm"
+              },
+              {
+                "label": "Söm"
+              },
+              {
+                "label": "Söm"
+              },
+              {
+                "label": "Söm"
+              },
+              {
+                "label": "Gummiblåsa"
+              },
+              {
+                "label": "Mark"
+              },
+              {
+                "label": "Kastlängd"
+              },
+              {
+                "label": "Kontaktyta"
+              },
+              {
+                "label": "Boll i flykt"
+              },
+              {
+                "label": "Boll i flykt"
+              },
+              {
+                "label": "Utan luft"
+              },
+              {
+                "label": "Landning"
+              },
+              {
+                "label": "Hoptryckt luft"
+              },
+              {
+                "label": "Med luft"
+              },
+              {
+                "label": "Tyngdkraft"
+              },
+              {
+                "label": "Hastighet"
+              },
+              {
+                "label": "Luftmotstånd"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "kastlängd vid 10 m/s, utan luft",
+                  "unit": "m"
+                },
+                "fx": [
+                  {
+                    "text": "10.2 m"
+                  },
+                  {}
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -434,6 +657,120 @@
               "label": "Låg växel, 34 och 34: tre gånger kraften, men bara",
               "unit": "m/varv"
             }
+          }
+        },
+        "explore": {
+          "title": "Så fungerar det",
+          "captions": [
+            "Ett varv på pedalerna kan föra en cykel över sex meter. Växlarna avgör hur långt.",
+            "Pedalerna vrider en stor kedjekrans; kedjan för rörelsen till ett litet bakre tandhjul.",
+            "48 tänder fram, 16 bak: bakhjulet snurrar tre varv per pedalvarv.",
+            "Priset: hjulet snurrar fortare, men däcket trycker mot vägen mycket svagare.",
+            "Varje hjulvarv rullar cirka 2.1 meter, så ett pedalvarv tar dig 6.3 meter.",
+            "Med 80 pedalvarv i minuten blir det 30 kilometer i timmen."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Kedjekrans, 48 tänder"
+              },
+              {
+                "label": "Vevaxel"
+              },
+              {
+                "label": "Vevarm"
+              },
+              {
+                "label": "Pedal"
+              },
+              {
+                "label": "Vänster vevarm"
+              },
+              {
+                "label": "Vänster pedal"
+              },
+              {
+                "label": "Kedja"
+              },
+              {
+                "label": "Bakre tandhjul, 16 tänder"
+              },
+              {
+                "label": "Bakhjul"
+              },
+              {
+                "label": "Däck"
+              },
+              {
+                "label": "Nav"
+              },
+              {
+                "label": "Eker"
+              },
+              {
+                "label": "Eker"
+              },
+              {
+                "label": "Eker"
+              },
+              {
+                "label": "Eker"
+              },
+              {
+                "label": "Kedjestag"
+              },
+              {
+                "label": "Sadelstag"
+              },
+              {
+                "label": "Sadelrör"
+              },
+              {
+                "label": "Överrör"
+              },
+              {
+                "label": "Underrör"
+              },
+              {
+                "label": "Framgaffel"
+              },
+              {
+                "label": "Styre"
+              },
+              {
+                "label": "Sadel"
+              },
+              {
+                "label": "Framhjul"
+              },
+              {
+                "label": "Framdäck"
+              },
+              {
+                "label": "2.1 m"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "ett hjulvarv"
+                  },
+                  {},
+                  {}
+                ]
+              },
+              {
+                "number": {
+                  "label": "framåt per pedalvarv",
+                  "unit": "m"
+                }
+              }
+            ]
           }
         }
       }
@@ -586,6 +923,76 @@
               "unit": "L"
             }
           }
+        },
+        "explore": {
+          "title": "Så fungerar det",
+          "captions": [
+            "En vattenkokare får en liter vatten att koka på ungefär tre minuter.",
+            "Inuti: ett värmeelement under botten, vattnet och en ångbrytare.",
+            "Ström som tvingas genom elementets motstånd gör elenergi till värme.",
+            "Vatten vid den heta botten utvidgas, blir lättare och stiger; kallare vatten sjunker.",
+            "Ångan når en bimetallskiva som böjs när den blir het och slår av strömmen.",
+            "2000 joule varje sekund: nog för att värma en liter en halv grad."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Sockel"
+              },
+              {
+                "label": "Kontakt"
+              },
+              {
+                "label": "Sladd"
+              },
+              {
+                "label": "Kanna"
+              },
+              {
+                "label": "Botten"
+              },
+              {
+                "label": "Värmeelement"
+              },
+              {
+                "label": "Vatten"
+              },
+              {
+                "label": "Lock"
+              },
+              {
+                "label": "Lockknopp"
+              },
+              {
+                "label": "Pip"
+              },
+              {
+                "label": "Handtag"
+              },
+              {
+                "label": "Ångkanal"
+              },
+              {
+                "label": "Ångbrytare"
+              },
+              {
+                "label": "Bimetallskiva"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "värmeeffekt",
+                  "unit": "W"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -718,6 +1125,125 @@
               "label": "Samma nycklar på Månen svänger på",
               "unit": "s"
             }
+          }
+        },
+        "explore": {
+          "title": "Så fungerar det",
+          "captions": [
+            "Nycklar som svänger i ett band håller jämn takt, med stora svängar eller små.",
+            "Bara tre saker spelar roll här: upphängningen, bandets längd och tyngdkraften.",
+            "Tyngdkraften drar nycklarna mot mitten, så de ökar farten när de faller.",
+            "Längst ner går de fortast, åker förbi, stiger på andra sidan och stannar.",
+            "Tyngre nycklar svänger lika fort; bara längden ändrar takten.",
+            "25 cm band: en sväng fram och tillbaka tar ungefär en sekund."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Väggkrok"
+              },
+              {
+                "label": "Svängpunkt"
+              },
+              {
+                "label": "Nyckelband"
+              },
+              {
+                "label": "Nyckelring"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Nycklar"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Väggkrok"
+              },
+              {
+                "label": "Svängpunkt"
+              },
+              {
+                "label": "Samma längd"
+              },
+              {
+                "label": "Nyckelring"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Tyngre nycklar"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Nyckelbricka"
+              },
+              {
+                "label": "Nyckelband"
+              },
+              {
+                "label": "Nyckelring"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Släpps här"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Nyckelband"
+              },
+              {
+                "label": "Nyckelring"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Stannar, vänder"
+              },
+              {
+                "label": "Nyckel"
+              },
+              {
+                "label": "Svängbana"
+              }
+            ],
+            "beats": [
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "25 cm"
+                  },
+                  {}
+                ]
+              },
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "en sväng, fram och tillbaka",
+                  "unit": "s"
+                }
+              }
+            ]
           }
         }
       }
@@ -862,6 +1388,118 @@
               "unit": "sekunder"
             }
           }
+        },
+        "explore": {
+          "title": "Så fungerar det",
+          "captions": [
+            "En telefon rymmer en dator, en radio och ett batteri på under en centimeter.",
+            "Under glaset: ett pekrutnät, en skärm som gör eget ljus, ett kretskort och ett batteri.",
+            "Ditt finger ändrar det elektriska fältet där trådarna korsar, så telefonen vet var.",
+            "Varje OLED-pixel gör sitt eget ljus; en svart pixel är helt enkelt avstängd.",
+            "Litiumjoner rör sig i batteriet och pressar ström genom chippen.",
+            "15 wattimmar i fullt batteri: en kokare på 2 kW drar det på 28 sekunder."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Baksida av glas"
+              },
+              {
+                "label": "Kamera"
+              },
+              {
+                "label": "Kameralins"
+              },
+              {
+                "label": "Kameralins"
+              },
+              {
+                "label": "Laddspole"
+              },
+              {
+                "label": "Ram"
+              },
+              {
+                "label": "Volymknappar"
+              },
+              {
+                "label": "Volymknappar"
+              },
+              {
+                "label": "Batteri"
+              },
+              {
+                "label": "Kretskort"
+              },
+              {
+                "label": "Processor"
+              },
+              {
+                "label": "Minne"
+              },
+              {
+                "label": "Radiochip"
+              },
+              {
+                "label": "Skärm"
+              },
+              {
+                "label": "Tänd pixel"
+              },
+              {
+                "label": "Tänd pixel"
+              },
+              {
+                "label": "Tänd pixel"
+              },
+              {
+                "label": "Släckt pixel"
+              },
+              {
+                "label": "Pekrutnät"
+              },
+              {
+                "label": "Pekrutnät"
+              },
+              {
+                "label": "Pekrutnät"
+              },
+              {
+                "label": "Pekrutnät"
+              },
+              {
+                "label": "Pekrutnät"
+              },
+              {
+                "label": "Pekrutnät"
+              },
+              {
+                "label": "Pekrutnät"
+              },
+              {
+                "label": "Täckglas"
+              },
+              {
+                "label": "Finger"
+              },
+              {
+                "label": "Fingernagel"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "energi i fullt batteri",
+                  "unit": "Wh"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -982,6 +1620,88 @@
               "label": "Silver leder värme bättre än stål med",
               "unit": "gånger"
             }
+          }
+        },
+        "explore": {
+          "title": "Så fungerar det",
+          "captions": [
+            "Lämna en metallsked i hett te så blir skaftet snart varmt.",
+            "Värmen måste färdas från teet, genom skedbladet, upp i skaftet till fingrarna.",
+            "Hett te skakar metallens atomer; fria elektroner för skakningen snabbt upp i skaftet.",
+            "Trä har inga fria elektroner, så värmen kryper mycket långsammare längs en träsked.",
+            "100 gånger: så mycket snabbare går värme genom stål än genom trä.",
+            "Därför har kastruller handtag av trä eller plast, och bra kastruller kopparbotten."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Mugg"
+              },
+              {
+                "label": "Muggens handtag"
+              },
+              {
+                "label": "Hett te"
+              },
+              {
+                "label": "Skedblad"
+              },
+              {
+                "label": "Stål"
+              },
+              {
+                "label": "Skaft"
+              },
+              {
+                "label": "Ditt finger"
+              },
+              {
+                "label": "Ditt finger"
+              },
+              {
+                "label": "Nagel"
+              },
+              {
+                "label": "Mugg"
+              },
+              {
+                "label": "Muggens handtag"
+              },
+              {
+                "label": "Hett te"
+              },
+              {
+                "label": "Skedblad av trä"
+              },
+              {
+                "label": "Trä"
+              },
+              {
+                "label": "Kastrull"
+              },
+              {
+                "label": "Kopparbotten"
+              },
+              {
+                "label": "Stålfäste"
+              },
+              {
+                "label": "Trähandtag"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "stål jämfört med trä",
+                  "unit": "gånger"
+                }
+              },
+              {}
+            ]
           }
         }
       }

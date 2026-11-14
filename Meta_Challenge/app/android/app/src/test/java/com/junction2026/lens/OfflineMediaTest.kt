@@ -17,6 +17,10 @@ class OfflineMediaTest {
             assertEquals("/media/${o.id}", m.base)
             val det = OfflineConvert.toDetection(OfflineCards.toDetect(o), m)
             val tracks = DetectionParser.tracks(det)
+            // An Explore chapter with its bundled stills is the first lens (MODEL3D), as on the glasses Web App.
+            if (o.lenses.first().kind == Explore.KIND && m.lenses["${o.id}.explore"]?.clean?.isNotEmpty() == true) {
+                assertEquals(o.id, "${o.id}.explore", tracks.first().lensId)
+            }
             // The first lens has a still for its first step, and every listed still exists on disk.
             val first = DetectionParser.stills(det, tracks.first().lensId)
             assertTrue(o.id, first.isNotEmpty())

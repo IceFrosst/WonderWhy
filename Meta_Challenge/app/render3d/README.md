@@ -17,7 +17,7 @@ Needs `ffmpeg` on PATH. The kettle (6 beats, 1224 frames) takes about **25 s** o
 ## Output (`bridge/media/<id>/explore/`)
 | File | What |
 |---|---|
-| `b<n>.mp4` | 600x600, 30 fps, H.264 yuv420p, `+faststart`, keyframe at `loopFrom`. 0.8 s move from beat n-1's rest state, then `dur` s of the beat. CRF starts at 20 and rises until the file is under 400 KB |
+| `b<n>.mp4` | 600x600, 30 fps, H.264 yuv420p, `+faststart`, keyframe at `loopFrom`. 0.8 s move from beat n-1's rest state, then `dur` s of the beat. CRF starts at 18 and rises only if the file is over 1 MB (`--crf`, `--max-kb` override both) |
 | `c<n>.png` | The frame at rest (t = `loopFrom`), text-free |
 | `s<n>.png` | The same frame with top line (object, beat dots), labels with leaders, number and caption |
 | `tracks.json` | `{objectId, size, fps, beats: [{dur, loopFrom, labels: [{part, side, focus, anchor: [[t, x, y], ...]}], number, dims?}]}`. `dur` is the clip length in seconds (move + beat `dur`); anchors are sampled at 10 Hz over the whole clip, in 600x600 pixels |

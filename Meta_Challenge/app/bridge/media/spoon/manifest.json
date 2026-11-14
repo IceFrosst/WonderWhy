@@ -1,6 +1,69 @@
 {
   "objectId": "spoon",
   "lenses": {
+    "spoon.explore": {
+      "kind": "explore",
+      "title": "How it works",
+      "beats": [
+        {
+          "clip": "explore/b1.mp4",
+          "still": "explore/s1.png",
+          "clean": "explore/c1.png"
+        },
+        {
+          "clip": "explore/b2.mp4",
+          "still": "explore/s2.png",
+          "clean": "explore/c2.png"
+        },
+        {
+          "clip": "explore/b3.mp4",
+          "still": "explore/s3.png",
+          "clean": "explore/c3.png"
+        },
+        {
+          "clip": "explore/b4.mp4",
+          "still": "explore/s4.png",
+          "clean": "explore/c4.png"
+        },
+        {
+          "clip": "explore/b5.mp4",
+          "still": "explore/s5.png",
+          "clean": "explore/c5.png"
+        },
+        {
+          "clip": "explore/b6.mp4",
+          "still": "explore/s6.png",
+          "clean": "explore/c6.png"
+        }
+      ],
+      "stills": [
+        "explore/s1.png",
+        "explore/s2.png",
+        "explore/s3.png",
+        "explore/s4.png",
+        "explore/s5.png",
+        "explore/s6.png"
+      ],
+      "clean": [
+        "explore/c1.png",
+        "explore/c2.png",
+        "explore/c3.png",
+        "explore/c4.png",
+        "explore/c5.png",
+        "explore/c6.png"
+      ],
+      "tracks": "explore/tracks.json",
+      "captions": [
+        "Leave a metal spoon in hot tea and the handle soon feels hot.",
+        "Heat must travel from the tea, through the bowl, up the handle to your fingers.",
+        "Hot tea shakes the metal's atoms; free electrons carry that shaking quickly up the handle.",
+        "Wood has no free electrons, so heat creeps along a wooden spoon far more slowly.",
+        "100 times: how much faster heat moves through steel than through wood.",
+        "That is why pan handles are wood or plastic, and good pans have copper bottoms."
+      ],
+      "size": 600,
+      "fps": 30
+    },
     "spoon.zoom": {
       "kind": "zoom",
       "title": "Zoom in",
