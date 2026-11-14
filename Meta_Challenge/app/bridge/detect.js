@@ -22,7 +22,9 @@ export function detectTimeout(env = process.env, provider = pickProvider(env)) {
   return Number(env.DETECT_TIMEOUT_MS) || (provider === 'claude' ? 60000 : provider === 'pi' ? 25000 : 8000);
 }
 
-export function buildPrompt(objects, question, hasFocus = false) {
+const LANGUAGE_NAMES = { fi: 'Finnish', sv: 'Swedish', de: 'German', es: 'Spanish', fr: 'French' };
+
+export function buildPrompt(objects, question, hasFocus = false, lang = 'en') {
   const list = objects.map((o) => `- ${o.id}: ${o.detect_hint}`).join('\n');
   const q = question
     ? `The wearer asked: "${question}". Put a reply in "answer": at most 2 short sentences, high-school level.`
@@ -32,11 +34,14 @@ export function buildPrompt(objects, question, hasFocus = false) {
 Classify the main object in image 2. Use image 1 only to understand what that object is. Ignore objects that are only in image 1, even if they are bigger or in the list.`
     : `You classify a photo from smart glasses against a closed set of objects.
 The wearer aims by looking: classify the object at or nearest the centre of the photo.`;
+  const language = LANGUAGE_NAMES[lang]
+    ? `\nWrite the "answer" field in ${LANGUAGE_NAMES[lang]}, and keep "objectId" exactly as listed.`
+    : '';
   return `${aim}
 Choose exactly one id, or "unknown" if it fits none:
 ${list}
 - unknown: anything else
-${q}
+${q}${language}
 Reply with strict JSON only, no markdown: {"objectId": string, "confidence": number 0-1, "answer": string}`;
 }
 
@@ -173,7 +178,7 @@ function callClaudeCli({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
 }
 
 /** Returns {objectId, confidence, answer, model, detectMs, provider}. Throws Error with .code on failure. */
-export async function detect({ imageBase64, focusBase64, question, forceObjectId, objects = loadObjects(), env = process.env, provider, timeoutMs }) {
+export async function detect({ imageBase64, focusBase64, question, forceObjectId, lang = 'en', objects = loadObjects(), env = process.env, provider, timeoutMs }) {
   const t0 = Date.now();
   if (forceObjectId) {
     if (!objects.some((o) => o.id === forceObjectId) && forceObjectId !== 'unknown') throw codeErr('detect_failed', `Unknown forceObjectId ${forceObjectId}`);
@@ -188,7 +193,7 @@ export async function detect({ imageBase64, focusBase64, question, forceObjectId
   if (!imageBase64) throw codeErr('detect_failed', 'No image supplied');
   if (prov === 'anthropic' && !env.ANTHROPIC_API_KEY) throw codeErr('detect_failed', 'ANTHROPIC_API_KEY not set');
   if (prov === 'gemini' && !env.GEMINI_API_KEY) throw codeErr('detect_failed', 'GEMINI_API_KEY not set');
-  const prompt = buildPrompt(objects, question, Boolean(focusBase64));
+  const prompt = buildPrompt(objects, question, Boolean(focusBase64), lang);
   const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : prov === 'claude' ? callClaudeCli : callGemini;
   const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs });
   const parsed = parseModelJson(text, objects);

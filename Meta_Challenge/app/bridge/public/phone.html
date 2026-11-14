@@ -22,10 +22,10 @@ iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:6px;ba
 <section><h2>Camera</h2>
 <video id="v" autoplay playsinline muted></video>
 <button class="big" id="cap">Pinch / capture (Space)</button>
-<div class="row"><label>Size <select id="size"><option value="360x640">LOW 360x640</option><option value="504x896" selected>MEDIUM 504x896</option><option value="720x1280">HIGH 720x1280</option></select></label></div>
+<div class="row"><label>Size <select id="size"><option value="360x640">LOW 360x640</option><option value="504x896" selected>MEDIUM 504x896</option><option value="720x1280">HIGH 720x1280</option></select></label><label>Language <select id="lang"><option value="en">en</option><option value="fi">fi</option><option value="sv">sv</option><option value="de">de</option><option value="es">es</option><option value="fr">fr</option></select></label></div>
 <div class="row"><input type="text" id="q" placeholder="Optional question (stands in for speech)"></div>
-<div class="row"><label>Simulated glasses→phone delay <b id="dl">0</b> ms</label><input type="range" id="delay" min="0" max="3000" step="50" value="0"></div>
-<div id="status">Starting…</div></section>
+<div class="row"><label>Simulated glasses&rarr;phone delay <b id="dl">0</b> ms</label><input type="range" id="delay" min="0" max="3000" step="50" value="0"></div>
+<div id="status">Starting...</div></section>
 <section><h2>Force object (skips model)</h2><div class="row" id="objs"></div></section>
 <section><h2>Neural Band stand-in</h2><div class="row" id="nav"></div></section>
 <section><h2>Device state</h2><div class="row" id="dev"></div><div class="row"><button id="err">Send test error</button></div></section>
@@ -33,7 +33,7 @@ iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:6px;ba
 <div>
 <section><h2>Latency <span id="prov" style="text-transform:none"></span></h2>
 <div id="sum" style="margin-bottom:6px;font-size:12px"></div>
-<table><thead><tr><th>req</th><th>object</th><th>cap→recv</th><th>detect</th><th>det→render</th><th>total</th></tr></thead><tbody id="rows"></tbody></table></section>
+<table><thead><tr><th>req</th><th>object</th><th>cap&rarr;recv</th><th>detect</th><th>det&rarr;render</th><th>total</th></tr></thead><tbody id="rows"></tbody></table></section>
 <section><h2>Glasses mirror</h2>
 <div class="row"><input type="text" id="murl" value="/"><button id="mgo">Load</button></div>
 <iframe id="mirror" title="glasses preview"></iframe></section>
@@ -43,6 +43,9 @@ const $=id=>document.getElementById(id);
 const pageUrl=new URL(location.href);let tokenFromUrl=pageUrl.searchParams.get('k');
 if(tokenFromUrl!==null){localStorage.setItem('lens.token',tokenFromUrl);pageUrl.searchParams.delete('k');history.replaceState(null,'',pageUrl.pathname+pageUrl.search+pageUrl.hash);}
 const lensToken=localStorage.getItem('lens.token')||'';
+const savedLang=localStorage.getItem('lens.lang');
+if(['en','fi','sv','de','es','fr'].includes(savedLang))$('lang').value=savedLang;
+$('lang').onchange=()=>localStorage.setItem('lens.lang',$('lang').value);
 const authHeaders=h=>lensToken?{...h,'X-Lens-Token':lensToken}:h;
 const wsUrl=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
 let ws,locked=false;const rows=[];
@@ -74,8 +77,8 @@ async function capture(force){
  const img=force?null:grab();
  if(!force&&!img){$('status').innerHTML='<span class="bad">No camera frame</span>';busy=false;return;}
  const d=Number($('delay').value);if(d)await new Promise(r=>setTimeout(r,d));
- $('status').textContent='Sending…';
- try{const r=await fetch('/detect',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,t_capture,preUploadMs:Date.now()-t_capture})});
+ $('status').textContent='Sending\u2026';
+ try{const r=await fetch('/detect',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,lang:$('lang').value,t_capture,preUploadMs:Date.now()-t_capture})});
   const j=await r.json();
   if(!r.ok){$('status').innerHTML='<span class="bad">'+(j.error||r.status)+': '+(j.message||'')+'</span>';}
   else{$('status').innerHTML='<span class="ok">'+j.objectId+' ('+Math.round(j.confidence*100)+'%) via '+j.timings.model+'</span>'+(j.answer?' - '+j.answer:'');
@@ -85,7 +88,7 @@ async function capture(force){
  busy=false;}
 $('cap').onclick=()=>capture();
 addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();capture();}});
-const f=v=>v==null?'…':Math.round(v);
+const f=v=>v==null?'\u2026':Math.round(v);
 function render(){$('rows').innerHTML=rows.slice(-10).reverse().map(r=>`<tr><td>${r.reqId.slice(0,6)}</td><td>${r.objectId}</td><td>${f(r.captureToReceivedMs)}</td><td>${f(r.detectMs)}</td><td>${f(r.detectedToRenderedMs)}</td><td>${f(r.totalMs)}</td></tr>`).join('');}
 async function refreshSummary(){try{const s=await (await fetch('/latency',{headers:authHeaders({})})).json();
  const p=k=>`${k.replace('Ms','')}: p50 ${f(s[k].p50)} / p90 ${f(s[k].p90)}`;

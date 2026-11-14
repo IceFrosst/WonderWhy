@@ -11,6 +11,7 @@ const BODY_LIMIT = 5 * 1024 * 1024;
 const STAGES = ['captureToReceivedMs', 'detectMs', 'detectedToRenderedMs', 'totalMs'];
 const GLASSES_DIST = path.resolve(here, '..', 'glasses', 'dist');
 const MEDIA_EXTS = new Set(['.png', '.jpg', '.mp4', '.json', '.webp']);
+const LANGUAGES = new Set(['en', 'fi', 'sv', 'de', 'es', 'fr']);
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 
 function serveFile(root, rel, res, headers, cache, allowedExts) {
@@ -52,6 +53,16 @@ function sameToken(actual, expected) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+function normalizeLang(value) {
+  if (typeof value !== 'string') return 'en';
+  const lang = value.trim().toLowerCase().split(/[-_]/, 1)[0];
+  return LANGUAGES.has(lang) ? lang : 'en';
+}
+
+function record(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
 export function start({
   port = Number(process.env.PORT) || 8787,
   latencyLog = process.env.LATENCY_LOG || path.join(here, 'latency.jsonl'),
@@ -66,9 +77,12 @@ export function start({
   provider = pickProvider(),
   detectTimeoutMs = detectTimeout(process.env, provider),
   mediaRoot = path.join(here, 'media'),
+  i18nRoot = path.join(here, '..', 'shared', 'i18n'),
 } = {}) {
   const byId = Object.fromEntries(objects.map((o) => [o.id, o]));
   const mediaBase = path.resolve(mediaRoot);
+  const i18nBase = path.resolve(i18nRoot);
+  const translations = new Map();
   const originAllowlist = new Set(String(allowedOrigins).split(',').map((s) => s.trim()).filter(Boolean));
   const glasses = new Set(); const phones = new Set();
   const pending = new Map(); const records = []; const timers = new Set();
@@ -96,6 +110,56 @@ export function start({
   }
   const json = (req, res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', ...cors(req) }); res.end(JSON.stringify(obj)); };
   const authorized = (req) => !token || sameToken(req.headers['x-lens-token'], token);
+
+  function loadTranslation(lang) {
+    if (lang === 'en') return null;
+    if (translations.has(lang)) return translations.get(lang);
+    let data = null;
+    try {
+      const parsed = JSON.parse(readFileSync(path.join(i18nBase, `${lang}.json`), 'utf8'));
+      if (!record(parsed)) throw new Error('translation root must be an object');
+      data = parsed;
+    } catch (e) {
+      console.error(`i18n ${lang} unavailable: ${e.message}`);
+    }
+    translations.set(lang, data);
+    return data;
+  }
+
+  function translationFor(data, objectId) {
+    const translatedObjects = record(data?.objects) ? data.objects : null;
+    return translatedObjects && Object.hasOwn(translatedObjects, objectId) && record(translatedObjects[objectId])
+      ? translatedObjects[objectId]
+      : null;
+  }
+
+  function mergeObject(obj, translated) {
+    if (!translated) return obj;
+    const chapters = Array.isArray(obj.chapters) ? obj.chapters.map((chapter) => {
+      const translatedChapter = record(translated.chapters) && record(translated.chapters[chapter.lens])
+        ? translated.chapters[chapter.lens]
+        : null;
+      if (!translatedChapter) return chapter;
+      const captions = Array.isArray(translatedChapter.captions)
+        && Array.isArray(chapter.captions)
+        && translatedChapter.captions.length === chapter.captions.length
+        && translatedChapter.captions.every((caption) => typeof caption === 'string')
+        ? translatedChapter.captions
+        : chapter.captions;
+      return {
+        ...chapter,
+        ...(typeof translatedChapter.title === 'string' ? { title: translatedChapter.title } : {}),
+        ...(typeof translatedChapter.lead === 'string' ? { lead: translatedChapter.lead } : {}),
+        ...(captions !== undefined ? { captions } : {}),
+      };
+    }) : obj.chapters;
+    return {
+      ...obj,
+      ...(typeof translated.label === 'string' ? { label: translated.label } : {}),
+      ...(typeof translated.answer === 'string' ? { answer: translated.answer } : {}),
+      ...(chapters !== undefined ? { chapters } : {}),
+    };
+  }
 
   function currentLast() {
     if (!lastShow) return { show: null, ageMs: null };
@@ -161,6 +225,7 @@ export function start({
     try { body = JSON.parse(await readBody(req) || '{}'); }
     catch (e) { return json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
     const reqId = body.reqId || randomUUID();
+    const lang = normalizeLang(body.lang);
     const t_received = Date.now(); const t_capture = Number(body.t_capture) || t_received;
     const preUploadMs = Number.isFinite(Number(body.preUploadMs)) ? Math.max(0, Number(body.preUploadMs)) : null;
     both({ type: 'detecting', reqId, timeoutMs: detectTimeoutMs + 2000, t_sent: Date.now() });
@@ -171,16 +236,22 @@ export function start({
     try {
       // Optional centre crop ("aim"): the model classifies what is in it. A broken crop is dropped, not fatal.
       const focusBase64 = validJpegBase64(body.focusBase64) ? body.focusBase64 : undefined;
-      const result = await runDetect({ imageBase64: body.imageBase64, focusBase64, question: body.question, forceObjectId: body.forceObjectId, objects, provider, timeoutMs: detectTimeoutMs });
+      const result = await runDetect({ imageBase64: body.imageBase64, focusBase64, question: body.question, forceObjectId: body.forceObjectId, lang, objects, provider, timeoutMs: detectTimeoutMs });
       if (result.provider !== 'forced') lastProvider = { provider: result.provider, model: result.model };
       const t_detected = Date.now(); const obj = byId[result.objectId];
+      const translation = loadTranslation(lang);
+      const translated = obj ? translationFor(translation, obj.id) : null;
+      const libraryObject = translated ? mergeObject(obj, translated) : obj;
+      const libraryLang = obj ? (translated ? lang : 'en') : (translation ? lang : 'en');
       const show = {
-        type: 'show', reqId, objectId: result.objectId, label: obj ? obj.label : 'Unknown object', confidence: result.confidence,
+        type: 'show', reqId, objectId: result.objectId,
+        label: libraryObject ? libraryObject.label : (typeof translation?.unknown_label === 'string' ? translation.unknown_label : 'Unknown object'),
+        lang: libraryLang, confidence: result.confidence,
         ...(body.question ? { question: body.question } : {}),
         ...(result.answer ? { answer: result.answer } : {}),
         ...(!body.forceObjectId && result.provider !== 'forced' && result.objectId !== 'unknown' && obj && result.confidence < minConfidence ? { lowConfidence: true } : {}),
         ...(STAND_INS.has(result.provider) ? { standIn: true } : {}),
-        ...objectFields(obj), ...mediaFields(result.objectId),
+        ...objectFields(libraryObject), ...mediaFields(result.objectId),
         timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: result.detectMs, model: result.model },
         t_sent: Date.now(),
       };
@@ -201,7 +272,13 @@ export function start({
       const protectedRoute = (req.method === 'POST' && url.pathname === '/detect') || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
       if (protectedRoute && !authorized(req)) return json(req, res, 401, { error: 'unauthorized' });
       if (req.method === 'GET' && url.pathname === '/phone') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...headers }); return res.end(readFileSync(path.join(here, 'public', 'phone.html'))); }
-      if (req.method === 'GET' && url.pathname === '/objects') return json(req, res, 200, { objects });
+      if (req.method === 'GET' && url.pathname === '/objects') {
+        if (!url.searchParams.has('lang')) return json(req, res, 200, { objects });
+        const lang = normalizeLang(url.searchParams.get('lang'));
+        const translation = loadTranslation(lang);
+        const localized = translation ? objects.map((obj) => mergeObject(obj, translationFor(translation, obj.id))) : objects;
+        return json(req, res, 200, { objects: localized, lang: translation ? lang : 'en' });
+      }
       if (req.method === 'GET' && url.pathname === '/last') return json(req, res, 200, currentLast());
       if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
       if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });

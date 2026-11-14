@@ -35,6 +35,10 @@ Protected when `LENS_TOKEN` is set: `POST /detect`, `GET /last`, and `GET /laten
 
 `GET /last` returns the most recent `show` while it is inside `LAST_TTL_MS`. A late glasses connection receives the same show with `replay: true` and `ageMs`; a phone `clear` removes it.
 
+## Languages
+
+`POST /detect` accepts `lang` (`en`, `fi`, `sv`, `de`, `es`, or `fr`), and `GET /objects?lang=fi` returns the localized library. The bridge lazily reads and caches `../shared/i18n/<lang>.json`. Missing files, objects, lenses, and fields fall back to English; translated caption arrays are used only when their length matches the English array. To add a language, add it to the bridge's accepted language list and model language names, add it to the phone selector, then create the corresponding JSON file under `shared/i18n` using the existing files as the schema.
+
 ## Lock it
 
 Set `LENS_TOKEN` to a private random value and open the phone stand-in once as `http://localhost:8787/phone?k=<token>`. The page stores the key locally, removes it from the address bar, authenticates its API and WebSocket traffic, and passes it to the embedded glasses preview. Add any separate browser origins to `LENS_ALLOWED_ORIGINS` as a comma-separated list. Never commit the key or put it in a checked-in QR code.
