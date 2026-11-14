@@ -222,13 +222,12 @@ export class KettleScene implements Scene {
     const state = this.energy > E_END ? 'Steam' : boiling ? 'Boiling (phase change)' : 'Heating';
     const out: Readout[] = [
       {label: 'Heat', value: `${this.heat} / 5`},
-      {label: 'Water', value: `${Math.round(T)} °C`},
+      {label: 'Water', value: `${Math.round(T)} \u00b0C`},
       {label: 'State', value: state},
     ];
     if (this.step === 3) {
       const share = boiling ? '100% to vapour' : this.energy > E_END ? 'heating steam' : '100% to warming';
-      out.push({label: 'Energy goes to', value: share});
-      out.push({label: 'Energy in', value: `${fmt(this.energy, 0)} units`});
+      return [out[0], out[1], {label: 'Energy to', value: share}];
     }
     return out;
   }

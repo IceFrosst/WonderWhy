@@ -180,12 +180,16 @@ export function parseFlowSpec(x: unknown): FlowSpec | null {
     if (!at || !label) return null;
     if (ids.has(at)) losses.push({at, label, share: bounded(item.share, 0, 1)});
   }
+  const totalShare = losses.reduce((sum, loss) => sum + loss.share, 0);
+  if (totalShare > 1) {
+    for (const loss of losses) loss.share /= totalShare;
+  }
 
   const steps: FlowSpec['steps'] = [];
-  for (const item of x.steps) {
+  for (const item of x.steps.slice(0, 6)) {
     if (!record(item) || !number(item.upTo) || !Array.isArray(item.focus) || typeof item.losses !== 'boolean') return null;
     const focus: string[] = [];
-    for (const raw of item.focus) {
+    for (const raw of item.focus.slice(0, 6)) {
       const id = shortText(raw);
       if (!id) return null;
       if (ids.has(id) && !focus.includes(id)) focus.push(id);
@@ -247,20 +251,23 @@ export function parseNumberSpec(x: unknown): NumberSpec | null {
     if (!label || !unit || !number(k.min) || !number(k.max) || !number(k.step) || !number(k.value)) return null;
     const min = safeValue(k.min);
     const max = safeValue(k.max);
-    if (min >= max || k.step <= 0) return null;
+    const range = max - min;
+    const magnitude = Math.max(1, Math.abs(min), Math.abs(max));
+    if (min >= max || range < magnitude * 0.000001 || k.step <= 0) return null;
+    const value = bounded(safeValue(k.value), min, max);
+    if (Math.abs(value) < 0.000001) return null;
     knob = {
       label,
       unit,
       min,
       max,
-      step: bounded(k.step, 0.000001, max - min),
-      value: bounded(k.value, min, max),
+      step: bounded(safeValue(k.step), 0.000001, range),
+      value,
     };
-    if (knob.value === 0) return null;
   }
 
   const steps: NumberSpec['steps'] = [];
-  for (const item of x.steps) {
+  for (const item of x.steps.slice(0, 6)) {
     if (!record(item) || typeof item.show !== 'string' || !NUMBER_SHOWS.includes(item.show)) return null;
     if (item.show === 'compare' && !compare) return null;
     steps.push({show: item.show as NumberSpec['steps'][number]['show']});
@@ -325,7 +332,13 @@ export function parseCurveSpec(x: unknown): CurveSpec | null {
   if (!xLabel || xUnit === null || Number.isNaN(xDecimals)
       || !yLabel || yUnit === null || Number.isNaN(yDecimals)) return null;
   if (!number(x.x.min) || !number(x.x.max) || !number(x.x.step) || !number(x.x.value)) return null;
-  if (x.x.min >= x.x.max || x.x.step <= 0) return null;
+  const xMin = safeValue(x.x.min);
+  const xMax = safeValue(x.x.max);
+  const xSpan = xMax - xMin;
+  const xMagnitude = Math.max(1, Math.abs(xMin), Math.abs(xMax));
+  if (xMin >= xMax || xSpan < xMagnitude * 0.000001 || x.x.step <= 0) return null;
+  const xStep = bounded(safeValue(x.x.step), 0.000001, xSpan);
+  const xValue = bounded(safeValue(x.x.value), xMin, xMax);
 
   const series: CurveSeries[] = [];
   const names = new Set<string>();
@@ -338,7 +351,7 @@ export function parseCurveSpec(x: unknown): CurveSpec | null {
     const points: Array<[number, number]> = [];
     for (const point of item.points) {
       if (!Array.isArray(point) || point.length < 2 || !number(point[0]) || !number(point[1])) continue;
-      points.push([point[0], point[1]]);
+      points.push([safeValue(point[0]), safeValue(point[1])]);
       if (points.length === 64) break;
     }
     if (points.length < 2) return null;
@@ -356,15 +369,15 @@ export function parseCurveSpec(x: unknown): CurveSpec | null {
     if (!record(item) || !number(item.x)) return null;
     const label = shortText(item.label);
     if (!label) return null;
-    marks.push({x: item.x, label});
+    marks.push({x: safeValue(item.x), label});
   }
 
   const steps: CurveSpec['steps'] = [];
   const mainName = series.find(item => item.role === 'main')!.name;
-  for (const item of x.steps) {
+  for (const item of x.steps.slice(0, 6)) {
     if (!record(item) || !Array.isArray(item.series)) return null;
     const shown: string[] = [];
-    for (const raw of item.series) {
+    for (const raw of item.series.slice(0, 2)) {
       const name = shortText(raw);
       if (!name) return null;
       if (names.has(name) && !shown.includes(name)) shown.push(name);
@@ -377,10 +390,10 @@ export function parseCurveSpec(x: unknown): CurveSpec | null {
     x: {
       label: xLabel,
       unit: xUnit,
-      min: x.x.min,
-      max: x.x.max,
-      step: Math.min(x.x.step, x.x.max - x.x.min),
-      value: bounded(x.x.value, x.x.min, x.x.max),
+      min: xMin,
+      max: xMax,
+      step: xStep,
+      value: xValue,
       ...(xDecimals === null ? {} : {decimals: xDecimals}),
     },
     y: {
@@ -445,7 +458,7 @@ export function parseZoomSpec(x: unknown): ZoomSpec | null {
   }
 
   const steps: ZoomSpec['steps'] = [];
-  for (const item of x.steps) {
+  for (const item of x.steps.slice(0, 6)) {
     if (!record(item) || !number(item.level) || !Number.isInteger(item.level)
         || item.level < 0 || item.level >= levels.length || typeof item.heat !== 'boolean') return null;
     steps.push({level: item.level, heat: item.heat});

@@ -1,127 +1,127 @@
 {
-  "date": "2026-11-14T02:03:04.763Z",
+  "date": "2026-11-14T03:21:31.527Z",
   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
   "bundle": {
-    "jsGzipBytes": 192847,
-    "cssGzipBytes": 18453,
-    "totalGzipBytes": 211300,
+    "jsGzipBytes": 195028,
+    "cssGzipBytes": 18495,
+    "totalGzipBytes": 213523,
     "requests": 5
   },
   "fps": {
     "guitar.motion": {
-      "min": 29.94,
+      "min": 29.81,
       "median": 29.98
     },
     "guitar.whatif": {
       "min": 29.98,
-      "median": 29.98
+      "median": 29.99
     },
     "guitar.flow": {
-      "min": 29.86,
+      "min": 29.96,
       "median": 29.98
     },
     "guitar.number": {
-      "min": 29.85,
+      "min": 29.87,
       "median": 29.98
     },
     "ball.motion": {
-      "min": 29.83,
-      "median": 29.99
+      "min": 29.87,
+      "median": 29.98
     },
     "ball.compare": {
-      "min": 29.92,
+      "min": 29.97,
       "median": 29.98
     },
     "ball.whatif": {
-      "min": 29.94,
+      "min": 29.95,
       "median": 29.96
     },
     "ball.flow": {
-      "min": 29.86,
-      "median": 29.98
-    },
-    "ball.number": {
-      "min": 29.82,
-      "median": 29.98
-    },
-    "bicycle.motion": {
       "min": 29.98,
       "median": 29.98
     },
+    "ball.number": {
+      "min": 29.85,
+      "median": 29.98
+    },
+    "bicycle.motion": {
+      "min": 29.9,
+      "median": 29.98
+    },
     "bicycle.whatif": {
-      "min": 29.87,
-      "median": 29.93
+      "min": 29.84,
+      "median": 29.91
     },
     "bicycle.flow": {
-      "min": 29.97,
+      "min": 29.95,
       "median": 29.98
     },
     "bicycle.number": {
       "min": 29.98,
-      "median": 29.99
+      "median": 29.98
     },
     "kettle.motion": {
-      "min": 29.93,
-      "median": 29.98
+      "min": 28.98,
+      "median": 29.89
     },
     "kettle.cutaway": {
-      "min": 29.97,
-      "median": 29.98
-    },
-    "kettle.whatif": {
-      "min": 29.9,
-      "median": 29.94
-    },
-    "kettle.flow": {
       "min": 29.92,
       "median": 29.98
     },
+    "kettle.whatif": {
+      "min": 29.95,
+      "median": 29.96
+    },
+    "kettle.flow": {
+      "min": 29.93,
+      "median": 29.98
+    },
     "kettle.number": {
-      "min": 29.96,
+      "min": 29.87,
       "median": 29.98
     },
     "pendulum.motion": {
-      "min": 29.98,
-      "median": 29.99
-    },
-    "pendulum.whatif": {
-      "min": 29.98,
+      "min": 29.83,
       "median": 29.98
     },
+    "pendulum.whatif": {
+      "min": 29.94,
+      "median": 29.96
+    },
     "pendulum.flow": {
-      "min": 29.84,
+      "min": 29.98,
       "median": 29.98
     },
     "pendulum.number": {
-      "min": 29.98,
-      "median": 29.99
+      "min": 29.82,
+      "median": 29.98
     },
     "phone.inside": {
-      "min": 29.96,
+      "min": 29.95,
       "median": 29.98
     },
     "phone.whatif": {
-      "min": 29.96,
+      "min": 29.79,
       "median": 29.97
     },
     "phone.flow": {
-      "min": 29.93,
+      "min": 29.95,
       "median": 29.98
     },
     "phone.number": {
-      "min": 29.97,
+      "min": 29.91,
       "median": 29.98
     },
     "spoon.zoom": {
-      "min": 29.93,
+      "min": 29.85,
       "median": 29.98
     },
     "spoon.flow": {
       "min": 29.98,
-      "median": 29.98
+      "median": 29.99
     },
     "spoon.number": {
-      "min": 29.89,
+      "min": 29.87,
       "median": 29.98
     }
   },
@@ -227,34 +227,79 @@
       "screenshot": "states/20-token-fragment.png"
     },
     {
+      "name": "token-foreign",
+      "ok": true,
+      "screenshot": "states/21-token-foreign.png"
+    },
+    {
+      "name": "reconnect-backoff",
+      "ok": true,
+      "screenshot": "states/22-reconnect-backoff.png"
+    },
+    {
       "name": "consent",
       "ok": true,
-      "screenshot": "states/21-consent.png"
+      "screenshot": "states/23-consent.png"
     },
     {
       "name": "consent-device-frame",
       "ok": true,
-      "screenshot": "states/22-consent-device-frame.png"
+      "screenshot": "states/24-consent-device-frame.png"
     },
     {
       "name": "follow-up",
       "ok": true,
-      "screenshot": "states/23-follow-up.png"
+      "screenshot": "states/25-follow-up.png"
     },
     {
       "name": "follow-up-bad-hint",
       "ok": true,
-      "screenshot": "states/24-follow-up-bad-hint.png"
+      "screenshot": "states/26-follow-up-bad-hint.png"
     },
     {
       "name": "demo",
       "ok": true,
-      "screenshot": "states/25-demo.png"
+      "screenshot": "states/27-demo.png"
     },
     {
       "name": "demo-button",
       "ok": true,
-      "screenshot": "states/26-demo-button.png"
+      "screenshot": "states/28-demo-button.png"
+    },
+    {
+      "name": "stale-request",
+      "ok": true,
+      "screenshot": "states/29-stale-request.png"
+    },
+    {
+      "name": "sketch-immediate",
+      "ok": true,
+      "screenshot": "states/30-sketch-immediate.png"
+    },
+    {
+      "name": "malformed-frame",
+      "ok": true,
+      "screenshot": "states/31-malformed-frame.png"
+    },
+    {
+      "name": "doffed-wake",
+      "ok": true,
+      "screenshot": "states/32-doffed-wake.png"
+    },
+    {
+      "name": "demo-stops",
+      "ok": true,
+      "screenshot": "states/33-demo-stops.png"
+    },
+    {
+      "name": "flow-loss-clamp",
+      "ok": true,
+      "screenshot": "states/34-flow-loss-clamp.png"
+    },
+    {
+      "name": "curve-bounds",
+      "ok": true,
+      "screenshot": "states/35-curve-bounds.png"
     },
     {
       "name": "scene-guitar-motion-s1",

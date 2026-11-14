@@ -223,19 +223,24 @@ export class BallScene implements Scene {
 
     dot(ctx, bx, by, 7, C.white);
 
-    const out: Readout[] = [
-      {label: 'Angle', value: `${this.angle}°`},
-      {label: 'Speed', value: `${this.speed} m/s`},
+    if (this.step === 2) {
+      return [
+        {label: 'Speed', value: `${this.speed} m/s`},
+        {label: 'Vx (constant)', value: `${fmt(s.vx)} m/s`},
+        {label: 'Vy', value: `${s.vy >= 0 ? '+' : ''}${fmt(s.vy)} m/s`},
+      ];
+    }
+    if (drag) {
+      return [
+        {label: 'Angle', value: `${this.angle}\u00b0`},
+        {label: 'Range', value: `${fmt(main.range)} m`},
+        {label: 'Best angle', value: `${this.bestAngle}\u00b0`},
+      ];
+    }
+    return [
+      {label: 'Angle', value: `${this.angle}\u00b0`},
       {label: 'Range', value: `${fmt(main.range)} m`},
       {label: 'Max height', value: `${fmt(main.maxH)} m`},
     ];
-    if (this.step === 2) {
-      out.push({label: 'Vx (constant)', value: `${fmt(s.vx)} m/s`});
-      out.push({label: 'Vy', value: `${s.vy >= 0 ? '+' : ''}${fmt(s.vy)} m/s`});
-    } else if (drag) {
-      out.push({label: 'No-air range', value: `${fmt(this.ideal.range)} m`});
-      out.push({label: 'Best angle', value: `${this.bestAngle}°`});
-    }
-    return out;
   }
 }

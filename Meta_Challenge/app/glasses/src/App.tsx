@@ -34,6 +34,8 @@ type View =
       acked?: boolean;
       /** Request that a later `sketch` frame is matched against (unknown view only). */
       sketchReq?: string;
+      /** Original request id, retained so replayed sketches can be deduplicated. */
+      sourceReq?: string;
       sketchState?: 'pending' | 'failed';
       answer?: string;
       question?: string;
@@ -115,7 +117,7 @@ function HomeScreen({connected, openObject, startDemo}: HomeScreenProps) {
   const choices = useMemo(
     () => [
       ...OBJECTS.map(object => ({id: object.id, label: object.label, short: object.short, onClick: () => openObject(object.id)})),
-      {id: 'demo', label: 'Demo', short: 'Demo', onClick: startDemo},
+      {id: 'demo', label: 'Demo', short: 'Demo', onClick: () => startDemo()},
     ],
     [openObject, startDemo],
   );
@@ -236,6 +238,18 @@ function ConsentScreen({onAccept}: ConsentScreenProps) {
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== 'Enter') return;
+      const element = buttonRef.current?.getElement();
+      if (element?.contains(document.activeElement)) return;
+      event.preventDefault();
+      onAccept();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onAccept]);
+
   return (
     <div className="consent-screen" role="dialog" aria-modal="true" aria-labelledby="consent-title">
       <Panel width="100%">
@@ -287,18 +301,18 @@ export default function App() {
   const [demoActive, setDemoActive] = useState(false);
   const keyRef = useRef(0);
   const viewRef = useRef<View>(view);
-  viewRef.current = view;
   const consentRef = useRef(consentRequired);
   consentRef.current = consentRequired;
   const bridgeRef = useRef<BridgeClient | null>(null);
   const cardTimer = useRef<number | undefined>(undefined);
   const detectTimer = useRef<number | undefined>(undefined);
   const paintFrame = useRef<number | undefined>(undefined);
+  const sketchTimer = useRef<number | undefined>(undefined);
+  const earlySketch = useRef<{message: Extract<BridgeMsg, {type: 'sketch'}>; received: number} | null>(null);
   const deferredBridge = useRef<DeferredBridgeMsg | null>(null);
   const bridgeHandler = useRef<((message: BridgeMsg) => void) | null>(null);
   const demoAdvance = useRef<(() => void) | null>(null);
   const demoUrlSeconds = useRef(urlDemoSeconds());
-  const demoUrlStarted = useRef(false);
   const demoRun = useRef<DemoRun>({
     active: false,
     stepMs: 5000,
@@ -316,15 +330,37 @@ export default function App() {
     if (c && ms) cardTimer.current = window.setTimeout(() => setCard(null), ms);
   }, []);
 
+  const setViewNow = useCallback((next: View | ((current: View) => View)) => {
+    const resolved = typeof next === 'function' ? next(viewRef.current) : next;
+    viewRef.current = resolved;
+    setView(resolved);
+  }, []);
+
   const openObject = useCallback((objectId: string, extra?: Partial<View & {k: 'explain'}>) => {
     keyRef.current += 1;
-    setView({k: 'explain', key: keyRef.current, objectId, info: findObject(objectId), ...extra} as View);
-  }, []);
+    setViewNow({k: 'explain', key: keyRef.current, objectId, info: findObject(objectId), ...extra} as View);
+  }, [setViewNow]);
 
   const clearDetectTimer = useCallback(() => {
     window.clearTimeout(detectTimer.current);
     detectTimer.current = undefined;
   }, []);
+
+  const clearSketchTimer = useCallback(() => {
+    window.clearTimeout(sketchTimer.current);
+    sketchTimer.current = undefined;
+  }, []);
+
+  const armSketchTimer = useCallback((reqId: string) => {
+    clearSketchTimer();
+    sketchTimer.current = window.setTimeout(() => {
+      const current = viewRef.current;
+      if (current.k === 'explain' && current.info.id === 'unknown' && current.sketchReq === reqId && current.sketchState === 'pending') {
+        setViewNow({...current, sketchState: 'failed'});
+      }
+      sketchTimer.current = undefined;
+    }, 25000);
+  }, [clearSketchTimer, setViewNow]);
 
   const clearDemoTimer = useCallback(() => {
     window.clearTimeout(demoRun.current.timer);
@@ -352,7 +388,8 @@ export default function App() {
     clearDemoTimer();
     const run = demoRun.current;
     run.active = true;
-    run.stepMs = Math.min(20, Math.max(2, seconds)) * 1000;
+    const safeSeconds = Number.isFinite(seconds) ? seconds : 5;
+    run.stepMs = Math.min(20, Math.max(2, safeSeconds)) * 1000;
     run.objectIndex = 0;
     run.lensIndex = 0;
     run.stepIndex = 0;
@@ -392,9 +429,9 @@ export default function App() {
     }
 
     run.phase = 'gap';
-    setView({k: 'home'});
+    setViewNow({k: 'home'});
     scheduleDemo(1500);
-  }, [openObject, scheduleDemo]);
+  }, [openObject, scheduleDemo, setViewNow]);
   demoAdvance.current = advanceDemo;
 
   useEffect(() => {
@@ -417,14 +454,44 @@ export default function App() {
   }, [clearDemoTimer, scheduleDemo]);
 
   useEffect(() => {
-    if (consentRequired || demoUrlStarted.current || demoUrlSeconds.current === null) return;
-    demoUrlStarted.current = true;
-    startDemo(demoUrlSeconds.current);
+    if (consentRequired || demoUrlSeconds.current === null || demoRun.current.active) return;
+    const timer = window.setTimeout(() => {
+      if (!demoRun.current.active && demoUrlSeconds.current !== null) startDemo(demoUrlSeconds.current);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [consentRequired, startDemo]);
 
   // Bridge connection.
   useEffect(() => {
+    const applySketch = (m: Extract<BridgeMsg, {type: 'sketch'}>, v: View): boolean => {
+      if (v.k !== 'explain' || v.info.id !== 'unknown' || v.sketchReq === undefined || v.sketchReq !== m.reqId) return false;
+      clearSketchTimer();
+      const sk = m.error === undefined && m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
+      if (sk) {
+        openObject('sketch', {
+          info: sk,
+          label: sk.label,
+          reqId: v.reqId,
+          acked: v.acked,
+          sourceReq: m.reqId,
+          lang: v.lang,
+          standIn: v.standIn,
+        });
+      } else {
+        setViewNow({...v, sketchState: 'failed'});
+      }
+      return true;
+    };
+
     const onMessage = (m: BridgeMsg): void => {
+      const current = viewRef.current;
+      if (m.type === 'show' && !m.replay && current.k === 'detecting' && current.reqId !== m.reqId) return;
+      if (m.type === 'error' && current.k === 'detecting' && m.reqId !== undefined && current.reqId !== m.reqId) return;
+      if (m.type === 'show' && m.replay && current.k === 'explain') {
+        if (m.objectId !== 'unknown' && current.objectId === m.objectId) return;
+        if (m.objectId === 'unknown' && current.info.id === 'unknown') return;
+        if (m.objectId === 'unknown' && current.info.provenance === 'sketch' && current.sourceReq === m.reqId) return;
+      }
       if (m.type === 'show' || m.type === 'detecting') {
         stopDemo();
         if (consentRef.current) {
@@ -435,19 +502,24 @@ export default function App() {
       switch (m.type) {
         case 'detecting':
           clearDetectTimer();
-          setView({k: 'detecting', reqId: m.reqId});
+          clearSketchTimer();
+          setViewNow({k: 'detecting', reqId: m.reqId});
+          {
+            const timeoutMs = m.timeoutMs === undefined ? 12000 : Math.min(120000, Math.max(2000, m.timeoutMs));
           detectTimer.current = window.setTimeout(() => {
             if (viewRef.current.k === 'detecting' && viewRef.current.reqId === m.reqId) {
-              setView({k: 'home'});
+              setViewNow({k: 'home'});
               flashCard({title: 'Took too long', body: 'Try again.'}, ERROR_MS);
             }
             detectTimer.current = undefined;
-          }, m.timeoutMs ?? 12000);
+          }, timeoutMs);
+          }
           break;
         case 'show':
           clearDetectTimer();
+          clearSketchTimer();
           if (m.lowConfidence) {
-            setView({k: 'home'});
+            setViewNow({k: 'home'});
             flashCard(
               {title: 'Not sure', body: `Maybe: ${m.label ?? 'that object'}. Look again, a bit closer.`},
               CARD_MS,
@@ -464,21 +536,34 @@ export default function App() {
           }
           {
             const lang = typeof m.lang === 'string' && LANG_RE.test(m.lang) ? m.lang : undefined;
-            const common = {reqId: m.replay ? undefined : m.reqId, standIn: m.standIn === true};
+            const common = {reqId: m.replay ? undefined : m.reqId, sourceReq: m.reqId, standIn: m.standIn === true};
             if (m.objectId === 'unknown') {
-              const sk = m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
+              const queued = earlySketch.current;
+              const early = queued?.message.reqId === m.reqId && Date.now() - queued.received <= 2000 ? queued.message : null;
+              if (early) earlySketch.current = null;
+              const sketchValue = m.sketch !== undefined && m.sketch !== null ? m.sketch : early?.sketch;
+              const sketchFailed = m.sketch === undefined && early?.error !== undefined;
+              const sk = sketchValue !== undefined && sketchValue !== null && !sketchFailed
+                ? sketchToObject(sketchValue)
+                : null;
               if (sk) {
                 openObject('sketch', {...common, info: sk, label: sk.label, lang});
               } else {
+                const sketchState = early
+                  ? 'failed'
+                  : m.sketchPending === true
+                    ? 'pending'
+                    : undefined;
                 openObject('unknown', {
                   ...common,
                   label: m.label,
                   answer: m.answer,
                   question: m.question,
                   sketchReq: m.reqId,
-                  sketchState: m.sketchPending === true ? 'pending' : undefined,
+                  sketchState,
                   lang,
                 });
+                if (sketchState === 'pending') armSketchTimer(m.reqId);
               }
               break;
             }
@@ -511,19 +596,13 @@ export default function App() {
           break;
         case 'sketch': {
           const v = viewRef.current;
-          if (v.k !== 'explain' || v.info.id !== 'unknown' || v.sketchReq === undefined || v.sketchReq !== m.reqId) break;
-          const sk =
-            m.error === undefined && m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
-          if (sk) {
-            openObject('sketch', {info: sk, label: sk.label, reqId: v.reqId, acked: true, lang: v.lang, standIn: v.standIn});
-          } else {
-            setView({...v, sketchState: 'failed'});
-          }
+          if (!applySketch(m, v)) earlySketch.current = {message: m, received: Date.now()};
           break;
         }
         case 'ping':
           break;
         case 'nav':
+          setDoffed(false);
           if (m.action === 'demo') {
             if (demoRun.current.active) stopDemo();
             else if (!consentRef.current) startDemo();
@@ -533,8 +612,10 @@ export default function App() {
           }
           break;
         case 'clear':
+          stopDemo();
           clearDetectTimer();
-          setView({k: 'blank'});
+          clearSketchTimer();
+          setViewNow({k: 'blank'});
           break;
         case 'device':
           if (m.state === 'first_run') {
@@ -542,20 +623,23 @@ export default function App() {
             flashCard(null);
             consentRef.current = true;
             setConsentRequired(true);
-          } else if (m.state === 'doffed') setDoffed(true);
+          } else if (m.state === 'doffed') {
+            stopDemo();
+            setDoffed(true);
+          }
           else if (m.state === 'donned') {
             setDoffed(false);
             flashCard(null);
           } else if (m.state === 'online') flashCard(null);
           else {
-            const c = DEVICE_CARDS[m.state];
-            if (c) flashCard(c, m.state === 'offline' ? undefined : CARD_MS);
+            const c = Object.hasOwn(DEVICE_CARDS, m.state) ? DEVICE_CARDS[m.state] : undefined;
+            if (c) flashCard(c, m.state === 'offline' ? 60000 : CARD_MS);
           }
           break;
         case 'error':
           clearDetectTimer();
-          if (viewRef.current.k === 'detecting') setView({k: 'home'});
-          flashCard({title: 'Something went wrong', body: m.message || m.code}, ERROR_MS);
+          if (viewRef.current.k === 'detecting') setViewNow({k: 'home'});
+          flashCard({title: 'Something went wrong', body: m.message || m.code || 'Try again.'}, ERROR_MS);
           break;
       }
     };
@@ -564,10 +648,14 @@ export default function App() {
     if (!url) return;
     const onStatus = (isConnected: boolean, closeCode?: number): void => {
       setConnected(isConnected);
-      if (isConnected) return;
+      if (isConnected) {
+        setDoffed(false);
+        flashCard(null);
+        return;
+      }
       if (viewRef.current.k === 'detecting') {
         clearDetectTimer();
-        setView({k: 'home'});
+        setViewNow({k: 'home'});
         flashCard({title: 'Bridge offline', body: 'Built-in demos still work.'}, ERROR_MS);
       }
       if (closeCode === 4401) {
@@ -583,9 +671,10 @@ export default function App() {
       bridgeRef.current = null;
       window.clearTimeout(cardTimer.current);
       clearDetectTimer();
+      clearSketchTimer();
       window.cancelAnimationFrame(paintFrame.current ?? 0);
     };
-  }, [openObject, flashCard, clearDetectTimer, startDemo, stopDemo]);
+  }, [openObject, flashCard, clearDetectTimer, clearSketchTimer, armSketchTimer, setViewNow, startDemo, stopDemo]);
 
   const acceptConsent = useCallback(() => {
     try {
@@ -607,12 +696,14 @@ export default function App() {
   // `done` from the bridge or Back on the glasses returns home; any key wakes a blank screen.
   useEffect(() => {
     const off = onNav(a => {
-      if (a === 'done' && viewRef.current.k !== 'home') setView({k: 'home'});
+      setDoffed(false);
+      if (a === 'done' && viewRef.current.k !== 'home') setViewNow({k: 'home'});
     });
     const wake = (e: KeyboardEvent): void => {
+      setDoffed(false);
       if (viewRef.current.k === 'blank' && (e.key === 'Enter' || e.key.startsWith('Arrow'))) {
         e.preventDefault();
-        setView({k: 'home'});
+        setViewNow({k: 'home'});
       }
     };
     window.addEventListener('keydown', wake, true);
@@ -620,7 +711,7 @@ export default function App() {
       off();
       window.removeEventListener('keydown', wake, true);
     };
-  }, []);
+  }, [setViewNow]);
 
   // A wearer key press stops hands-free playback without also moving the current step.
   useEffect(() => {
@@ -641,7 +732,7 @@ export default function App() {
       return true;
     }
     if (viewRef.current.k !== 'home') {
-      setView({k: 'home'});
+      setViewNow({k: 'home'});
       return true;
     }
     return false;
@@ -651,8 +742,10 @@ export default function App() {
   const onRendered = useCallback(() => {
     if (reqId && !demoRun.current.active) {
       bridgeRef.current?.send({type: 'rendered', reqId, t_rendered: Date.now()});
+      const current = viewRef.current;
+      if (current.k === 'explain' && current.reqId === reqId && !current.acked) setViewNow({...current, acked: true});
     }
-  }, [reqId]);
+  }, [reqId, setViewNow]);
   const objectId = view.k === 'explain' ? view.objectId : undefined;
   const onState = useCallback(
     (step: number, param: number | undefined, lens: string | undefined, lensIndex: number, steps: number) => {
@@ -700,6 +793,7 @@ export default function App() {
           followUpLens={view.followUpLens}
           followUpStep={view.followUpStep}
           demo={demoActive}
+          paused={doffed}
           onRendered={onRendered}
           onState={onState}
         />

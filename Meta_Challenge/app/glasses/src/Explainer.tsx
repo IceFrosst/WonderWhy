@@ -21,6 +21,7 @@ interface Props {
   followUpLens?: number;
   followUpStep?: number;
   demo?: boolean;
+  paused?: boolean;
   onRendered: () => void;
   onState: (
     step: number,
@@ -82,6 +83,7 @@ export default function Explainer({
   followUpLens,
   followUpStep,
   demo = false,
+  paused = false,
   onRendered,
   onState,
 }: Props) {
@@ -100,6 +102,10 @@ export default function Explainer({
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<Scene | null>(null);
+  const loopControlRef = useRef<{pause: () => void; resume: () => void} | null>(null);
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const forceReadoutsRef = useRef(false);
   const positionRef = useRef<Position>({info, lens: startingLens, step: startingStep});
   positionRef.current = {info, lens, step};
   const btnRef = useRef<ButtonHandle>(null);
@@ -127,7 +133,10 @@ export default function Explainer({
       const changesLens = nextLens !== current.lens;
       positionRef.current = {...current, lens: nextLens, step: boundedStep};
       if (changesLens) sceneRef.current = null;
-      else sceneRef.current?.setStep(boundedStep + 1);
+      else {
+        sceneRef.current?.setStep(boundedStep + 1);
+        forceReadoutsRef.current = true;
+      }
       setLens(nextLens);
       setStep(boundedStep);
       reportState();
@@ -138,7 +147,6 @@ export default function Explainer({
   // New object: start at the requested answer position, or the first step of the first lens.
   useEffect(() => {
     positionRef.current = {info, lens: startingLens, step: startingStep};
-    sceneRef.current = null;
     setLens(startingLens);
     setStep(startingStep);
   }, [info, objectId, startingLens, startingStep]);
@@ -159,6 +167,7 @@ export default function Explainer({
   // Canvas setup, 30 fps loop, first-paint notification, and readout throttling.
   useEffect(() => {
     if (sceneInstance === undefined) return;
+    if (sceneInstance !== sceneRef.current) return;
     if (!known || sceneInstance === null) {
       // No scene: tell the bridge the text is on screen after the next paint.
       let r2 = 0;
@@ -179,8 +188,9 @@ export default function Explainer({
     const scene = sceneInstance;
     sceneRef.current = scene;
     const fit = (): void => {
-      const w = Math.max(64, Math.round(stage.clientWidth));
-      const h = Math.max(64, Math.round(stage.clientHeight));
+      const w = Math.round(stage.clientWidth);
+      const h = Math.round(stage.clientHeight);
+      if (w < 64 || h < 64) return;
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -200,7 +210,9 @@ export default function Explainer({
     let lastSet = 0;
     let fpsFrames = 0;
     let fpsT = last;
+    let running = !pausedRef.current && !document.hidden;
     const tick = (now: number): void => {
+      if (!running) return;
       raf = requestAnimationFrame(tick);
       const el = now - last;
       if (el < FRAME_GAP_MS) return;
@@ -214,11 +226,13 @@ export default function Explainer({
         fpsT = now;
       }
       const key = out.map(r => r.label + r.value).join('|');
-      if (key !== lastKey && now - lastSet > 110) {
+      const immediate = forceReadoutsRef.current;
+      if (key !== lastKey && (immediate || now - lastSet >= 500)) {
         lastKey = key;
         lastSet = now;
         setReadouts(out);
       }
+      if (immediate) forceReadoutsRef.current = false;
       if (!firstDone) {
         firstDone = true;
         setReadouts(out);
@@ -226,22 +240,36 @@ export default function Explainer({
         requestAnimationFrame(() => cb.current.onRendered());
       }
     };
-    const onVis = (): void => {
+    const pauseLoop = (): void => {
+      running = false;
       cancelAnimationFrame(raf);
-      if (!document.hidden) {
-        last = performance.now();
-        raf = requestAnimationFrame(tick);
-      }
     };
+    const resumeLoop = (): void => {
+      if (running || document.hidden || pausedRef.current) return;
+      running = true;
+      last = performance.now();
+      raf = requestAnimationFrame(tick);
+    };
+    const onVis = (): void => {
+      if (document.hidden) pauseLoop();
+      else resumeLoop();
+    };
+    loopControlRef.current = {pause: pauseLoop, resume: resumeLoop};
     document.addEventListener('visibilitychange', onVis);
-    raf = requestAnimationFrame(tick);
+    if (running) raf = requestAnimationFrame(tick);
     reportState();
     return () => {
+      if (loopControlRef.current?.pause === pauseLoop) loopControlRef.current = null;
       cancelAnimationFrame(raf);
       document.removeEventListener('visibilitychange', onVis);
       ro.disconnect();
     };
   }, [objectId, lens, known, reportState, sceneInstance]);
+
+  useEffect(() => {
+    if (paused) loopControlRef.current?.pause();
+    else loopControlRef.current?.resume();
+  }, [paused]);
 
   // Arrow keys and bridge `nav` messages share one bus.
   useEffect(() => {
@@ -261,6 +289,7 @@ export default function Explainer({
         const scene = sceneRef.current;
         if (!knob || !scene) return;
         scene.setParam(knob.axis, a === 'up' ? 1 : -1);
+        forceReadoutsRef.current = true;
         reportState();
       } else if (a === 'next') {
         if (current.step < lastStep) goPosition(current.lens, current.step + 1);
@@ -315,9 +344,13 @@ export default function Explainer({
   const multi = info.chapters.length > 1;
   const currentLensName = lensName(chapter);
   const isSketch = known && info.provenance === 'sketch';
+  const fullTitle = chapter ? `${info.label} \u00b7 ${chapter.title}` : info.label;
+  const compactTitle = chapter ? `${info.short ?? info.label} \u00b7 ${chapter.title}` : info.label;
   const title = known
     ? multi && chapter && !isSketch
-      ? `${info.label} \u00b7 ${chapter.title}`
+      ? fullTitle.trim().split(/\s+/).length <= 5
+        ? fullTitle
+        : compactTitle
       : info.label
     : 'Not in the library yet';
   const oneLine = known ? (chapter?.lead ?? info.answer) : label ? `Looks like: ${label}` : '';
@@ -379,7 +412,7 @@ export default function Explainer({
 
       {known ? (
         <>
-          <div className="ex-read" role="status" aria-label="Live values">
+          <div className="ex-read" aria-live="off" aria-label="Live values">
             {readouts.map(r => (
               <span className="ex-chip" key={r.label}>
                 <TextView textStyle={TextStyle.META2} textColor={TextColor.SECONDARY}>
@@ -395,7 +428,12 @@ export default function Explainer({
               <span className="ex-follow-up-answer">{answer}</span>
             </div>
           ) : null}
-          <TextView as="p" textStyle={TextStyle.META1} className="ex-caption" aria-live="polite">
+          <TextView
+            as="p"
+            textStyle={TextStyle.META1}
+            className="ex-caption"
+            aria-label={`Step ${step + 1}/${stepsInLens}. ${chapter?.captions[step] ?? ''}`}
+          >
             {`Step ${step + 1}/${stepsInLens}. ${chapter?.captions[step] ?? ''}`}
           </TextView>
           <div className="ex-foot">
@@ -410,7 +448,11 @@ export default function Explainer({
                   return (
                     <span className="ex-lens-mark" aria-hidden="true" key={i}>
                       <span className={`ex-lens-dot${current ? ' ex-lens-dot--current' : ''}`} />
-                      {current ? <span className="ex-lens-name">{currentLensName}</span> : null}
+                      {current ? (
+                        <TextView as="span" textStyle={TextStyle.META1} className="ex-lens-name">
+                          {currentLensName}
+                        </TextView>
+                      ) : null}
                     </span>
                   );
                 })}

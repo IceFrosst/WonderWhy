@@ -84,7 +84,7 @@ class BouncingBall {
       } else {
         this.contact = clamp(this.time / this.duration, 0, 1);
         // Store the impact energy at full compression, then dissipate a smooth
-        // (1 - e²) fraction as the spring releases. The tiny terminal residue
+        // (1 - e^2) fraction as the spring releases. The tiny terminal residue
         // also becomes heat when the ball settles at the display threshold.
         const release = Math.sin(Math.max(0, this.contact - 0.5) * Math.PI);
         const lossFraction = this.terminal ? 1 : 1 - this.preset.e * this.preset.e;
@@ -130,7 +130,6 @@ export class BounceScene implements Scene {
   private readonly left = new BouncingBall();
   private readonly right = new BouncingBall();
   private readonly energy = new Float64Array(4);
-  private readonly percentages = new Int16Array(4);
   private readouts: Readout[] = [];
 
   init(ctx: CanvasRenderingContext2D, w: number, h: number): void {
@@ -173,23 +172,18 @@ export class BounceScene implements Scene {
     const drop = {label: 'Drop', value: `${this.drop.toFixed(2)} m`};
     if (this.step === 2) {
       this.readouts = [
-        {label: 'Height', value: '100%'},
+        drop,
         {label: 'Movement', value: '0%'},
-        {label: 'Squash', value: '0%'},
         {label: 'Lost to heat', value: '0%'},
-        ball, drop,
       ];
     } else if (this.step === 3) {
-      const bounces = Math.min(MAX_BOUNCES, Math.ceil(Math.log(0.02) / (2 * Math.log(preset.e))));
       this.readouts = [
         ball,
         {label: 'e', value: preset.e.toFixed(2)},
         {label: `${comparison.name.split(' /')[0]} e`, value: comparison.e.toFixed(2)},
-        {label: 'Bounces to rest', value: String(bounces)},
-        drop,
       ];
     } else {
-      this.readouts = [ball, {label: 'Keeps', value: PERCENT[Math.round(preset.e * preset.e * 100)]}, drop];
+      this.readouts = [drop, ball, {label: 'Keeps', value: PERCENT[Math.round(preset.e * preset.e * 100)]}];
     }
   }
 
@@ -292,31 +286,14 @@ export class BounceScene implements Scene {
   }
 
   private updateEnergyReadouts(): void {
-    // Largest-remainder rounding keeps the four integer chips summing to 100.
     const initial = G * this.drop;
-    let total = 0;
-    for (let i = 0; i < 4; i++) {
-      this.percentages[i] = Math.floor(clamp(this.energy[i] / initial, 0, 1) * 100);
-      total += this.percentages[i];
-    }
-    while (total < 100) {
-      let best = 0;
-      for (let i = 1; i < 4; i++) {
-        if (this.energy[i] / initial * 100 - this.percentages[i]
-          > this.energy[best] / initial * 100 - this.percentages[best]) best = i;
-      }
-      this.percentages[best]++;
-      total++;
-    }
-    // React needs a fresh snapshot when chips change. Keep existing objects and
-    // arrays otherwise; all simulation and drawing buffers are reused.
-    let changed = false;
-    for (let i = 0; i < 4; i++) {
-      const value = PERCENT[this.percentages[i]];
-      if (this.readouts[i].value === value) continue;
-      if (!changed) this.readouts = this.readouts.slice();
-      changed = true;
-      this.readouts[i] = {label: this.readouts[i].label, value};
-    }
+    const movement = PERCENT[Math.round(clamp(this.energy[1] / initial, 0, 1) * 100)];
+    const lost = PERCENT[Math.round(clamp(this.energy[3] / initial, 0, 1) * 100)];
+    if (this.readouts[1].value === movement && this.readouts[2].value === lost) return;
+    this.readouts = [
+      this.readouts[0],
+      {label: 'Movement', value: movement},
+      {label: 'Lost to heat', value: lost},
+    ];
   }
 }

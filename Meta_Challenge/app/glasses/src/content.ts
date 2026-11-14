@@ -113,7 +113,9 @@ export function sketchToObject(sketch: unknown): ObjectInfo | null {
         if (!isRecord(k) || (k.axis !== 'x' && k.axis !== 'y')) return null;
         const kl = capped(k.label, 40, true);
         if (kl === null) return null;
-        knobs.push({axis: k.axis, label: kl});
+        const usable = (raw.scene === 'curve' && k.axis === 'x')
+          || (raw.scene === 'number' && k.axis === 'x' && isRecord(raw.spec) && isRecord(raw.spec.knob));
+        knobs.push(usable ? {axis: k.axis, label: kl} : null);
       }
     }
     chapters.push({scene: raw.scene, lens: raw.lens, title, lead, hint: '', captions, knobs, spec: raw.spec});

@@ -52,6 +52,20 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function captureScreenshot(page, target) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await page.screenshot({path: target});
+      return;
+    } catch (error) {
+      lastError = error;
+      await sleep(100 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
 function median(values) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -100,6 +114,7 @@ class FakeBridge {
     this.frames = [];
     this.waiters = new Set();
     this.closeNextHello = null;
+    this.closeHelloCount = 0;
   }
 
   async start() {
@@ -114,7 +129,7 @@ class FakeBridge {
         } catch {
           return;
         }
-        const frame = {socket, message};
+        const frame = {socket, message, received: Date.now()};
         this.frames.push(frame);
         for (const waiter of [...this.waiters]) {
           if (waiter.predicate(frame)) waiter.resolve(frame);
@@ -123,6 +138,9 @@ class FakeBridge {
           const code = this.closeNextHello;
           this.closeNextHello = null;
           socket.close(code);
+        } else if (message.type === 'hello' && this.closeHelloCount > 0) {
+          this.closeHelloCount--;
+          socket.close(1000);
         }
       });
     });
@@ -232,6 +250,60 @@ async function fontOffenders(page) {
   });
 }
 
+async function layoutOffenders(page) {
+  return page.evaluate(() => {
+    const visible = element => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' &&
+        Number(style.opacity) !== 0 && !element.closest('[hidden]');
+    };
+    const selectors = [
+      '.ex-title',
+      '.ex-head > p',
+      '.ex-caption',
+      '.ex-follow-up',
+      '.ex-read',
+      '.ex-chip',
+      '.ex-hint',
+      '.ex-lenses',
+      '.ex-lens-name',
+      '.ex-tag',
+      '.card > p',
+      '.consent-card > h1',
+      '.consent-card > p',
+      '.home-intro > p',
+      'button [class*="titleLabel"]',
+    ];
+    const elements = [...new Set(selectors.flatMap(selector => [...document.querySelectorAll(selector)]))]
+      .filter(element => element instanceof HTMLElement && visible(element));
+    const offenders = [];
+    for (const element of elements) {
+      if (element.clientWidth > 0 && element.scrollWidth > element.clientWidth + 1) {
+        offenders.push({kind: 'horizontal clip', text: element.textContent?.trim() || element.className});
+      }
+      if (element.clientHeight > 0 && element.scrollHeight > element.clientHeight + 1) {
+        offenders.push({kind: 'vertical clip', text: element.textContent?.trim() || element.className});
+      }
+    }
+    const docks = [...document.querySelectorAll('.ex-dock, .action-dock')]
+      .filter(element => element instanceof HTMLElement && visible(element));
+    const siblings = [...document.querySelectorAll('.ex > :not(.ex-dock), .action-page-shell > :not(.action-dock)')]
+      .filter(element => element instanceof HTMLElement && visible(element) && !element.closest('.overlay'));
+    for (const dock of docks) {
+      const dockRect = dock.getBoundingClientRect();
+      for (const element of siblings) {
+        if (element.parentElement !== dock.parentElement) continue;
+        const rect = element.getBoundingClientRect();
+        const overlaps = rect.left < dockRect.right - 1 && rect.right > dockRect.left + 1 &&
+          rect.top < dockRect.bottom - 1 && rect.bottom > dockRect.top + 1;
+        if (overlaps) offenders.push({kind: 'dock overlap', text: element.textContent?.trim() || element.className});
+      }
+    }
+    return offenders;
+  });
+}
+
 function stateFile(index, name) {
   return `${String(index).padStart(2, '0')}-${name}.png`;
 }
@@ -257,6 +329,8 @@ async function main() {
     'bridge-drop-while-looking', 'device-battery-low', 'device-thermal-hot', 'device-offline',
     'device-camera-denied', 'device-doffed', 'device-donned', 'clear', 'replay', 'heartbeat', 'token', 'token-fragment',
     'consent', 'consent-device-frame', 'follow-up', 'follow-up-bad-hint', 'demo', 'demo-button',
+    'stale-request', 'sketch-immediate', 'malformed-frame', 'doffed-wake', 'demo-stops', 'flow-loss-clamp',
+    'curve-bounds', 'token-foreign', 'reconnect-backoff',
   ];
   const isSceneName = value => /^scene-[^-]+-[^-]+-s\d+$/.test(value || '');
   if (options.only && !simpleNames.includes(options.only) && !objectIds.has(options.only) && !isSceneName(options.only)) {
@@ -278,8 +352,17 @@ async function main() {
     console.log(`${result.name}: ${detail}`);
   };
 
-  const openPage = async ({offline = false, token = null, fragmentToken = null, closeOnHello = null, params = {}} = {}) => {
+  const openPage = async ({
+    offline = false,
+    token = null,
+    fragmentToken = null,
+    closeOnHello = null,
+    closeHelloCount = 0,
+    bridgeHost = 'localhost',
+    params = {},
+  } = {}) => {
     if (closeOnHello !== null) bridge.closeNextHello = closeOnHello;
+    bridge.closeHelloCount = closeHelloCount;
     const context = await browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
     const page = await context.newPage();
     const consoleErrors = [];
@@ -296,7 +379,7 @@ async function main() {
     });
     const frameStart = bridge.frames.length;
     const wsPort = offline ? 1 : bridge.port;
-    const query = new URLSearchParams({bridge: `ws://localhost:${wsPort}/ws`});
+    const query = new URLSearchParams({bridge: `ws://${bridgeHost}:${wsPort}/ws`});
     if (token !== null) query.set('k', token);
     for (const [key, value] of Object.entries(params)) query.set(key, String(value));
     const fragment = fragmentToken !== null ? `#k=${encodeURIComponent(fragmentToken)}` : '';
@@ -331,12 +414,18 @@ async function main() {
           return false;
         }
       };
-      await action({...session, check, expectText, result});
+      const checkLayout = async () => {
+        const offenders = await layoutOffenders(session.page);
+        for (const offender of offenders) addFailure(result, `${offender.kind}: "${short(offender.text, 100)}"`);
+      };
+      await action({...session, check, expectText, checkLayout, result});
     } catch (error) {
       addFailure(result, errorMessage(error));
     } finally {
       if (session?.page) {
         try {
+          const layout = await layoutOffenders(session.page);
+          for (const offender of layout) addFailure(result, `${offender.kind}: "${short(offender.text, 100)}"`);
           const offenders = await fontOffenders(session.page);
           if (offenders.length) {
             addFailure(result, `visible text under 16 px: ${offenders.map(item => `"${short(item.text, 60)}" (${item.size}px)`).join(', ')}`);
@@ -347,7 +436,7 @@ async function main() {
         if (session.consoleErrors.length) addFailure(result, `console errors: ${session.consoleErrors.map(error => short(error, 160)).join(' | ')}`);
         if (!result.screenshotCaptured) {
           try {
-            await session.page.screenshot({path: path.join(SCREENSHOTS, filename)});
+            await captureScreenshot(session.page, path.join(SCREENSHOTS, filename));
           } catch (error) {
             addFailure(result, `screenshot failed: ${errorMessage(error)}`);
           }
@@ -429,8 +518,10 @@ async function main() {
     });
 
     await simple('took-too-long', {}, async session => {
-      send(session, {type: 'detecting', reqId: 'slow-1', timeoutMs: 700});
+      const started = Date.now();
+      send(session, {type: 'detecting', reqId: 'slow-1', timeoutMs: 0});
       await session.expectText('Took too long', {exact: true});
+      session.check(Date.now() - started >= 1900, `detect timeout was not clamped to 2 s; elapsed ${Date.now() - started} ms`);
       await session.expectText('Physics Lens', {exact: true});
     });
 
@@ -481,6 +572,16 @@ async function main() {
       await simple(name, {}, async session => {
         send(session, {type: 'device', state});
         await session.expectText(title, {exact: true});
+        if (state === 'offline') {
+          const since = bridge.frames.length;
+          bridge.terminate(session.socket);
+          await bridge.waitForMessage(message => message.type === 'hello', {since, description: 'reconnect after offline card'});
+          try {
+            await session.page.getByText('Offline', {exact: true}).waitFor({state: 'hidden', timeout: WAIT_MS});
+          } catch {
+            session.check(false, 'Offline card remained after the bridge reconnected');
+          }
+        }
       });
     }
 
@@ -513,8 +614,13 @@ async function main() {
 
     await simple('replay', {}, async session => {
       const since = bridge.frames.length;
-      send(session, {type: 'show', reqId: 'replay-1', objectId: 'guitar', label: 'Guitar string', replay: true});
+      send(session, {type: 'show', reqId: 'replay-live-1', objectId: 'guitar', label: 'Guitar string'});
       await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+      await session.page.keyboard.press('Enter');
+      await session.expectText(/^Step 2\//);
+      send(session, {type: 'show', reqId: 'replay-1', objectId: 'guitar', label: 'Guitar string', replay: true});
+      await session.page.waitForTimeout(150);
+      await session.expectText(/^Step 2\//);
       await sleep(1000);
       const rendered = bridge.frames.slice(since).some(frame => frame.message.type === 'rendered' && frame.message.reqId === 'replay-1');
       session.check(!rendered, 'replay show sent a rendered acknowledgement');
@@ -542,11 +648,27 @@ async function main() {
       session.check(!session.page.url().includes('k='), `page address still contains k=: ${session.page.url()}`);
     });
 
+    await simple('token-foreign', {token: 'do-not-leak', bridgeHost: '127.0.0.2'}, async session => {
+      const hello = bridge.frames.slice(session.frameStart).find(frame => frame.message.type === 'hello')?.message;
+      session.check(!Object.hasOwn(hello ?? {}, 'token'), `foreign bridge received stored token: ${JSON.stringify(hello?.token)}`);
+    });
+
+    await simple('reconnect-backoff', {closeHelloCount: 3}, async session => {
+      await bridge.waitFor(frame => {
+        return frame.message.type === 'hello' && bridge.frames.slice(session.frameStart)
+          .filter(item => item.message.type === 'hello').length >= 4;
+      }, {since: session.frameStart, timeout: 8000, description: 'four reconnect hellos'});
+      const hellos = bridge.frames.slice(session.frameStart).filter(frame => frame.message.type === 'hello').slice(0, 4);
+      const gaps = hellos.slice(1).map((frame, index) => frame.received - hellos[index].received);
+      session.check(gaps[2] >= 1400, `reconnect backoff did not grow after repeated open/close cycles: ${gaps.join(', ')} ms`);
+    });
+
     await simple('consent', {params: {consent: 1}}, async session => {
       await session.expectText('Before you start', {exact: true});
       await session.expectText('OK, start', {exact: true});
-      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      await captureScreenshot(session.page, path.join(SCREENSHOTS, session.result.screenshot.split('/').pop()));
       session.result.screenshotCaptured = true;
+      await session.page.evaluate(() => document.activeElement?.blur());
       await session.page.keyboard.press('Enter');
       await session.expectText('Physics Lens', {exact: true});
       const stored = await session.page.evaluate(() => localStorage.getItem('lens.consent'));
@@ -561,14 +683,15 @@ async function main() {
       send(session, {type: 'device', state: 'first_run'});
       await session.expectText('Before you start', {exact: true});
       await session.expectText('OK, start', {exact: true});
-      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      await captureScreenshot(session.page, path.join(SCREENSHOTS, session.result.screenshot.split('/').pop()));
       session.result.screenshotCaptured = true;
       send(session, {type: 'detecting', reqId: 'consent-held-1', timeoutMs: 60000});
       send(session, {type: 'show', reqId: 'consent-held-1', objectId: 'kettle', label: 'Boiling kettle'});
       await session.page.waitForTimeout(100);
       await session.expectText('Before you start', {exact: true});
+      await session.page.evaluate(() => document.activeElement?.blur());
       await session.page.keyboard.press('Enter');
-      await session.expectText(/Boiling kettle/);
+      await session.expectText(/Convection and boiling/);
     });
 
     await simple('follow-up', {}, async session => {
@@ -591,7 +714,7 @@ async function main() {
       await session.expectText(/^Step 2\//);
       const title = await session.page.locator('.ex-title').innerText();
       session.check(title.includes(lastLens.title), `expected title to name lens "${lastLens.title}", found "${title}"`);
-      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      await captureScreenshot(session.page, path.join(SCREENSHOTS, session.result.screenshot.split('/').pop()));
       session.result.screenshotCaptured = true;
       await session.page.keyboard.press('Enter');
       await session.expectText(/^Step 3\//);
@@ -640,7 +763,7 @@ async function main() {
       } catch (error) {
         session.check(false, errorMessage(error));
       }
-      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      await captureScreenshot(session.page, path.join(SCREENSHOTS, session.result.screenshot.split('/').pop()));
       session.result.screenshotCaptured = true;
       await session.page.keyboard.press('ArrowDown');
       try {
@@ -663,6 +786,184 @@ async function main() {
         return element?.getAttribute('aria-label') || element?.textContent || '';
       });
       session.check(focused.includes('Demo'), `expected D-pad focus on Demo, found ${JSON.stringify(focused)}`);
+      await session.page.keyboard.press('Enter');
+      await session.page.locator('.ex-title').waitFor({state: 'visible', timeout: WAIT_MS});
+      const initialTitle = await session.page.locator('.ex-title').innerText();
+      await session.page.waitForTimeout(1600);
+      const laterTitle = await session.page.locator('.ex-title').innerText();
+      session.check(laterTitle === initialTitle, `Demo advanced too quickly from "${initialTitle}" to "${laterTitle}"`);
+    });
+
+    await simple('stale-request', {}, async session => {
+      send(session, {type: 'detecting', reqId: 'new-request', timeoutMs: 60000});
+      await session.expectText(/^Looking/);
+      send(session, {type: 'show', reqId: 'old-request', objectId: 'guitar', label: 'Old guitar'});
+      send(session, {type: 'error', reqId: 'old-request', code: 'detect_failed', message: 'Old error'});
+      await session.page.waitForTimeout(150);
+      await session.expectText(/^Looking/);
+      session.check(await session.page.locator('.ex-canvas').count() === 0, 'stale show opened while a newer request was detecting');
+      send(session, {type: 'show', reqId: 'new-request', objectId: 'ball', label: 'Ball'});
+      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+    });
+
+    const immediateSketch = {
+      label: 'Stapler',
+      answer: 'The handle multiplies your force.',
+      chapters: [{
+        lens: 'number',
+        scene: 'number',
+        title: 'Force ratio',
+        lead: 'A longer handle multiplies force.',
+        captions: ['The handle doubles the force at the staple.'],
+        knobs: [{axis: 'x', label: 'handle length'}],
+        spec: {
+          headline: {value: 2, unit: 'times', label: 'force multiplication'},
+          rows: [{value: 20, unit: 'N', label: 'hand force'}],
+          knob: {label: 'handle', unit: 'cm', min: 5, max: 20, step: 1, value: 10},
+          steps: [{show: 'rows'}],
+        },
+      }],
+    };
+    await simple('sketch-immediate', {}, async session => {
+      const since = bridge.frames.length;
+      send(session, {type: 'show', reqId: 'sketch-now', objectId: 'unknown', label: 'Stapler', sketchPending: true});
+      send(session, {type: 'sketch', reqId: 'sketch-now', sketch: immediateSketch});
+      await session.expectText('Stapler', {exact: true});
+      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+      try {
+        await bridge.waitForMessage(message => message.type === 'rendered' && message.reqId === 'sketch-now', {
+          since,
+          description: 'rendered acknowledgement for immediate sketch',
+        });
+      } catch (error) {
+        const frames = bridge.frames.slice(since).map(frame => frame.message.type === 'rendered'
+          ? `${frame.message.type}:${frame.message.reqId}`
+          : frame.message.type).join(', ');
+        session.check(false, `${errorMessage(error)}; frames: ${frames}`);
+      }
+      await session.page.keyboard.press('ArrowUp');
+      await session.page.waitForTimeout(100);
+      const beforeReplay = await session.page.locator('.ex-read').innerText();
+      send(session, {
+        type: 'show',
+        reqId: 'sketch-now',
+        objectId: 'unknown',
+        label: 'Stapler',
+        sketch: immediateSketch,
+        replay: true,
+      });
+      await session.page.waitForTimeout(150);
+      const afterReplay = await session.page.locator('.ex-read').innerText();
+      session.check(afterReplay === beforeReplay, `sketch replay reset the current value from ${JSON.stringify(beforeReplay)} to ${JSON.stringify(afterReplay)}`);
+    });
+
+    await simple('malformed-frame', {}, async session => {
+      send(session, {
+        type: 'show',
+        reqId: 'bad-fields',
+        objectId: 'ball',
+        label: {bad: true},
+        answer: {bad: true},
+        question: {bad: true},
+        summary: {bad: true},
+        lenses: [{id: 'ball.motion', kind: 'motion', title: {bad: true}, lead: {bad: true}, steps: [{bad: true}]}],
+      });
+      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+      session.check((await visibleText(session.page)).length > 0, 'non-string show fields blanked the app');
+      send(session, {type: 'error', code: {bad: true}, message: {bad: true}});
+      await session.expectText('Something went wrong', {exact: true});
+    });
+
+    await simple('doffed-wake', {}, async session => {
+      send(session, {type: 'show', reqId: 'doffed-scene', objectId: 'ball', label: 'Ball'});
+      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+      await session.page.evaluate(() => { delete window.__glassesFps; });
+      send(session, {type: 'device', state: 'doffed'});
+      await session.page.waitForTimeout(1300);
+      const whileOff = await session.page.evaluate(() => window.__glassesFps);
+      session.check(whileOff === undefined, `canvas frame loop continued while doffed: ${JSON.stringify(whileOff)}`);
+      await session.page.keyboard.press('ArrowUp');
+      await session.page.locator('.ex-title').waitFor({state: 'visible', timeout: WAIT_MS});
+      await session.page.waitForFunction(() => typeof window.__glassesFps === 'number', null, {timeout: WAIT_MS});
+      send(session, {type: 'device', state: 'doffed'});
+      const since = bridge.frames.length;
+      bridge.terminate(session.socket);
+      await bridge.waitForMessage(message => message.type === 'hello', {since, description: 'reconnect while doffed'});
+      await session.page.locator('.ex-title').waitFor({state: 'visible', timeout: WAIT_MS});
+    });
+
+    await simple('demo-stops', {}, async session => {
+      send(session, {type: 'nav', action: 'demo'});
+      await session.expectText('Demo', {exact: true});
+      send(session, {type: 'clear'});
+      await session.page.waitForTimeout(100);
+      await session.page.keyboard.press('Enter');
+      await session.expectText('Physics Lens', {exact: true});
+      session.check(!await session.page.locator('.ex-tag', {hasText: 'Demo'}).isVisible().catch(() => false), 'clear did not stop demo mode');
+      send(session, {type: 'nav', action: 'demo'});
+      await session.expectText('Demo', {exact: true});
+      send(session, {type: 'device', state: 'doffed'});
+      send(session, {type: 'device', state: 'donned'});
+      await session.page.locator('.ex-tag', {hasText: 'Demo'}).waitFor({state: 'hidden', timeout: WAIT_MS}).catch(() => {
+        session.check(false, 'doffed did not stop demo mode');
+      });
+    });
+
+    const flowSketch = {
+      label: 'Motor',
+      answer: 'Energy flows through the motor.',
+      chapters: [{
+        lens: 'flow',
+        scene: 'flow',
+        title: 'Energy flow',
+        captions: ['Some energy leaves at each stage.'],
+        knobs: [{axis: 'x', label: 'loss'}],
+        spec: {
+          kind: 'energy',
+          nodes: [
+            {id: 'a', label: 'Input', sub: '100 J'},
+            {id: 'b', label: 'Coils', sub: 'turning'},
+            {id: 'c', label: 'Output', sub: 'motion'},
+          ],
+          losses: [
+            {at: 'a', label: 'Heat', share: 1},
+            {at: 'b', label: 'Sound', share: 1},
+            {at: 'c', label: 'Friction', share: 1},
+          ],
+          steps: [{upTo: 3, focus: ['c'], losses: true}],
+        },
+      }],
+    };
+    await simple('flow-loss-clamp', {}, async session => {
+      send(session, {type: 'show', reqId: 'flow-loss', objectId: 'unknown', label: 'Motor', sketch: flowSketch});
+      await session.expectText('100%', {exact: true});
+      const hint = await session.page.locator('.ex-hint').textContent().catch(() => '');
+      session.check(!hint, `flow sketch promised an unusable knob: ${JSON.stringify(hint)}`);
+    });
+
+    await simple('curve-bounds', {}, async session => {
+      const curveSketch = {
+        label: 'Huge curve',
+        answer: 'The invalid range is shown as text only.',
+        chapters: [{
+          lens: 'whatif',
+          scene: 'curve',
+          title: 'Huge range',
+          captions: ['This range must not freeze the display.'],
+          knobs: [{axis: 'x', label: 'value'}],
+          spec: {
+            x: {label: 'x', unit: 'm', min: 1e16, max: 1e16 + 4, step: 1, value: 1e16},
+            y: {label: 'y', unit: 'm'},
+            series: [{name: 'line', role: 'main', points: [[1e16, 0], [1e16 + 4, 1]]}],
+            marks: [{x: 1e16 + 2, label: 'middle'}],
+            steps: [{series: ['line']}],
+          },
+        }],
+      };
+      send(session, {type: 'show', reqId: 'curve-huge', objectId: 'unknown', label: 'Huge curve', sketch: curveSketch});
+      await session.expectText('This range must not freeze the display.', {exact: false});
+      await session.page.keyboard.press('ArrowUp');
+      session.check((await visibleText(session.page)).includes('Huge curve'), 'huge curve range froze or blanked the app');
     });
 
     const selectedObjects = options.only && objectIds.has(options.only)
@@ -688,7 +989,10 @@ async function main() {
           for (let stepIndex = 0; stepIndex < chapter.captions.length; stepIndex++) {
             const name = `scene-${object.id}-${chapter.lens}-s${stepIndex + 1}`;
             if (options.only && isSceneName(options.only) && options.only !== name) {
-              if (stepIndex + 1 < chapter.captions.length) await session.page.keyboard.press('Enter');
+              if (stepIndex + 1 < chapter.captions.length) {
+                await session.page.locator('.ex-caption').waitFor({state: 'visible', timeout: WAIT_MS});
+                await session.page.keyboard.press('Enter');
+              }
               continue;
             }
             const filename = `${name}.png`;
@@ -743,10 +1047,40 @@ async function main() {
                   addFailure(result, `canvas is entirely black after waiting for paint: ${errorMessage(error)}`);
                 }
                 await session.page.evaluate(() => { delete window.__glassesFps; });
+                await session.page.evaluate(() => {
+                  window.__readoutMutations = 0;
+                  window.__readoutObserver?.disconnect();
+                  const readouts = document.querySelector('.ex-read');
+                  if (!readouts) return;
+                  const observer = new MutationObserver(() => {
+                    window.__readoutMutations += 1;
+                  });
+                  observer.observe(readouts, {subtree: true, childList: true, characterData: true});
+                  window.__readoutObserver = observer;
+                });
                 await session.page.waitForTimeout(1200);
                 const sample = await session.page.evaluate(() => window.__glassesFps);
                 if (typeof sample === 'number' && Number.isFinite(sample)) samples.push(sample);
                 else addFailure(result, `window.__glassesFps was ${JSON.stringify(sample)} after 1.2 s`);
+                const readoutState = await session.page.evaluate(() => {
+                  window.__readoutObserver?.disconnect();
+                  const root = document.querySelector('.ex-read');
+                  const chips = root ? [...root.children] : [];
+                  const tops = chips.map(chip => Math.round(chip.getBoundingClientRect().top));
+                  return {
+                    count: chips.length,
+                    oneLine: tops.length < 2 || tops.every(top => Math.abs(top - tops[0]) <= 1),
+                    mutations: window.__readoutMutations ?? 0,
+                    live: root?.getAttribute('aria-live'),
+                    role: root?.getAttribute('role'),
+                  };
+                });
+                if (readoutState.count > 3) addFailure(result, `expected at most 3 readouts, found ${readoutState.count}`);
+                if (!readoutState.oneLine) addFailure(result, 'readouts wrapped onto more than one line');
+                if (readoutState.mutations > 3) addFailure(result, `readouts updated ${readoutState.mutations} times in 1.2 s`);
+                if (readoutState.live !== 'off' || readoutState.role !== null) {
+                  addFailure(result, `readouts must use aria-live=off without a live role; found live=${readoutState.live}, role=${readoutState.role}`);
+                }
 
                 const knob = chapter.knobs?.[stepIndex];
                 if (!knobChecked && knob) {
@@ -796,13 +1130,15 @@ async function main() {
               if (offenders.length) {
                 addFailure(result, `visible text under 16 px: ${offenders.map(item => `"${short(item.text, 60)}" (${item.size}px)`).join(', ')}`);
               }
+              const layout = await layoutOffenders(session.page);
+              for (const offender of layout) addFailure(result, `${offender.kind}: "${short(offender.text, 100)}"`);
               const newConsoleErrors = session.consoleErrors.slice(consoleStart);
               consoleCursor = session.consoleErrors.length;
               if (newConsoleErrors.length) addFailure(result, `console errors: ${newConsoleErrors.map(error => short(error, 160)).join(' | ')}`);
-              await session.page.screenshot({path: path.join(SCREENSHOTS, filename)});
+              await captureScreenshot(session.page, path.join(SCREENSHOTS, filename));
             } catch (error) {
               addFailure(result, errorMessage(error));
-              await session.page.screenshot({path: path.join(SCREENSHOTS, filename)}).catch(screenshotError => {
+              await captureScreenshot(session.page, path.join(SCREENSHOTS, filename)).catch(screenshotError => {
                 addFailure(result, `screenshot failed: ${errorMessage(screenshotError)}`);
               });
             }
@@ -821,7 +1157,25 @@ async function main() {
             }
           }
           for (const result of lensResults) recordResult(result);
-          if (lensIndex + 1 < object.chapters.length) await session.page.keyboard.press('ArrowRight');
+          if (lensIndex + 1 < object.chapters.length) {
+            const navSince = bridge.frames.length;
+            await session.page.keyboard.press('ArrowRight');
+            try {
+              await bridge.waitForMessage(message => message.type === 'state' && message.objectId === object.id &&
+                message.lensIndex === lensIndex + 1 && message.step === 1, {
+                since: navSince,
+                description: `${object.id} lens ${lensIndex + 1} state after lens change`,
+              });
+              await session.page.waitForTimeout(100);
+              const stale = bridge.frames.slice(navSince).filter(frame => frame.message.type === 'state' &&
+                frame.message.objectId === object.id && frame.message.lensIndex === lensIndex);
+              if (stale.length && lensResults.length) {
+                addFailure(lensResults[lensResults.length - 1], `lens change emitted ${stale.length} stale state frame(s)`);
+              }
+            } catch (error) {
+              if (lensResults.length) addFailure(lensResults[lensResults.length - 1], errorMessage(error));
+            }
+          }
         }
 
         // Only objects that have a knob on some step must show a changed param (the spoon has none).
