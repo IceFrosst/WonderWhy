@@ -995,10 +995,12 @@ async function main() {
       });
       session.check(focused.includes('Demo'), `expected D-pad focus on Demo, found ${JSON.stringify(focused)}`);
       await session.page.keyboard.press('Enter');
-      await session.page.locator('.ex-title').waitFor({state: 'visible', timeout: WAIT_MS});
-      const initialTitle = await session.page.locator('.ex-title').innerText();
+      // The demo's first object may open on its Explore lens, whose top line has the name instead of .ex-title.
+      const title = session.page.locator('.ex-title, .xp-name').first();
+      await title.waitFor({state: 'visible', timeout: WAIT_MS});
+      const initialTitle = await title.innerText();
       await session.page.waitForTimeout(1600);
-      const laterTitle = await session.page.locator('.ex-title').innerText();
+      const laterTitle = await title.innerText();
       session.check(laterTitle === initialTitle, `Demo advanced too quickly from "${initialTitle}" to "${laterTitle}"`);
     });
 
