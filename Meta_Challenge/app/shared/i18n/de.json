@@ -1,0 +1,275 @@
+{
+  "_note": "Machine-translated on 14 Nov 2026 from shared/objects.json. Not yet reviewed by a native speaker.",
+  "lang": "de",
+  "unknown_label": "Unbekanntes Objekt",
+  "lens_names": {
+    "motion": "Bewegung",
+    "inside": "Innenleben",
+    "cutaway": "Schnitt",
+    "flow": "Fluss",
+    "zoom": "Zoom",
+    "whatif": "Was wäre wenn",
+    "compare": "Vergleich",
+    "number": "Die Zahl"
+  },
+  "objects": {
+    "guitar": {
+      "label": "Gitarrensaite",
+      "answer": "Eine kürzere Saite schwingt schneller, also klingt der Ton höher.",
+      "chapters": {
+        "motion": {
+          "title": "Stehende Wellen",
+          "captions": [
+            "Ein Bund verkürzt die Saite. Die halbe Länge ergibt die doppelte Frequenz: f = v / 2L.",
+            "Eine Saite schwingt auch in ganzzahligen Mustern: Obertöne n = 1, 2, 3 bei f, 2f, 3f.",
+            "Die Wellengeschwindigkeit hängt von der Spannung T und der Masse pro Länge ab: f = (1/2L) sqrt(T/mu). Straffer = höher."
+          ]
+        },
+        "whatif": {
+          "title": "Was wäre wenn",
+          "lead": "Jeder Bund erhöht den Ton um dasselbe Verhältnis.",
+          "captions": [
+            "Jeder Bund verkürzt die Saite und hebt den Ton um etwa 6 Prozent. Zwölf Bünde verdoppeln die Frequenz: eine Oktave.",
+            "Eine doppelt so lange Saite klingt bei jedem Bund eine Oktave tiefer. Darum sind Bassinstrumente groß."
+          ]
+        },
+        "flow": {
+          "title": "Dem Klang folgen",
+          "lead": "Eine dünne Saite bewegt kaum Luft. Der Holzkörper schon.",
+          "captions": [
+            "Beim Zupfen wird die Saite zur Seite gezogen und losgelassen. Sie schwingt hin und her, mit ihrer eigenen Frequenz.",
+            "Die Saite ist zu dünn, um viel Luft zu bewegen. Stattdessen bringt sie den Steg zum Schwingen, an dem sie hängt.",
+            "Der Steg bringt die dünne Decke zum Schwingen. Ihre große Fläche bewegt viel Luft, und das macht den Ton laut.",
+            "Druckwellen laufen mit 343 Metern pro Sekunde durch die Luft zu deinem Ohr."
+          ]
+        },
+        "number": {
+          "title": "Die Zahl",
+          "lead": "Eine leere A-Saite schwingt 110-mal pro Sekunde.",
+          "captions": [
+            "Die Frequenz zählt die Schwingungen pro Sekunde. Die leere tiefe A-Saite der Gitarre macht 110 davon: 110 Hertz.",
+            "Bund 12 halbiert die Saite, also verdoppelt sich der Ton auf 220 Hz. Die Welle läuft mit 143 m/s entlang der Saite.",
+            "Jede Verdopplung ist eine Oktave. Zwei Oktaven über dieser Saite liegen die 440 Hz, auf die Orchester stimmen."
+          ]
+        }
+      }
+    },
+    "ball": {
+      "label": "Geworfener Ball",
+      "answer": "Die Schwerkraft biegt die Bahn zu einer Kurve.",
+      "chapters": {
+        "motion": {
+          "title": "Wurfbewegung",
+          "captions": [
+            "Die Schwerkraft zieht den Ball ständig nach unten, darum krümmt sich seine Bahn zu einer Parabel.",
+            "Die seitliche Geschwindigkeit bleibt gleich. Nur die senkrechte ändert sich, denn die Schwerkraft wirkt nach unten.",
+            "Luftwiderstand bremst den Ball, darum liegt der beste Winkel unter 45 Grad. Grau = keine Luft."
+          ]
+        },
+        "compare": {
+          "title": "Aufprall",
+          "lead": "Jeder Aufprall behält nur einen Teil der Energie.",
+          "captions": [
+            "Jeder Sprung wird niedriger, weil der Ball nur einen Teil seiner Energie behält: das Höhenverhältnis ist e zum Quadrat.",
+            "Beim Fallen wird Lageenergie zu Bewegungsenergie; die Verformung speichert sie wie eine Feder; bei jedem Aufprall geht etwas als Wärme und Schall verloren.",
+            "Die Sprungkraft hängt vom Material ab: ein Flummi springt fast ganz zurück, Ton nimmt die Energie als Wärme auf und springt kaum."
+          ]
+        },
+        "whatif": {
+          "title": "Was wäre wenn",
+          "lead": "Ändere den Winkel, dann den Planeten.",
+          "captions": [
+            "Ändere den Winkel. Ein flacher und ein steiler Wurf fallen beide zu kurz aus. 45 Grad reicht am weitesten.",
+            "Auf dem Mond ist die Schwerkraft sechsmal schwächer, also fliegt jeder Wurf sechsmal weiter. Der beste Winkel bleibt 45."
+          ]
+        },
+        "flow": {
+          "title": "Der Energie folgen",
+          "lead": "Die Energie wechselt die Form, verschwindet aber nie.",
+          "captions": [
+            "Dein Arm verrichtet Arbeit am Ball. Ein Tennisball, der mit 10 Metern pro Sekunde geworfen wird, trägt etwa 2.9 Joule.",
+            "Beim Steigen wird Bewegungsenergie zu Lageenergie. Am höchsten Punkt eines Wurfs mit 45 Grad ist es je zur Hälfte beides.",
+            "Beim Fallen wird Lageenergie wieder zu Bewegung. Ein wenig geht unterwegs durch Luftwiderstand verloren.",
+            "Beim Aufprall wird die Bewegungsenergie zu Wärme, Schall und dem nächsten Sprung. Nichts davon wird vernichtet."
+          ]
+        },
+        "number": {
+          "title": "Die Zahl",
+          "lead": "Ein Wurf mit 10 m/s unter 45 Grad landet etwa 10 Meter entfernt.",
+          "captions": [
+            "Die Wurfweite ist Geschwindigkeit zum Quadrat geteilt durch g bei 45 Grad: 100 geteilt durch 9.81 ist etwa 10 Meter. Luft wird ignoriert.",
+            "Der Ball bleibt 1.4 Sekunden in der Luft und steigt bis 2.5 Meter. Zehn Meter pro Sekunde sind 36 km/h.",
+            "Der Mond zieht sechsmal schwächer, also fliegt derselbe Wurf sechsmal weiter: etwa 62 Meter."
+          ]
+        }
+      }
+    },
+    "bicycle": {
+      "label": "Fahrradgangschaltung",
+      "answer": "Großes Kettenblatt vorn und kleines Ritzel hinten tauschen Kraft gegen Tempo.",
+      "chapters": {
+        "motion": {
+          "title": "Übersetzung",
+          "captions": [
+            "Die Kette verbindet zwei Zahnräder. Übersetzung = Zähne vorn / Zähne hinten.",
+            "Jede Pedalumdrehung zieht die Kette um die vordere Zähnezahl, das Rad dreht sich um die Übersetzung.",
+            "Energie bleibt erhalten: eine höhere Übersetzung gibt mehr Tempo pro Pedalumdrehung, aber weniger Kraft am Rad."
+          ]
+        },
+        "whatif": {
+          "title": "Was wäre wenn",
+          "lead": "Weniger Zähne hinten, mehr Tempo pro Pedalumdrehung.",
+          "captions": [
+            "Weniger Zähne hinten geben mehr Tempo bei gleichem Treten: 44 km/h im kleinsten Gang, 14 im größten.",
+            "Das kleine vordere Kettenblatt senkt jeden Gang um etwa ein Drittel. Du bist langsamer, aber jeder Tritt ist kräftiger."
+          ]
+        },
+        "flow": {
+          "title": "Der Kraft folgen",
+          "lead": "Dein Tritt läuft durch die Kette bis zur Straße.",
+          "captions": [
+            "Dein Bein drückt das Pedal nach unten. Die Kurbel ist ein Hebel, der den Druck in ein Drehmoment am vorderen Zahnrad verwandelt.",
+            "Das vordere Zahnrad zieht das obere Kettenstück straff. Eine saubere Kette verliert nur etwa 3 Prozent durch Reibung.",
+            "Die Kette dreht das hintere Zahnrad. Ein kleines Ritzel dreht das Rad mehrmals pro Pedalumdrehung.",
+            "Der Reifen drückt nach hinten auf die Straße und die Straße drückt das Rad nach vorn. Dieser Schub bewegt dich."
+          ]
+        },
+        "number": {
+          "title": "Die Zahl",
+          "lead": "Eine Pedalumdrehung im hohen Gang bringt dich über 6 Meter weit.",
+          "captions": [
+            "48 Zähne geteilt durch 16 ergibt die Übersetzung 3. Das Rad dreht sich dreimal pro Pedalumdrehung: 3 mal 2.1 Meter.",
+            "Bei 80 Pedalumdrehungen pro Minute sind das 30 km/h. Der Preis: Nur 17 Prozent deiner Kraft kommen am Reifen an.",
+            "Ein niedriger Gang dreht es um. Die dreifache Kraft zum Bergauffahren, aber nur 2.1 Meter pro Umdrehung."
+          ]
+        }
+      }
+    },
+    "kettle": {
+      "label": "Kochender Wasserkocher",
+      "answer": "Heißes Wasser steigt, kaltes sinkt, Blasen sind Dampf.",
+      "chapters": {
+        "motion": {
+          "title": "Konvektion und Sieden",
+          "captions": [
+            "Erwärmtes Wasser dehnt sich aus und wird leichter, darum steigt es in der Mitte auf und sinkt an den Seiten.",
+            "Heiße Stellen am Boden lassen Dampfblasen entstehen (Keimbildung), dann steigen sie auf und platzen.",
+            "Bei 100 C geht zusätzliche Energie in die Verdampfung, nicht in die Erwärmung. Das ist die latente Wärme."
+          ]
+        },
+        "whatif": {
+          "title": "Was wäre wenn",
+          "lead": "Doppelt so viel Wasser braucht doppelt so lange.",
+          "captions": [
+            "Die Kochzeit wächst gleichmäßig mit der Wassermenge. Doppelt so viel Wasser braucht doppelt so lange und doppelt so viel Energie.",
+            "Wasser, das bei 60 C startet, braucht nur die halbe Heizenergie, also kocht es in der halben Zeit."
+          ]
+        },
+        "flow": {
+          "title": "Der Energie folgen",
+          "lead": "Strom hinein, heißes Wasser und etwas Abwärme heraus.",
+          "captions": [
+            "Strom fließt aus der Steckdose in eine Drahtspirale im Boden: das Heizelement.",
+            "Das Element setzt dem Strom Widerstand entgegen, darum wird alle elektrische Energie zu Wärme, die ins Wasser übergeht.",
+            "Etwa 88 Prozent landen im Wasser. Der Rest wärmt die Kanne und die Luft ringsum.",
+            "Bei 100 C wird das Wasser zu Dampf. Der Dampf erhitzt einen Metallstreifen, der sich biegt und den Kocher abschaltet."
+          ]
+        },
+        "number": {
+          "title": "Die Zahl",
+          "lead": "Einen Liter zu kochen braucht etwa ein Zehntel Kilowattstunde.",
+          "captions": [
+            "Einen Liter Wasser um 80 Grad zu erwärmen braucht 335 Kilojoule. Aus der Steckdose sind das etwa 0.11 kWh.",
+            "Ein Kocher mit 2 kW braucht dafür etwa drei Minuten, und es kostet etwa zwei Cent.",
+            "Dieselbe Energie würde eine LED-Lampe mit 10 Watt über zehn Stunden leuchten lassen. Koche nur, was du brauchst."
+          ]
+        }
+      }
+    },
+    "pendulum": {
+      "label": "Schwingende Schlüssel",
+      "answer": "Schwingzeit: Länge zählt, Gewicht nicht.",
+      "chapters": {
+        "motion": {
+          "title": "Schwingzeit",
+          "captions": [
+            "Eine Schwingung dauert T = 2 pi sqrt(L/g). Eine längere Schnur schwingt langsamer.",
+            "Der Winkel folgt einer glatten Sinuskurve. Die vierfache Länge ergibt die doppelte Periode.",
+            "Die Masse kürzt sich weg: zwei verschieden schwere Gewichte an gleichen Fäden schwingen im Takt."
+          ]
+        },
+        "whatif": {
+          "title": "Was wäre wenn",
+          "lead": "Eine längere Schnur schwingt langsamer, aber nicht proportional.",
+          "captions": [
+            "Mach die Schnur länger, und die Schwingung wird langsamer, doch die Kurve flacht ab. Die vierfache Länge verdoppelt die Zeit nur.",
+            "Auf dem Mond schwingt dieselbe Schnur etwa zweieinhalbmal langsamer, weil die Schwerkraft sanfter zurückzieht."
+          ]
+        },
+        "flow": {
+          "title": "Der Energie folgen",
+          "lead": "Lageenergie und Bewegungsenergie wechseln sich ab.",
+          "captions": [
+            "Das Anheben der Schlüssel zur Seite speichert Lageenergie. Noch bewegt sich nichts.",
+            "Loslassen: Lageenergie wird zu Bewegung. Unten ist alles Bewegung, etwa einen halben Meter pro Sekunde.",
+            "Auf der anderen Seite steigen die Schlüssel wieder, und Bewegung wird zurück zu Höhe. Dann läuft alles rückwärts.",
+            "Bei jeder Schwingung nimmt die Luft etwas Energie als Wärme weg, darum werden die Ausschläge kleiner. Die Schwingzeit bleibt gleich."
+          ]
+        },
+        "number": {
+          "title": "Die Zahl",
+          "lead": "Schlüssel an 25 cm Band: eine Sekunde pro Schwingung.",
+          "captions": [
+            "Die Schwingzeit ist 2 pi mal die Wurzel aus Länge durch g. Bei 25 Zentimetern ist das eine Sekunde.",
+            "Die vierfache Länge verdoppelt die Zeit: zwei Sekunden für einen Meter. Das Gewicht der Schlüssel ändert nichts.",
+            "Schwächere Schwerkraft zieht sanfter zurück. Auf dem Mond braucht dasselbe Band zweieinhalb Sekunden."
+          ]
+        }
+      }
+    },
+    "phone": {
+      "label": "Smartphone",
+      "answer": "Etwa neun dünne Schichten: Glas, Touch, Pixel, Chips und ein Akku.",
+      "chapters": {
+        "inside": {
+          "title": "Schichten",
+          "captions": [
+            "Ein Handy ist ein Sandwich aus etwa neun dünnen Schichten, alles in weniger als einem Zentimeter.",
+            "Der Touchsensor ist ein Gitter aus Elektroden. Dein Finger verändert das elektrische Feld, die Kapazität, wo du berührst.",
+            "Millionen OLED-Pixel erzeugen je ihr eigenes Licht. Ein schwarzer Pixel ist einfach aus, das spart Strom bei dunklen Bildern.",
+            "Die Platine trägt Prozessor, Speicher und Funkchips. Der Prozessor macht Milliarden einfacher Schritte pro Sekunde.",
+            "Lithium-Ionen wandern zwischen zwei Elektrodenschichten, wenn du lädst und das Handy nutzt. Der Akku ist der größte Teil im Inneren.",
+            "Die Spule lädt ohne Kabel durch magnetische Induktion. Die Kamera stapelt mehrere Linsen auf einen winzigen Sensor."
+          ]
+        },
+        "whatif": {
+          "title": "Was wäre wenn",
+          "lead": "Ein stärkeres Ladegerät füllt den Akku schneller.",
+          "captions": [
+            "Ein Ladegerät mit 5 Watt braucht über drei Stunden, eines mit 20 Watt unter einer. Echte Handys werden kurz vor voll langsamer.",
+            "Ein Tablet-Akku fasst doppelt so viel Energie, also braucht jedes Ladegerät doppelt so lange."
+          ]
+        },
+        "flow": {
+          "title": "Der Energie folgen",
+          "lead": "Von der Steckdose bis zum Licht des Bildschirms.",
+          "captions": [
+            "Die Steckdose liefert 230 Volt, die hin und her wechseln. Das Ladegerät macht daraus eine niedrige, gleichmäßige Spannung.",
+            "Im Akku werden Lithium-Ionen von einer Elektrodenschicht zur anderen gedrückt. So wird die Energie gespeichert.",
+            "Beim Benutzen fließen die Ionen zurück. Der Strom treibt Prozessor, Funkchip und Bildschirm an.",
+            "Am Ende verlässt alles das Handy als Licht, Funkwellen und Wärme. Darum fühlt sich ein beschäftigtes Handy warm an."
+          ]
+        },
+        "number": {
+          "title": "Die Zahl",
+          "lead": "Ein voller Handy-Akku fasst etwa 15 Wattstunden.",
+          "captions": [
+            "4000 Milliamperestunden bei 3.85 Volt sind etwa 15 Wattstunden: die Energie eines vollen Akkus.",
+            "Das Laden kostet unter einen halben Cent. Ein ganzes Jahr tägliches Laden kostet etwas über einen Euro.",
+            "Ein Wasserkocher verbraucht dieselbe Energie in 28 Sekunden. Wasser zu erhitzen kostet weit mehr als Rechnen."
+          ]
+        }
+      }
+    }
+  }
+}

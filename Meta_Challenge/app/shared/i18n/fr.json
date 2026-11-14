@@ -1,0 +1,275 @@
+{
+  "_note": "Machine-translated on 14 Nov 2026 from shared/objects.json. Not yet reviewed by a native speaker.",
+  "lang": "fr",
+  "unknown_label": "Objet inconnu",
+  "lens_names": {
+    "motion": "Mouvement",
+    "inside": "Intérieur",
+    "cutaway": "Coupe",
+    "flow": "Flux",
+    "zoom": "Zoom",
+    "whatif": "Et si",
+    "compare": "Comparer",
+    "number": "Le chiffre"
+  },
+  "objects": {
+    "guitar": {
+      "label": "Corde de guitare",
+      "answer": "Une corde plus courte vibre plus vite, donc la note est plus aiguë.",
+      "chapters": {
+        "motion": {
+          "title": "Ondes stationnaires",
+          "captions": [
+            "Appuyer sur une case raccourcit la corde. La moitié de la longueur donne le double de fréquence : f = v / 2L.",
+            "Une corde vibre aussi en motifs entiers : harmoniques n = 1, 2, 3 à f, 2f, 3f.",
+            "La vitesse d'onde dépend de la tension T et de la masse linéique : f = (1/2L) sqrt(T/mu). Plus tendue = plus aiguë."
+          ]
+        },
+        "whatif": {
+          "title": "Et si",
+          "lead": "Chaque case monte la note du même rapport.",
+          "captions": [
+            "Chaque case raccourcit la corde et monte la note d'environ 6 pour cent. Douze cases doublent la fréquence : une octave.",
+            "Une corde deux fois plus longue sonne une octave plus grave à chaque case. C'est pourquoi les instruments graves sont grands."
+          ]
+        },
+        "flow": {
+          "title": "Suivre le son",
+          "lead": "Une corde fine remue peu d'air. Le corps en bois, si.",
+          "captions": [
+            "Un pincement écarte la corde puis la lâche. La corde oscille d'un côté à l'autre à sa propre fréquence.",
+            "La corde est trop fine pour remuer beaucoup d'air seule. Elle fait vibrer le chevalet auquel elle est attachée.",
+            "Le chevalet fait vibrer la fine table d'harmonie. Sa grande surface remue beaucoup d'air, et la note devient forte.",
+            "Les ondes de pression traversent l'air à 343 mètres par seconde jusqu'à ton oreille."
+          ]
+        },
+        "number": {
+          "title": "Le chiffre",
+          "lead": "Une corde de La à vide vibre 110 fois par seconde.",
+          "captions": [
+            "La fréquence compte les oscillations par seconde. La corde de La grave à vide de la guitare en fait 110 : 110 hertz.",
+            "La case 12 divise la corde par deux, donc la note double à 220 Hz. L'onde parcourt la corde à 143 m/s.",
+            "Chaque doublement est une octave. Deux octaves plus haut : les 440 Hz de l'accord des orchestres."
+          ]
+        }
+      }
+    },
+    "ball": {
+      "label": "Balle lancée",
+      "answer": "La gravité courbe la trajectoire.",
+      "chapters": {
+        "motion": {
+          "title": "Mouvement de projectile",
+          "captions": [
+            "La gravité tire la balle vers le bas en permanence, donc sa trajectoire se courbe en parabole.",
+            "La vitesse horizontale ne change jamais. Seule la vitesse verticale change, car la gravité agit vers le bas.",
+            "La résistance de l'air freine la balle, donc le meilleur angle passe sous 45 degrés. Gris = sans air."
+          ]
+        },
+        "compare": {
+          "title": "Rebond",
+          "lead": "Chaque rebond ne garde qu'une partie de l'énergie.",
+          "captions": [
+            "Chaque rebond est plus bas car la balle ne garde qu'une partie de son énergie : le rapport des hauteurs est e au carré.",
+            "En tombant, l'énergie potentielle devient énergie cinétique ; l'écrasement la stocke comme un ressort ; une part se perd en chaleur et en son à chaque rebond.",
+            "Le rebond dépend de la matière : une balle rebondissante revient presque entièrement, l'argile absorbe l'énergie en chaleur et rebondit à peine."
+          ]
+        },
+        "whatif": {
+          "title": "Et si",
+          "lead": "Change l'angle, puis change de planète.",
+          "captions": [
+            "Change l'angle. Un lancer plat et un lancer très haut tombent tous deux trop court. 45 degrés va le plus loin.",
+            "Sur la Lune la gravité est six fois plus faible, donc chaque lancer va six fois plus loin. Le meilleur angle reste 45."
+          ]
+        },
+        "flow": {
+          "title": "Suivre l'énergie",
+          "lead": "L'énergie change de forme mais ne disparaît jamais.",
+          "captions": [
+            "Ton bras fournit un travail à la balle. Une balle de tennis lancée à 10 mètres par seconde porte environ 2.9 joules.",
+            "En montant, l'énergie cinétique devient énergie potentielle. Au sommet d'un lancer à 45 degrés, c'est moitié-moitié.",
+            "En descendant, l'énergie potentielle redevient mouvement. Un peu se perd par résistance de l'air en chemin.",
+            "À l'arrivée, l'énergie cinétique devient chaleur, son et prochain rebond. Rien n'en est détruit."
+          ]
+        },
+        "number": {
+          "title": "Le chiffre",
+          "lead": "Un lancer à 10 m/s sous 45 degrés atterrit à environ 10 mètres.",
+          "captions": [
+            "La portée est la vitesse au carré divisée par g à 45 degrés : 100 divisé par 9.81 fait environ 10 mètres. L'air est ignoré.",
+            "La balle reste 1.4 seconde en l'air et culmine à 2.5 mètres. Dix mètres par seconde font 36 km/h.",
+            "La Lune attire six fois moins, donc le même lancer va six fois plus loin : environ 62 mètres."
+          ]
+        }
+      }
+    },
+    "bicycle": {
+      "label": "Vitesses de vélo",
+      "answer": "Un grand plateau et un petit pignon échangent force contre vitesse.",
+      "chapters": {
+        "motion": {
+          "title": "Rapport de vitesse",
+          "captions": [
+            "La chaîne relie deux roues dentées. Rapport = dents devant / dents derrière.",
+            "Chaque tour de pédale tire la chaîne du nombre de dents du plateau, donc la roue tourne selon le rapport.",
+            "L'énergie se conserve : un rapport plus grand donne plus de vitesse par tour de pédale mais moins de poussée à la roue."
+          ]
+        },
+        "whatif": {
+          "title": "Et si",
+          "lead": "Moins de dents derrière, plus de vitesse par tour de pédale.",
+          "captions": [
+            "Moins de dents derrière donnent plus de vitesse pour le même pédalage : 44 km/h sur le plus petit pignon, 14 sur le plus grand.",
+            "Le petit plateau baisse chaque vitesse d'environ un tiers. Tu vas moins vite, mais chaque coup de pédale pousse plus fort."
+          ]
+        },
+        "flow": {
+          "title": "Suivre la force",
+          "lead": "Ta poussée voyage par la chaîne jusqu'à la route.",
+          "captions": [
+            "Ta jambe pousse la pédale vers le bas. Le pédalier est un levier qui change la poussée en rotation du plateau.",
+            "Le plateau tend le brin supérieur de la chaîne. Une chaîne propre ne perd qu'environ 3 pour cent par frottement.",
+            "La chaîne fait tourner le pignon. Un petit pignon fait tourner la roue plusieurs fois par tour de pédale.",
+            "Le pneu pousse la route vers l'arrière et la route pousse le vélo vers l'avant. Cette poussée te fait avancer."
+          ]
+        },
+        "number": {
+          "title": "Le chiffre",
+          "lead": "Un tour de pédale en grand braquet te fait avancer de plus de 6 mètres.",
+          "captions": [
+            "48 dents divisées par 16 donnent un rapport de 3. La roue tourne trois fois par tour de pédale : 3 fois 2.1 mètres.",
+            "À 80 tours de pédale par minute, cela fait 30 km/h. Le prix : seuls 17 pour cent de ta poussée atteignent le pneu.",
+            "Un petit braquet inverse cela. Trois fois la poussée pour grimper, mais seulement 2.1 mètres par tour."
+          ]
+        }
+      }
+    },
+    "kettle": {
+      "label": "Bouilloire en ébullition",
+      "answer": "L'eau chaude monte, l'eau froide descend, les bulles sont de la vapeur.",
+      "chapters": {
+        "motion": {
+          "title": "Convection et ébullition",
+          "captions": [
+            "L'eau chauffée se dilate et devient plus légère, donc elle monte au milieu et descend sur les côtés.",
+            "Des points chauds au fond laissent se former des bulles de vapeur (nucléation), puis elles montent et éclatent.",
+            "À 100 C, l'énergie en plus sert à transformer l'eau en vapeur, pas à la chauffer. C'est la chaleur latente."
+          ]
+        },
+        "whatif": {
+          "title": "Et si",
+          "lead": "Deux fois plus d'eau prend deux fois plus de temps.",
+          "captions": [
+            "Le temps d'ébullition croît en ligne droite avec l'eau. Deux fois plus d'eau demande deux fois plus de temps et d'énergie.",
+            "Une eau qui part de 60 C n'a besoin que de la moitié du chauffage, donc elle bout en moitié moins de temps."
+          ]
+        },
+        "flow": {
+          "title": "Suivre l'énergie",
+          "lead": "Électricité en entrée, eau chaude et un peu de chaleur perdue en sortie.",
+          "captions": [
+            "L'électricité passe de la prise à une spirale de fil dans le socle : la résistance chauffante.",
+            "La résistance s'oppose au courant, donc toute l'énergie électrique devient chaleur, qui passe dans l'eau.",
+            "Environ 88 pour cent finissent dans l'eau. Le reste chauffe la bouilloire et l'air autour.",
+            "À 100 C l'eau devient vapeur. La vapeur chauffe une lame métallique qui se plie et éteint la bouilloire d'un clic."
+          ]
+        },
+        "number": {
+          "title": "Le chiffre",
+          "lead": "Faire bouillir un litre demande environ un dixième de kilowattheure.",
+          "captions": [
+            "Chauffer un litre d'eau de 80 degrés demande 335 kilojoules. Depuis la prise, cela fait environ 0.11 kWh.",
+            "Une bouilloire de 2 kW met environ trois minutes, et cela coûte environ deux centimes.",
+            "La même énergie ferait briller une lampe LED de 10 watts plus de dix heures. Ne fais bouillir que le nécessaire."
+          ]
+        }
+      }
+    },
+    "pendulum": {
+      "label": "Clés qui se balancent",
+      "answer": "La durée dépend de la longueur, pas du poids.",
+      "chapters": {
+        "motion": {
+          "title": "Durée d'oscillation",
+          "captions": [
+            "Une oscillation dure T = 2 pi sqrt(L/g). Un fil plus long oscille plus lentement.",
+            "L'angle suit une sinusoïde régulière. Quatre fois la longueur donne le double de période.",
+            "La masse s'annule : deux masses différentes au bout de fils égaux oscillent ensemble."
+          ]
+        },
+        "whatif": {
+          "title": "Et si",
+          "lead": "Un fil plus long oscille plus lentement, mais pas proportionnellement.",
+          "captions": [
+            "Allonge le fil et l'oscillation ralentit, mais la courbe s'aplatit. Quatre fois la longueur ne fait que doubler le temps.",
+            "Sur la Lune, le même fil oscille environ deux fois et demie plus lentement, car la gravité rappelle plus doucement."
+          ]
+        },
+        "flow": {
+          "title": "Suivre l'énergie",
+          "lead": "L'énergie potentielle et l'énergie cinétique s'échangent sans cesse.",
+          "captions": [
+            "Soulever les clés sur le côté stocke de l'énergie potentielle. Rien ne bouge encore.",
+            "Lâche : l'énergie potentielle devient mouvement. En bas, tout est mouvement, environ un demi-mètre par seconde.",
+            "De l'autre côté, les clés remontent et le mouvement redevient hauteur. Puis tout se déroule à l'envers.",
+            "À chaque oscillation l'air prend un peu d'énergie en chaleur, donc l'amplitude diminue. La durée reste la même."
+          ]
+        },
+        "number": {
+          "title": "Le chiffre",
+          "lead": "Clés sur un cordon de 25 cm : une seconde par oscillation.",
+          "captions": [
+            "La durée d'oscillation est 2 pi fois la racine carrée de la longueur sur g. Pour 25 centimètres, cela fait une seconde.",
+            "Quatre fois la longueur double le temps : deux secondes pour un mètre. Le poids des clés ne change rien.",
+            "Une gravité plus faible rappelle plus doucement. Sur la Lune, le même cordon demande deux secondes et demie."
+          ]
+        }
+      }
+    },
+    "phone": {
+      "label": "Smartphone",
+      "answer": "Environ neuf couches fines : verre, tactile, pixels, puces et une batterie.",
+      "chapters": {
+        "inside": {
+          "title": "Couches",
+          "captions": [
+            "Un téléphone est un sandwich d'environ neuf couches fines, le tout dans moins d'un centimètre.",
+            "Le capteur tactile est une grille d'électrodes. Ton doigt change le champ électrique, ou capacité, là où tu touches.",
+            "Des millions de pixels OLED font chacun leur lumière. Un pixel noir est simplement éteint, ce qui économise l'énergie sur écran sombre.",
+            "La carte logique porte le processeur, la mémoire et les puces radio. Le processeur fait des milliards d'étapes simples par seconde.",
+            "Des ions lithium passent entre deux couches d'électrodes quand tu charges et utilises le téléphone. La batterie est la plus grosse pièce.",
+            "La bobine charge sans câble par induction magnétique. L'appareil photo empile plusieurs lentilles sur un minuscule capteur."
+          ]
+        },
+        "whatif": {
+          "title": "Et si",
+          "lead": "Un chargeur plus puissant remplit la batterie plus tôt.",
+          "captions": [
+            "Un chargeur de 5 watts demande plus de trois heures. Un de 20 watts, moins d'une. Les vrais téléphones ralentissent près du plein.",
+            "Une batterie de tablette contient deux fois plus d'énergie, donc tout chargeur met deux fois plus longtemps."
+          ]
+        },
+        "flow": {
+          "title": "Suivre l'énergie",
+          "lead": "De la prise murale à la lumière de l'écran.",
+          "captions": [
+            "La prise donne 230 volts qui alternent dans les deux sens. Le chargeur en fait une tension basse et constante.",
+            "Dans la batterie, des ions lithium sont poussés d'une couche d'électrodes à l'autre. Cela stocke l'énergie.",
+            "Quand tu utilises le téléphone, les ions reviennent. Le courant alimente le processeur, la radio et l'écran.",
+            "Au final tout repart en lumière, en ondes radio et en chaleur. C'est pourquoi un téléphone très sollicité est chaud."
+          ]
+        },
+        "number": {
+          "title": "Le chiffre",
+          "lead": "Une batterie de téléphone pleine contient environ 15 wattheures.",
+          "captions": [
+            "4000 milliampères-heures à 3.85 volts font environ 15 wattheures : l'énergie d'une batterie pleine.",
+            "La recharger coûte moins d'un demi-centime. Une année entière de charges quotidiennes coûte un peu plus d'un euro.",
+            "Une bouilloire consomme la même énergie en 28 secondes. Chauffer de l'eau coûte bien plus que calculer."
+          ]
+        }
+      }
+    }
+  }
+}
