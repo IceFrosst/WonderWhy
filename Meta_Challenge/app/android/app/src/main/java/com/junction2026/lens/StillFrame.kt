@@ -73,12 +73,15 @@ object StillFrame {
 
     /**
      * Rows of the stage in a frame [h] rows high: below the head (title and answer, the top 15.5%) and above
-     * the caption block. The caption is found from the bottom: the lens name (a line in the bottom 12%), then
+     * the caption block. A two-line answer runs a little past 15.5% (its second line at y 89-105 on the
+     * 14 Nov exports): a text line that crosses that row moves the stage top below it.
+     * The caption is found from the bottom: the lens name (a line in the bottom 12%), then
      * up to three caption lines, each close to the one below; a wide gap ends the caption.
      */
     fun stageRows(rows: BooleanArray): IntRange {
         val h = rows.size
-        val top = (h * 0.155).toInt()
+        var top = (h * 0.155).toInt()
+        blocks(rows).firstOrNull { it.first < top && it.last >= top && it.last - it.first + 1 <= h * 0.045 }?.let { top = it.last + 1 }
         val bl = blocks(rows, top)
         var i = bl.lastIndex
         var bottom = h // exclusive: first row that is not stage
@@ -124,6 +127,33 @@ object StillFrame {
             (maxX + 1 + PAD).coerceAtMost(w), (maxY + 1 + PAD).coerceAtMost(stage.last + 1),
         )
     }
+
+    /**
+     * The drawn part of a text-free frame (an Explore still `c<n>.png`), plus a small margin: everything that
+     * is not black. No head or caption logic: the whole picture is kept, only the see-through black around it
+     * goes. The soft bloom around the glowing edges counts (anything over [GLOW]), so the cut never shows as
+     * a hard edge. An empty frame keeps everything.
+     */
+    fun drawnBox(px: IntArray, w: Int, h: Int): CropBox {
+        var minX = w; var maxX = -1; var minY = h; var maxY = -1
+        for (y in 0 until h) for (x in 0 until w) {
+            val c = px[y * w + x]
+            if (maxOf((c shr 16) and 0xff, (c shr 8) and 0xff, c and 0xff) > GLOW) {
+                if (x < minX) minX = x
+                if (x > maxX) maxX = x
+                if (y < minY) minY = y
+                if (y > maxY) maxY = y
+            }
+        }
+        if (maxX < 0) return CropBox(0, 0, w, h)
+        return CropBox((minX - PAD).coerceAtLeast(0), (minY - PAD).coerceAtLeast(0), (maxX + 1 + PAD).coerceAtMost(w), (maxY + 1 + PAD).coerceAtMost(h))
+    }
+
+    /** Brightest channel over this is part of an Explore drawing, bloom included (black is 0). */
+    const val GLOW = 4
+
+    /** Explore beat stills are whole frames for [drawnBox], never cut to a stage. */
+    fun isWhole(path: String): Boolean = "/explore/" in path
 
     /** Band for a [w]x[h] crop: same height, widened to [aspect]; a wider crop is kept as is. */
     fun bandFor(w: Int, h: Int, aspect: Double): Pair<Int, Int> {

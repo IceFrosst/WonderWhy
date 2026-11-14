@@ -32,9 +32,22 @@ class OfflineCardsTest {
             assertTrue(o.id, o.lenses.first().steps.isNotEmpty())
         }
         val ball = objs.getValue("ball").lenses
-        assertEquals("ball.motion", ball.first().id) // the first lens is the one the steps come from
         assertTrue(ball.map { it.id }.containsAll(listOf("ball.motion", "ball.compare")))
+        assertEquals("ball.motion", ball.first { it.kind != Explore.KIND }.id) // the first 2D lens
         assertTrue(ball.single { it.id == "ball.compare" }.lead.orEmpty().isNotBlank())
+        // MODEL3D: an Explore chapter, when an object has one, is its first, with its spec text parsed.
+        for (o in objs.values) {
+            val i = o.lenses.indexOfFirst { it.kind == Explore.KIND }
+            if (i < 0) continue
+            assertEquals(o.id, 0, i)
+            val ex = o.lenses[0]
+            assertEquals("${o.id}.explore", ex.id)
+            assertTrue(o.id, ex.steps.size in 1..6)
+            val spec = ex.explore!!
+            assertTrue(o.id, spec.partIds.filterNotNull().isNotEmpty())
+            assertEquals(o.id, spec.partIds.size, spec.partLabels.size)
+            assertTrue(o.id, o.lenses.drop(1).all { it.explore == null })
+        }
     }
 
     @Test fun lookups() {

@@ -30,10 +30,13 @@ android {
 
 // Bundle the shared library JSON and the bridge's exported stills (manifest + sN.png, no clips) for offline
 // cards; no duplicate copy lives in git. Sync, so a still removed from bridge/media leaves the APK too.
+// Explore (3D) beats: the text-free stills cN.png and tracks.json (label anchors) instead of the captioned
+// sN.png (English text in the Web App's layout, unused by the app); never the bN.mp4 clips.
 val copyLensAssets by tasks.registering(Sync::class) {
     from(rootProject.layout.projectDirectory.file("../shared/objects.json"))
     from(rootProject.layout.projectDirectory.dir("../bridge/media")) {
-        include("*/manifest.json", "*/*/s*.png")
+        include("*/manifest.json", "*/*/s*.png", "*/explore/c*.png", "*/explore/tracks.json")
+        exclude("*/explore/s*.png", "**/*.mp4")
         into("media")
     }
     into(layout.buildDirectory.dir("generated/lensAssets"))

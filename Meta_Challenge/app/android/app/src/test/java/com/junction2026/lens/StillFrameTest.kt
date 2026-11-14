@@ -51,9 +51,10 @@ class StillFrameTest {
         assertTrue("$c", c.top < 125) // the big number stays
     }
 
+    /** 2D lens stills. Explore stills (`explore/`) have another layout and the app never cuts them (below). */
     @Test fun everyRealStillGivesAStageBand() {
         val root = appFile("bridge/media")
-        val files = root.walkTopDown().filter { it.name.matches(Regex("s\\d+\\.png")) }.toList()
+        val files = root.walkTopDown().filter { it.name.matches(Regex("s\\d+\\.png")) && it.parentFile.name != "explore" }.toList()
         assertTrue(files.size > 30)
         for (f in files) {
             val c = crop(f.relativeTo(root).path)
@@ -91,6 +92,42 @@ class StillFrameTest {
         // ball step 1: the big "10.2 m" ends above the line "how far a 10 m/s throw..." (from y=285).
         val (px, w, h) = pixels(appFile("bridge/media/ball/number/s1.png"))
         assertTrue(StillFrame.crop(px, w, h, headlineOnly = true).bottom <= 285)
+    }
+
+    /**
+     * Regenerated 14 Nov: the pendulum's answer wraps to a second line (y 89-105) that crosses the 15.5% head
+     * line (y 93). The stage starts below that line, so the headline is the big "1.0 s" (y 209-284), not "second.".
+     */
+    @Test fun twoLineAnswerStaysInTheHead() {
+        val (px, w, h) = pixels(appFile("bridge/media/pendulum/number/s1.png"))
+        val full = StillFrame.crop(px, w, h)
+        assertTrue("$full", full.top >= 106)
+        val head = StillFrame.crop(px, w, h, headlineOnly = true)
+        assertTrue("$head", head.top >= 200 && head.bottom <= 293)
+        // A one-line answer keeps the old head line: ball motion still starts its stage under y=93.
+        val (bp, bw, bh) = pixels(appFile("bridge/media/ball/motion/s1.png"))
+        assertTrue(StillFrame.stageRows(StillFrame.rowsDrawn(bp, bw, bh)).first == 93)
+    }
+
+    /** Explore beat stills (text-free cN.png) are kept whole: only the black around the drawing is trimmed. */
+    @Test fun exploreStillsKeepTheirWholeDrawing() {
+        val root = appFile("bridge/media")
+        val files = root.walkTopDown().filter { it.parentFile?.name == "explore" && it.name.matches(Regex("c\\d+\\.png")) }.toList()
+        assertTrue(files.size >= 6)
+        for (f in files) {
+            val (px, w, h) = pixels(f)
+            assertTrue(f.path, StillFrame.isWhole("/media/x/explore/${f.name}"))
+            val b = StillFrame.drawnBox(px, w, h)
+            assertTrue("${f.path} $b", b.width in 100..w && b.height in 100..h)
+            // Nothing drawn outside the box: the trim never cuts the picture.
+            for (y in 0 until h) for (x in 0 until w) {
+                if (x in b.left until b.right && y in b.top until b.bottom) continue
+                val c = px[y * w + x]
+                assertTrue("${f.path} ($x,$y)", maxOf((c shr 16) and 0xff, (c shr 8) and 0xff, c and 0xff) <= StillFrame.GLOW)
+            }
+        }
+        assertFalse(StillFrame.isWhole("/media/ball/motion/s1.png"))
+        assertEquals(CropBox(0, 0, 10, 10), StillFrame.drawnBox(IntArray(100), 10, 10)) // empty: keep it all
     }
 
     @Test fun syntheticFrameWithoutCaption() {

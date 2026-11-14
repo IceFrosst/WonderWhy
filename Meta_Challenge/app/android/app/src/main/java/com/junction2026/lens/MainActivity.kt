@@ -832,7 +832,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** First still of an entry, from the APK's assets; a whole exported frame is cut to its drawing. */
+    /** First still of an entry, from the APK's assets; a whole exported frame is cut to its drawing (an Explore still to its drawn box). */
     private fun loadThumb(path: String, onReady: (android.graphics.Bitmap?) -> Unit) {
         if (thumbs.containsKey(path)) { onReady(thumbs[path]); return }
         lifecycleScope.launch {
@@ -842,7 +842,9 @@ class MainActivity : ComponentActivity() {
                     val piece = if (StillFrame.isFrame(src.width, src.height)) {
                         val px = IntArray(src.width * src.height)
                         src.getPixels(px, 0, src.width, 0, 0, src.width, src.height)
-                        val c = StillFrame.crop(px, src.width, src.height, false)
+                        // An Explore still is text-free: only the black around the drawing goes.
+                        val c = if (StillFrame.isWhole("/$path")) StillFrame.drawnBox(px, src.width, src.height)
+                            else StillFrame.crop(px, src.width, src.height, false)
                         android.graphics.Bitmap.createBitmap(src, c.left, c.top, c.width, c.height)
                     } else src
                     val side = dp(56)

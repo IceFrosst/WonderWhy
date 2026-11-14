@@ -13,8 +13,8 @@ enum class TextRole { HEADING, BODY, BODY_MUTED, META, META_MUTED }
 
 sealed class CardItem {
     data class Text(val text: String, val role: TextRole) : CardItem()
-    /** A step still, already cut to its band ([StillFrame]). */
-    class Picture(val bitmap: Bitmap) : CardItem()
+    /** A step still, already cut to its band ([StillFrame]). [alt]: words drawn in it, for the text mirror. */
+    class Picture(val bitmap: Bitmap, val alt: String? = null) : CardItem()
     /** The dock: at most 2 actions (DESIGN.md card anatomy). */
     data class Actions(val primary: String, val secondary: String?) : CardItem()
 }
@@ -34,7 +34,7 @@ class CardSpec(
     val summary: String get() = items.joinToString(" | ") {
         when (it) {
             is CardItem.Text -> it.text
-            is CardItem.Picture -> "[still]"
+            is CardItem.Picture -> if (it.alt.isNullOrBlank()) "[still]" else "[still: ${it.alt}]"
             is CardItem.Actions -> "[" + listOfNotNull(it.primary, it.secondary).joinToString(" / ") + "]"
         }
     }
@@ -46,7 +46,7 @@ class CardSpec(
         fun muted(t: String) { items += CardItem.Text(t, TextRole.BODY_MUTED) }
         fun meta(t: String) { items += CardItem.Text(t, TextRole.META) }
         fun metaMuted(t: String) { items += CardItem.Text(t, TextRole.META_MUTED) }
-        fun picture(b: Bitmap) { items += CardItem.Picture(b) }
+        fun picture(b: Bitmap, alt: String? = null) { items += CardItem.Picture(b, alt) }
         fun actions(primary: String, secondary: String? = null) { items += CardItem.Actions(primary, secondary) }
         fun build(onPrimary: () -> Unit, onSecondary: () -> Unit, centered: Boolean) = CardSpec(items.toList(), onPrimary, onSecondary, centered)
     }

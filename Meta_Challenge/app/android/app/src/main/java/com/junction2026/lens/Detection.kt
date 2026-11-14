@@ -12,10 +12,18 @@ data class Lens(
     val title: String,
     val lead: String?,
     val steps: List<String>,
+    /**
+     * Explore lens only: the text of its `model3d` spec in the card's language. Online: the bridge's `specText`
+     * (non-English only; no part ids, laid over the English spec by index). Offline: the library chapter's spec.
+     */
+    val exploreText: ExploreSpec? = null,
 )
 
-/** Exported scene media for one lens. Files are relative to [Media.base]. */
-data class LensMedia(val stills: List<String>, val clip: String?)
+/**
+ * Exported scene media for one lens. Files are relative to [Media.base]. Explore lenses also list [clean]
+ * (text-free stills at rest, `explore/c<n>.png`) and [tracks] (`explore/tracks.json`, label anchors).
+ */
+data class LensMedia(val stills: List<String>, val clip: String?, val clean: List<String> = emptyList(), val tracks: String? = null)
 
 /** `media` block: `base` is a bridge path like `/media/ball`. */
 data class Media(val base: String, val lenses: Map<String, LensMedia>)
@@ -24,7 +32,11 @@ data class Media(val base: String, val lenses: Map<String, LensMedia>)
 data class LensHint(val id: String, val step: Int)
 
 /** One chapter of a generated sketch: shaped like a library chapter (the app uses the text only). */
-data class SketchChapter(val lens: String, val scene: String, val title: String, val lead: String?, val captions: List<String>)
+data class SketchChapter(
+    val lens: String, val scene: String, val title: String, val lead: String?, val captions: List<String>,
+    /** An `explore` chapter's spec text (labels, numbers); null for other chapters. */
+    val exploreText: ExploreSpec? = null,
+)
 
 /** `show.sketch`: a generated, unverified explanation of an object the library does not have. */
 data class Sketch(val label: String, val answer: String?, val verified: Boolean, val chapters: List<SketchChapter>)
@@ -233,8 +245,8 @@ object DetectionParser {
         )
     }
 
-    /** PROTOCOL: a sketch has 1 to 3 chapters. */
-    const val MAX_SKETCH_CHAPTERS = 3
+    /** A sketch has 1 to 3 chapters, plus an optional `explore` chapter first (the bridge allows 4). */
+    const val MAX_SKETCH_CHAPTERS = 4
 
     private fun lensHint(v: Any?): LensHint? {
         val m = v as? Map<*, *> ?: return null
@@ -257,6 +269,7 @@ object DetectionParser {
                 title = cm.str("title")?.trim()?.ifEmpty { null } ?: kindName(lens),
                 lead = cm.str("lead")?.trim()?.ifEmpty { null },
                 captions = captions,
+                exploreText = if (lens == Explore.KIND) Explore.spec(cm["spec"]) else null,
             )
         }.take(MAX_SKETCH_CHAPTERS)
         if (chapters.isEmpty()) return null
@@ -269,10 +282,21 @@ object DetectionParser {
         )
     }
 
-    /** Tracks of a sketch. Lens ids are `sketch.<lens>`: there is no media for them. */
-    fun sketchTracks(s: Sketch): List<Track> = s.chapters.mapIndexed { i, c ->
+    /**
+     * Tracks of a sketch. Lens ids are `sketch.<lens>`: there is no media for them, except an `explore` chapter
+     * when the show's `media` has rendered stills for it (a lens key ending in `.explore`, id taken from it);
+     * without them the explore chapter is skipped, as on the glasses Web App.
+     */
+    fun sketchTracks(s: Sketch, media: Media? = null): List<Track> = s.chapters.mapIndexedNotNull { i, c ->
+        if (c.lens == Explore.KIND) {
+            val key = media?.lenses?.keys?.firstOrNull { Explore.isExplore(it) && exploreUsable(media.lenses[it], c.captions.size) }
+            return@mapIndexedNotNull key?.let { Track(it, c.title, c.lead, c.captions) }
+        }
         Track("sketch.${c.lens.ifEmpty { "$i" }}", c.title, c.lead, c.captions)
     }
+
+    /** Explore media is usable when it has a text-free still for every beat. */
+    fun exploreUsable(m: LensMedia?, beats: Int): Boolean = m != null && beats > 0 && m.clean.size >= beats
 
     private fun Map<*, *>.str(k: String): String? = when (val v = this[k]) {
         is String -> v
@@ -301,6 +325,7 @@ object DetectionParser {
             title = m.str("title")?.ifBlank { null } ?: kindName(kind),
             lead = m.str("lead")?.ifBlank { null },
             steps = strings(m["steps"]),
+            exploreText = if (Explore.isExplore(id)) Explore.spec(m["specText"]) else null,
         )
     }
 
@@ -310,7 +335,10 @@ object DetectionParser {
         val lenses = (m["lenses"] as? Map<*, *>).orEmpty().mapNotNull { (k, lv) ->
             val key = k as? String ?: return@mapNotNull null
             val lm = lv as? Map<*, *> ?: return@mapNotNull null
-            key to LensMedia(stills = strings(lm["stills"]), clip = lm.str("clip")?.ifBlank { null })
+            key to LensMedia(
+                stills = strings(lm["stills"]), clip = lm.str("clip")?.ifBlank { null },
+                clean = strings(lm["clean"]), tracks = lm.str("tracks")?.trim()?.ifEmpty { null },
+            )
         }.toMap()
         return Media(base, lenses)
     }
@@ -325,29 +353,44 @@ object DetectionParser {
         "whatif" -> "What if"
         "compare" -> "Compare"
         "number" -> "The number"
+        "explore" -> "Explore"
         else -> "Lens"
     }
 
-    /** Tracks to step through: lenses with steps, else the plain `steps` list, else none. */
+    /**
+     * Tracks to step through: lenses with steps, else the plain `steps` list, else none. An Explore lens needs
+     * its media (a text-free still per beat): without it, it is skipped and the object opens on its next lens
+     * (the glasses Web App does the same). At most [MAX_LENSES], in library order (Explore first).
+     */
     fun tracks(d: Detection): List<Track> {
-        val fromLenses = d.lenses.filter { it.steps.isNotEmpty() }.take(MAX_LENSES)
+        val fromLenses = d.lenses.filter { it.steps.isNotEmpty() }
+            .filter { !Explore.isExplore(it.id) || exploreUsable(d.media?.lenses?.get(it.id), it.steps.size) }
+            .take(MAX_LENSES)
             .map { Track(it.id, it.title, it.lead, it.steps) }
         if (fromLenses.isNotEmpty()) return fromLenses
         if (d.steps.isEmpty()) return emptyList()
-        // `steps` are the captions of the first lens, so its media (if any) belongs to them.
-        return listOf(Track(d.lenses.firstOrNull()?.id, d.label.ifBlank { "Explanation" }, null, d.steps))
+        // `steps` are the captions of the first lens, so its media (if any) belongs to them (not an Explore
+        // lens without media: its captions are then shown as text only).
+        val first = d.lenses.firstOrNull()?.id?.takeIf { !Explore.isExplore(it) }
+        return listOf(Track(first, d.label.ifBlank { "Explanation" }, null, d.steps))
     }
 
     fun verdict(d: Detection): Verdict = when {
-        d.objectId == "unknown" && d.sketch != null -> Verdict.Sketched(d, sketchTracks(d.sketch))
+        d.objectId == "unknown" && d.sketch != null && sketchTracks(d.sketch, d.media).isNotEmpty() ->
+            Verdict.Sketched(d, sketchTracks(d.sketch, d.media))
         d.lowConfidence && d.objectId != "unknown" && d.label.isNotBlank() -> Verdict.NotSure(d.label)
         d.objectId == "unknown" || d.confidence < LOCAL_MIN_CONFIDENCE || d.lowConfidence -> Verdict.Unrecognised(d.answer)
         else -> tracks(d).let { if (it.isEmpty()) Verdict.Plain(d) else Verdict.Explainer(d, it) }
     }
 
-    /** Media file names for [lensId]'s steps; step i shows stills[i] when present. */
-    fun stills(d: Detection, lensId: String?): List<String> =
-        lensId?.let { d.media?.lenses?.get(it)?.stills }.orEmpty()
+    /**
+     * Media file names for [lensId]'s steps; step i shows stills[i] when present. An Explore lens shows its
+     * text-free stills (`clean`): the captioned ones carry English text in a layout made for the Web App.
+     */
+    fun stills(d: Detection, lensId: String?): List<String> {
+        val m = lensId?.let { d.media?.lenses?.get(it) } ?: return emptyList()
+        return if (Explore.isExplore(lensId)) m.clean else m.stills
+    }
 
     /** Bridge path of a still: `{media.base}/{file}`. Null when the file name is unsafe. */
     fun stillPath(mediaBase: String, file: String): String? {
