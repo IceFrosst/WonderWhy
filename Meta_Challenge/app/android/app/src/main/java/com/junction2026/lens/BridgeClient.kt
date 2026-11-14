@@ -89,7 +89,7 @@ class BridgeClient(config: BridgeConfig, private val log: (String) -> Unit = {})
     }
 
     /** [focus] is the centre of [jpeg], zoomed: where the wearer is looking. The bridge classifies that. */
-    suspend fun detect(jpeg: ByteArray, focus: ByteArray?, tCapture: Long, lang: String, forceObjectId: String? = null): Detection = withContext(Dispatchers.IO) {
+    suspend fun detect(jpeg: ByteArray, focus: ByteArray?, tCapture: Long, lang: String, forceObjectId: String? = null, question: String? = null): Detection = withContext(Dispatchers.IO) {
         val reqId = UUID.randomUUID().toString()
         val body = BridgeRequests.detectBody(
             reqId = reqId,
@@ -100,6 +100,7 @@ class BridgeClient(config: BridgeConfig, private val log: (String) -> Unit = {})
             lang = lang,
             waitSketch = true,
             forceObjectId = forceObjectId,
+            question = question,
         )
         // API providers answer in a few seconds (the dev-only pi provider needs up to 25 s). With waitSketch an
         // unknown object also waits for the sketch (SKETCH_TIMEOUT_MS, default 20 s) in the same response.

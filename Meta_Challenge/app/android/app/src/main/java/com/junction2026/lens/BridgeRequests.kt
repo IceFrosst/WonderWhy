@@ -24,11 +24,13 @@ object BridgeRequests {
         waitSketch: Boolean = true,
         /** PROTOCOL `forceObjectId`: a library id; the bridge skips the model (dev testing without a key). */
         forceObjectId: String? = null,
+        /** What the wearer said right after the photo ("what to explain in it"); the model answers it about this photo. */
+        question: String? = null,
     ): String {
         val o = JSONObject()
             .put("reqId", reqId)
             .put("imageBase64", imageBase64)
-            .put("question", JSONObject.NULL)
+            .put("question", cleanQuestion(question) ?: JSONObject.NULL)
             .put("t_capture", tCapture)
             .put("preUploadMs", (now - tCapture).coerceAtLeast(0))
         if (focusBase64 != null) o.put("focusBase64", focusBase64) // PROTOCOL: omitted when absent

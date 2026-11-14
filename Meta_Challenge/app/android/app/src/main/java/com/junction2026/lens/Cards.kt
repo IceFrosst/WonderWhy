@@ -59,6 +59,12 @@ object Cards {
         muted(t(Lang.IDLE))
     }
 
+    /** Right after the photo: the wearer can say what to explain in it. English only for now. */
+    fun askWhat(): CardSpec = CardSpec.of(centered = true) {
+        heading("What should I explain?")
+        muted("Say it now, or pinch to skip")
+    }
+
     /** "Looking…", centred (DESIGN.md states table). */
     fun looking(): CardSpec = CardSpec.of(centered = true) { heading(t(Lang.LOOKING)) }
 

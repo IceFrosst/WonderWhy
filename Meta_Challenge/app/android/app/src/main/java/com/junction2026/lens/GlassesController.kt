@@ -41,6 +41,7 @@ import com.meta.wearable.dat.speech.removeSpeech
 import com.meta.wearable.dat.speech.types.SpeechState
 import com.meta.wearable.dat.speech.types.TranscriptionResult
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -164,6 +165,12 @@ class GlassesController(
     private var connectJob: Job? = null
     /** Microphone wanted (a result on screen); re-applied when speech settles (STOPPING ignores a start). */
     private var wantListening = false
+
+    /** Set while the "What should I explain?" card is up: the next final transcription (or a pinch = skip) ends it. */
+    private var questionWait: CompletableDeferred<String?>? = null
+    private var heardPartial = false
+    /** Ask "what should I explain?" after every photo. Off = send the photo at once (the earlier behaviour). */
+    var askWithPhoto = true
     /** Follows the glasses' state outside any session (a folded pair ends the session but keeps reporting). */
     private var deviceWatchJob: Job? = null
     /** The device watch saw the Bluetooth link go down and not come back yet. */
@@ -566,6 +573,16 @@ class GlassesController(
     }
 
     private fun onHeard(r: TranscriptionResult) {
+        // A question spoken right after the photo goes with that photo, not to /ask.
+        questionWait?.takeIf { it.isActive }?.let { w ->
+            if (r.text.isNotBlank()) heardPartial = true
+            if (r.isFinal && r.text.isNotBlank()) {
+                log("Heard with the photo: \"${r.text}\" (${"%.2f".format(r.confidence)})")
+                lastHeard = r.text
+                w.complete(r.text)
+            }
+            return
+        }
         if (!r.isFinal || r.text.isBlank()) return
         log("Heard: \"${r.text}\" (${"%.2f".format(r.confidence)})")
         lastHeard = r.text
@@ -759,6 +776,8 @@ class GlassesController(
 
     /** True when the photo runs now or once the display is ready; false when refused (logged). */
     private fun tryTrigger(): Boolean {
+        // A pinch while the question card is up means "no question, just explain it".
+        questionWait?.takeIf { it.isActive }?.let { it.complete(null); log("Question skipped"); return true }
         val blocking = TriggerGate.blocking(active)
         val d = TriggerGate.decide(
             // While Connect is still creating the session, a trigger waits for the display like any other.
@@ -870,6 +889,7 @@ class GlassesController(
         val startedAt = SystemClock.elapsedRealtime()
         val demo = useFixture
         _receipt.value = null
+        var question: String? = null
         try {
             show(Cards.looking())
             var receivedAt = 0L
@@ -882,8 +902,10 @@ class GlassesController(
                 log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
                 onPhoto(jpeg)
                 lastPhotoKb = jpeg.size / 1024
+                question = listenForQuestion()
+                show(Cards.looking())
                 val sentAt = SystemClock.elapsedRealtime()
-                bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null })
+                bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null }, question)
                     .also { receivedAt = SystemClock.elapsedRealtime(); lastDetectMs = receivedAt - sentAt }
             }
             log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}" +
@@ -892,7 +914,18 @@ class GlassesController(
                 (det.lang?.let { " lang=$it" } ?: "") + (if (det.media != null) " media" else "") +
                 (det.sketch?.let { " sketch='${it.label}' chapters=${it.chapters.size}" } ?: "") +
                 (det.sketchError?.let { " sketchError=$it" } ?: ""))
-            if (present(det, if (demo) ResultSource.DEMO else ResultSource.BRIDGE, startedAt) && receivedAt > 0) ackRendered(det.reqId, receivedAt)
+            val q = question
+            val shown = if (q != null && !det.answer.isNullOrBlank()) {
+                // The wearer asked about this photo: show the model's answer; pinch opens the object's steps if it has any.
+                media.clear()
+                currentSaved = false
+                currentReplay = false
+                explainer = null
+                val known = DetectionParser.tracks(det).isNotEmpty()
+                val shownDet = if (known) det else det.copy(label = "Answer")
+                showAnswer(shownDet, shownDet, q, local = false, startedAt = startedAt)
+            } else present(det, if (demo) ResultSource.DEMO else ResultSource.BRIDGE, startedAt)
+            if (shown && receivedAt > 0) ackRendered(det.reqId, receivedAt)
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
             log("Camera timed out: the glasses did not deliver a photo")
             showError(Cards.t(Lang.TOOK_TOO_LONG))
@@ -918,6 +951,30 @@ class GlassesController(
         } catch (e: Exception) {
             log("Unexpected: $e")
             showError(Cards.t(Lang.ERR_GENERIC))
+        }
+    }
+
+    /**
+     * After the photo: "What should I explain?" with the microphone on. Returns the spoken question, or null
+     * when the wearer pinches (skip), stays silent for [QUESTION_WAIT_MS], or speech is not available.
+     */
+    private suspend fun listenForQuestion(): String? {
+        if (!askWithPhoto || speech == null) return null
+        val w = CompletableDeferred<String?>()
+        heardPartial = false
+        questionWait = w
+        try {
+            show(Cards.askWhat())
+            setListening(true)
+            var q = withTimeoutOrNull(QUESTION_WAIT_MS) { w.await() }
+            // Still talking at the deadline: wait for the end of the sentence.
+            if (q == null && !w.isCompleted && heardPartial) q = withTimeoutOrNull(QUESTION_FINISH_MS) { w.await() }
+            val clean = BridgeRequests.cleanQuestion(q)
+            log(if (clean != null) "Question with the photo: \"$clean\"" else "No question with the photo")
+            return clean
+        } finally {
+            questionWait = null
+            setListening(false)
         }
     }
 
@@ -1481,6 +1538,9 @@ class GlassesController(
     }
 
     companion object {
+        /** How long the "What should I explain?" card waits for speech to start, then for the sentence to end. */
+        const val QUESTION_WAIT_MS = 6_000L
+        const val QUESTION_FINISH_MS = 6_000L
         /** Share of the photo's width and height that counts as "what the wearer is looking at". */
         const val AIM_FRACTION = 0.5f
         private const val NAV_DEBOUNCE_MS = 350L
