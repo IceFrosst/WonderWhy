@@ -65,7 +65,7 @@ When `preUploadMs` is absent, `captureToReceivedMs` is `null` and `totalMs` cove
 | `summary` | The object's one-line answer (`answer` in `objects.json`) |
 | `steps` | `string[]`: the captions of the object's first lens, in order. Enough for a phone card with more than one line |
 | `lenses` | `[{ "id": "ball.motion", "kind": "motion", "title": "Projectile motion", "lead": "...", "steps": ["..."] }]`: every lens the object has, for lens buttons. `kind` is one of `motion, inside, cutaway, flow, zoom, whatif, compare, number` |
-| `media` | `{ "base": "/media/ball", "lenses": { "ball.motion": { "stills": ["s1.png", "s2.png"], "clip": "clip.mp4" } } }` when exported stills and clips exist for the object (served open under `/media/`). Absent when none exist |
+| `media` | `{ "base": "/media/ball", "lenses": { "ball.motion": { "stills": ["s1.png", "s2.png"], "clip": "clip.mp4" } } }` when exported stills and clips exist for the object (served open under `/media/`). `clean` lists the same steps without any text (scene only, 600x600), for clients that draw their own captions. Absent when none exist |
 | `replay`, `ageMs` | Set on a `show` that is replayed from memory (see `/last`) |
 | `standIn` | `true` when the answer came from a dev-only stand-in provider (`pi`, `claude`: a person's own model login on a dev machine). Clients show a "Stand-in model" tag. Never set on the droplet. `/health` carries the same flag |
 

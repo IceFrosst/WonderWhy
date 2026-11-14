@@ -1,8 +1,11 @@
+import '@wearables-ui-toolkit/mrbd/styles.css';
 import {OBJECTS} from './content';
 import {createScene} from './scenes';
 import type {Scene} from './scenes';
 
-const FONT = 'system-ui, "Segoe UI", Roboto, sans-serif';
+const FALLBACK_FONT = 'system-ui, "Segoe UI", Roboto, sans-serif';
+const PRODUCT_FONT = '"Noto Sans Local", "Noto Sans", system-ui, sans-serif';
+let exportFont = FALLBACK_FONT;
 const LENS_NAMES: Record<string, string> = {
   motion: 'Motion',
   inside: 'Inside',
@@ -88,6 +91,10 @@ function integer(value: number | undefined, fallback: number): number {
   return Math.max(1, Math.round(positive(value, fallback)));
 }
 
+function safeStep(step: number, count: number): number {
+  return Math.min(count, Math.max(1, Math.round(step)));
+}
+
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.trim().split(/\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -150,17 +157,17 @@ function createCardLayout(
   const lead = chapter.lead ?? object.answer;
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = `700 ${titleSize}px ${FONT}`;
+  ctx.font = `700 ${titleSize}px ${exportFont}`;
   const titleLines = wrap(ctx, title, size - margin * 2);
   let y = drawLines(ctx, titleLines, margin, margin, titleHeight);
   ctx.fillStyle = '#c9d4ff';
-  ctx.font = `400 ${bodySize}px ${FONT}`;
+  ctx.font = `400 ${bodySize}px ${exportFont}`;
   const leadLines = wrap(ctx, lead, size - margin * 2);
   y = drawLines(ctx, leadLines, margin, y + 4 * scale, bodyHeight);
 
-  const safeStep = Math.min(chapter.captions.length, Math.max(1, Math.round(step)));
-  const caption = `Step ${safeStep}/${chapter.captions.length}. ${chapter.captions[safeStep - 1]}`;
-  ctx.font = `400 ${bodySize}px ${FONT}`;
+  const currentStep = safeStep(step, chapter.captions.length);
+  const caption = `Step ${currentStep}/${chapter.captions.length}. ${chapter.captions[currentStep - 1]}`;
+  ctx.font = `400 ${bodySize}px ${exportFont}`;
   const captionLines = wrap(ctx, caption, size - margin * 2);
   const captionTop = size - margin - lensSize - 10 * scale - captionLines.length * bodyHeight;
   const stageTop = y + 8 * scale;
@@ -191,7 +198,7 @@ function drawCardCaption(layout: CardLayout, alpha = 1, target = layout): void {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.fillStyle = '#ffffff';
-  ctx.font = `400 ${layout.bodySize}px ${FONT}`;
+  ctx.font = `400 ${layout.bodySize}px ${exportFont}`;
   ctx.textAlign = 'left';
   drawLines(ctx, layout.captionLines, layout.margin, layout.captionTop, layout.bodyHeight);
   ctx.restore();
@@ -200,7 +207,7 @@ function drawCardCaption(layout: CardLayout, alpha = 1, target = layout): void {
 function drawCardLens(layout: CardLayout): void {
   const {ctx} = layout;
   ctx.fillStyle = '#c9d4ff';
-  ctx.font = `400 ${layout.lensSize}px ${FONT}`;
+  ctx.font = `400 ${layout.lensSize}px ${exportFont}`;
   ctx.textAlign = 'right';
   ctx.fillText(
     layout.lensName,
@@ -209,34 +216,78 @@ function drawCardLens(layout: CardLayout): void {
   );
 }
 
-function renderStill(options: StillOptions): string | null {
-  const found = getChapter(options.objectId, options.chapterIndex);
-  if (!found) throw new Error(`Unknown object/chapter: ${options.objectId}/${options.chapterIndex}`);
+function renderSettledScene(
+  found: NonNullable<ReturnType<typeof getChapter>>,
+  step: number,
+  width: number,
+  height: number,
+  settle: number | undefined,
+): HTMLCanvasElement | null {
   const scene = createScene(found.chapter.scene, found.chapter.spec);
   if (!scene) return null;
-
-  const size = integer(options.size, 600);
-  const safeStep = Math.min(found.chapter.captions.length, Math.max(1, Math.round(options.step)));
-  const layout = createCardLayout(found, size, safeStep);
-  const stage = canvas(layout.stageWidth);
-  stage.height = layout.stageHeight;
-  const sceneCtx = stage.getContext('2d');
+  const surface = canvas(width);
+  surface.height = height;
+  const sceneCtx = surface.getContext('2d');
   if (!sceneCtx) throw new Error('Could not create scene canvas context');
 
   try {
-    scene.init(sceneCtx, layout.stageWidth, layout.stageHeight);
-    scene.setStep(safeStep);
+    scene.init(sceneCtx, width, height);
+    scene.setStep(step);
     const dt = 1 / 30;
-    const frames = Math.max(1, Math.ceil(positive(options.settle, 2) / dt));
+    const frames = Math.max(1, Math.ceil(positive(settle, 2) / dt));
     for (let frame = 0; frame < frames; frame++) scene.frame(dt);
-    layout.ctx.drawImage(stage, layout.margin, layout.stageTop);
   } finally {
     scene.dispose();
   }
+  return surface;
+}
+
+function renderStill(options: StillOptions): string | null {
+  const found = getChapter(options.objectId, options.chapterIndex);
+  if (!found) throw new Error(`Unknown object/chapter: ${options.objectId}/${options.chapterIndex}`);
+
+  const size = integer(options.size, 600);
+  const currentStep = safeStep(options.step, found.chapter.captions.length);
+  const layout = createCardLayout(found, size, currentStep);
+  const stage = renderSettledScene(
+    found,
+    currentStep,
+    layout.stageWidth,
+    layout.stageHeight,
+    options.settle,
+  );
+  if (!stage) return null;
+  layout.ctx.drawImage(stage, layout.margin, layout.stageTop);
 
   drawCardCaption(layout);
   drawCardLens(layout);
   return layout.output.toDataURL('image/png');
+}
+
+function renderSceneStill(options: StillOptions): string | null {
+  const found = getChapter(options.objectId, options.chapterIndex);
+  if (!found) throw new Error(`Unknown object/chapter: ${options.objectId}/${options.chapterIndex}`);
+
+  const size = integer(options.size, 600);
+  const scale = size / 600;
+  const margin = 12 * scale;
+  const stageSize = Math.max(1, Math.floor(size - margin * 2));
+  const stage = renderSettledScene(
+    found,
+    safeStep(options.step, found.chapter.captions.length),
+    stageSize,
+    stageSize,
+    options.settle,
+  );
+  if (!stage) return null;
+
+  const output = canvas(size);
+  const ctx = output.getContext('2d');
+  if (!ctx) throw new Error('Could not create clean still canvas context');
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(stage, margin, margin, stageSize, stageSize);
+  return output.toDataURL('image/png');
 }
 
 function renderClip(options: ClipOptions): string[] | null {
@@ -378,6 +429,7 @@ const lensExport = {
     captions: [...chapter.captions],
   }))),
   still: renderStill,
+  sceneStill: renderSceneStill,
   clip: renderClip,
   cardClipStart: (options: CardClipOptions) => startStream(options, 'card'),
   cardClipNext: streamNext,
@@ -393,4 +445,74 @@ declare global {
   }
 }
 
+async function prepareExportFonts(): Promise<void> {
+  const localFacesId = 'uit-noto-sans-local-faces';
+  if (!document.getElementById(localFacesId)) {
+    const style = document.createElement('style');
+    style.id = localFacesId;
+    style.textContent = `
+@font-face {
+  font-family: 'Noto Sans Local';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Noto Sans'), local('Noto Sans Regular'), local('NotoSans-Regular');
+}
+@font-face {
+  font-family: 'Noto Sans Local';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('Noto Sans Medium'), local('NotoSans-Medium');
+}
+@font-face {
+  font-family: 'Noto Sans Local';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Noto Sans Bold'), local('NotoSans-Bold');
+}`;
+    document.head.appendChild(style);
+  }
+
+  const fontLinkId = 'uit-noto-sans-font';
+  let fontLink = document.getElementById(fontLinkId) as HTMLLinkElement | null;
+  let createdFontLink = false;
+  if (!fontLink) {
+    fontLink = document.createElement('link');
+    fontLink.id = fontLinkId;
+    fontLink.rel = 'stylesheet';
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap';
+    document.head.appendChild(fontLink);
+    createdFontLink = true;
+  }
+  const remoteStylesLoaded = Boolean(fontLink.sheet) || await new Promise<boolean>(resolve => {
+    const timeout = window.setTimeout(() => resolve(false), 5000);
+    fontLink.addEventListener('load', () => {
+      window.clearTimeout(timeout);
+      resolve(true);
+    }, {once: true});
+    fontLink.addEventListener('error', () => {
+      window.clearTimeout(timeout);
+      resolve(false);
+    }, {once: true});
+  });
+  if (!remoteStylesLoaded && createdFontLink) fontLink.remove();
+
+  try {
+    await document.fonts.ready;
+    const localFaces = await document.fonts.load('600 20px "Noto Sans Local"').catch(() => []);
+    const remoteFaces = remoteStylesLoaded
+      ? await document.fonts.load('600 20px "Noto Sans"').catch(() => [])
+      : [];
+    if (localFaces.length || remoteFaces.length) {
+      exportFont = PRODUCT_FONT;
+      document.body.style.fontFamily = PRODUCT_FONT;
+    }
+  } catch {
+    document.body.style.fontFamily = FALLBACK_FONT;
+  }
+}
+
+await prepareExportFonts();
 window.__lensExport = lensExport;
