@@ -26,8 +26,11 @@ enc() { # enc <src in TMP> <out name>
 for f in printer_1_core_one.mp4 printer_2_side_by_side.mp4 share_scene_glasses_friend.mp4 sauna.mp4 gym_air_bike.mp4; do
   grab "origin/main:DemoVideos/Objects/$f" "$f"; enc "$f" "$f"
 done
-for f in IMG_5543.MOV IMG_5544.MOV IMG_5557.MOV IMG_5560.MOV IMG_5561.MOV; do
+for f in IMG_5543.MOV IMG_5544.MOV IMG_5545.MOV IMG_5546.MOV IMG_5556.MOV IMG_5557.MOV IMG_5560.MOV IMG_5561.MOV; do
   grab "origin/friend-next:DemoVideos/$f" "$f"; enc "$f" "$f"
+done
+for f in IMG_5554.MOV A001_11141614_C103.MOV; do
+  grab "origin/friend-next:DemoVideos/New/$f" "$f"; enc "$f" "$f"
 done
 for base in "A001_11141516_C098 2" "A001_11141518_C099 2" "A001_11141519_C100"; do # split in two parts on GitHub
   grab "origin/friend-next:DemoVideos/New/$base part0.MOV" "$base part0.MOV"

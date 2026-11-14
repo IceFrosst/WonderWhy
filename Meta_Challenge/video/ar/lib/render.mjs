@@ -47,8 +47,10 @@ for (const [key, f] of Object.entries(cfg.footage || {})) {
   const dir = path.join(FR, key); fs.mkdirSync(dir, { recursive: true });
   const dur = f.duration || cfg.duration, speed = f.speed || 1;
   // f.vf: optional ffmpeg filter that crops/rotates the raw clip to the frame (e.g. a 16:9 window of a portrait clip).
-  const fit = f.vf || `scale=${Wd}:${Ht}:force_original_aspect_ratio=increase,crop=${Wd}:${Ht}`;
-  const vf = `setpts=PTS/${speed},fps=${FPS},${fit},scale=${Wd}:${Ht}`;
+  // f.size: [w, h] frames to extract (e.g. [608, 1080] keeps a portrait clip whole); default the film frame.
+  const [sw, sh] = f.size || [Wd, Ht];
+  const fit = f.vf || `scale=${sw}:${sh}:force_original_aspect_ratio=increase,crop=${sw}:${sh}`;
+  const vf = `setpts=PTS/${speed},fps=${FPS},${fit},scale=${sw}:${sh}`;
   const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-ss', String(f.in || 0), '-t', String(dur * speed), '-i', src, '-an', '-vf', vf, '-q:v', '3', path.join(dir, '%05d.jpg')], { stdio: 'inherit' });
   const n = fs.readdirSync(dir).length;
   if (r.status === 0 && n) { manifest[key] = { frames: n, fps: FPS }; console.log(`footage ${key}: ${n} frames from ${f.path || src}`); }

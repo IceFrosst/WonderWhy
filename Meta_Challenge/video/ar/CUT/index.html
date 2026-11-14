@@ -1,0 +1,122 @@
+<!doctype html>
+<!-- Rough cut: plays config.shots (EDL) back to back. window.renderFrame(t), pure function of t. -->
+<html><head><meta charset="utf-8"><title>CUT</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script>
+(async () => {
+const W = 1920, H = 1080, ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const shots = cfg.shots, clamp = K.clamp;
+const small = K.layer(96, 54).getContext('2d'), tiny = small.canvas;
+const lay = K.layer(), lg = lay.getContext('2d');
+
+const keyed = (kf, t, i) => { // linear between [t, v...] keyframes, component i
+  if (!kf || !kf.length) return undefined;
+  if (t <= kf[0][0]) return kf[0][i];
+  for (let k = 0; k < kf.length - 1; k++) if (t <= kf[k + 1][0]) { const a = kf[k], b = kf[k + 1]; return K.lerp(a[i] ?? 0, b[i] ?? 0, (t - a[0]) / (b[0] - a[0] || 1)); }
+  return kf[kf.length - 1][i];
+};
+const gradeAt = (s, lt) => ({ sat: s.grade ? keyed(s.grade, lt, 1) : 1, warm: s.grade ? (keyed(s.grade, lt, 2) ?? 0) : 0 });
+
+// draw one frame image into g with the shot's framing, then grade
+function drawShot(g, s, im, lt, dx = 0) {
+  const gr = gradeAt(s, lt), zoom = (s.zoom || 1) * (1 + (s.push || 0) * lt / s.dur);
+  g.save(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  g.translate(dx, 0);
+  g.filter = `saturate(${gr.sat.toFixed(3)})`;
+  if (!im) K.placeholder(g, (s.label || s.id) + ' (no footage)', s.raw, { zoom });
+  else if (s.frame === 'asset') { g.translate(W / 2, H / 2); g.scale(zoom, zoom); g.drawImage(im, -W / 2, -H / 2, W, H); }
+  else if (s.frame === 'fill') K.cover(g, im, zoom, .5, .5);
+  else { // fit: blurred darkened cover copy behind, portrait frame whole in front
+    small.drawImage(im, 0, (54 - 96 * im.height / im.width) / 2, 96, 96 * im.height / im.width);
+    g.save(); g.translate(W / 2, H / 2); g.scale(zoom * 1.05, zoom * 1.05);
+    g.imageSmoothingQuality = 'high'; g.filter = `saturate(${gr.sat.toFixed(3)}) blur(14px) brightness(0.45)`;
+    g.drawImage(tiny, -W / 2 - 40, -H / 2 - 40, W + 80, H + 80); g.restore();
+    g.translate(W / 2, H / 2); g.scale(zoom, zoom);
+    const h = H, w = im.width * H / im.height; g.drawImage(im, -w / 2, -h / 2, w, h);
+  }
+  g.restore();
+  if (gr.warm > 0.001) { g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = `rgba(255,190,90,${(0.55 * gr.warm).toFixed(3)})`; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'source-over'; g.fillStyle = `rgba(255,196,110,${(0.10 * gr.warm).toFixed(3)})`; g.fillRect(0, 0, W, H); g.restore(); }
+}
+
+const STY = {
+  child:   { font: '600 80px Caveat', fill: '#f6e7c6', lh: 88 },
+  grey:    { font: '500 54px Archivo', fill: '#c9cacc', lh: 64 },
+  big:     { font: '800 96px Archivo', fill: '#ffffff', lh: 106 },
+  label:   { font: '600 44px Archivo', fill: '#ffffff', lh: 54 },
+  caption: { font: '600 46px Archivo', fill: '#ffffff', lh: 56, plate: true },
+  tag:     { font: '700 26px Archivo', fill: '#ffffff', lh: 32, plate: true, upper: true }
+};
+const POS = { // anchor x, y, align, baseline
+  top: [W / 2, 110, 'center', 'top'], center: [W / 2, H / 2, 'center', 'middle'], bottom: [W / 2, H - 90, 'center', 'bottom'],
+  'lower-left': [90, H - 90, 'left', 'bottom'], 'lower-right': [W - 90, H - 90, 'right', 'bottom'],
+  'upper-left': [90, 110, 'left', 'top'], 'upper-right': [W - 90, 110, 'right', 'top'], left: [90, H / 2, 'left', 'middle'], right: [W - 90, H / 2, 'right', 'middle'],
+  'top-left': [60, 60, 'left', 'top'], 'top-right': [W - 60, 60, 'right', 'top'], 'bottom-left': [60, H - 60, 'left', 'bottom'], 'bottom-right': [W - 60, H - 60, 'right', 'bottom']
+};
+function wrap(g, text, maxW) {
+  const out = [];
+  for (const para of String(text).split('\n')) {
+    let cur = '';
+    for (const w of para.split(' ')) { const tr = cur ? cur + ' ' + w : w; if (cur && g.measureText(tr).width > maxW) { out.push(cur); cur = w; } else cur = tr; }
+    out.push(cur);
+  }
+  return out;
+}
+const fade = (lt, a, d) => Math.min(clamp((lt - a) / 0.2), clamp((a + d - lt) / 0.2));
+function drawText(g, x, lt) {
+  const a = fade(lt, x.t || 0, x.dur); if (a <= 0) return;
+  const st = STY[x.style || 'label'] || STY.label, p = POS[x.pos || 'center'] || POS.center;
+  let txt = st.upper ? String(x.text).toUpperCase() : x.text;
+  g.save(); g.globalAlpha = a; g.font = st.font; g.textAlign = p[2]; g.textBaseline = 'top';
+  const lines = wrap(g, txt, 1500), bh = lines.length * st.lh;
+  const y0 = p[3] === 'top' ? p[1] : p[3] === 'bottom' ? p[1] - bh : p[1] - bh / 2;
+  if (st.plate) { const mw = Math.max(...lines.map(l => g.measureText(l).width)) + 36, px = p[2] === 'center' ? p[0] - mw / 2 : p[2] === 'left' ? p[0] - 18 : p[0] - mw + 18;
+    g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.roundRect(px, y0 - 8, mw, bh + 16, 10); g.fill(); }
+  g.shadowColor = 'rgba(0,0,0,0.75)'; g.shadowBlur = 18; g.shadowOffsetY = 3; g.fillStyle = st.fill;
+  lines.forEach((l, i) => g.fillText(l, p[0], y0 + i * st.lh + (st.lh - parseInt(st.font.match(/(\d+)px/)[1])) / 2));
+  g.restore();
+}
+function drawBox(g, b, lt) {
+  const a = fade(lt, b.t || 0, b.dur); if (a <= 0) return;
+  g.save(); g.globalAlpha = a;
+  g.beginPath(); g.roundRect(b.x, b.y, b.w, b.h, 22); g.fillStyle = 'rgba(8,12,18,0.55)'; g.fill();
+  g.setLineDash([14, 10]); g.lineWidth = 2; g.strokeStyle = 'rgba(77,240,255,0.85)'; g.stroke(); g.setLineDash([]);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#4df0ff'; g.font = '700 30px Archivo'; g.letterSpacing = '4px';
+  g.fillText(String(b.label || '').toUpperCase(), b.x + b.w / 2, b.y + b.h / 2 - 18);
+  if (b.sub) { g.letterSpacing = '0px'; g.fillStyle = 'rgba(255,255,255,0.72)'; g.font = '500 24px Archivo'; wrap(g, b.sub, b.w - 50).forEach((l, i) => g.fillText(l, b.x + b.w / 2, b.y + b.h / 2 + 22 + i * 30)); }
+  g.restore();
+}
+const tcs = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}.${String(Math.floor((t % 1) * 100)).padStart(2, '0')}`;
+
+window.renderFrame = async t => {
+  let i = shots.length - 1; for (let k = 0; k < shots.length; k++) if (t < shots[k].start + shots[k].dur - 1e-9) { i = k; break; }
+  const s = shots[i], lt = clamp(t - s.start, 0, s.dur);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (s.frame === 'card') {
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = 'rgba(0,0,0,0)';
+    ctx.fillStyle = '#fff'; ctx.font = '800 96px Archivo'; ctx.fillText(s.card?.text || '', W / 2, H / 2 - (s.card?.sub ? 30 : 0));
+    if (s.card?.sub) { ctx.fillStyle = '#9a9a9a'; ctx.font = '500 44px Archivo'; ctx.fillText(s.card.sub, W / 2, H / 2 + 70); }
+    ctx.restore();
+  } else {
+    const im = await K.footageFrame(s.id, lt);
+    const whipT = 6 / 30;
+    if (s.cut === 'whip' && lt < whipT) {
+      const dxAt = u => 520 * Math.pow(1 - clamp(u / whipT), 2); // starts off to the right, settles
+      K.accumulate(ctx, lt, 8, 1 / 30 * 2, (g, tt) => drawShot(g, s, im, lt, dxAt(tt)));
+    } else drawShot(ctx, s, im, lt);
+  }
+  (s.boxes || []).forEach(b => drawBox(ctx, b, lt)); // also on cards (e.g. the diagram placeholder)
+  (s.text || []).forEach(x => drawText(ctx, x, lt));
+  if (cfg.debug) {
+    ctx.save(); ctx.font = '600 22px Archivo'; ctx.textBaseline = 'top'; const txt = `${tcs(t)}  #${i + 1} ${s.id}  ${s.label || ''}`;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(20, 20, ctx.measureText(txt).width + 24, 38); ctx.fillStyle = '#ffd36b'; ctx.fillText(txt, 32, 28); ctx.restore();
+  }
+};
+window.ready = true;
+})();
+</script></body></html>
