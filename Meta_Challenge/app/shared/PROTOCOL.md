@@ -88,5 +88,15 @@ Source of truth for `summary`, `steps` and `lenses` is `shared/objects.json` (`t
 | `state` (glasses to bridge to phone) | New fields: `lens` (kind, e.g. `flow`), `lensIndex` (0-based), `steps` (steps in this lens). `step` is now 1-based **inside the lens** |
 | `objects.json` chapters | One chapter = one lens. Optional `knobs` (one per step: `{axis, label}` or `null`) and `spec` (drawing data for the data-driven scenes `flow` and `number`). The bridge never sends `spec` |
 
+### Language (`lang`), requested by `friend` for the second-language demo
+| What | Rule |
+|---|---|
+| Request | Optional `lang` in the `POST /detect` body: one of `en, fi, sv, de, es, fr`. Anything else, or absent, means `en` |
+| Library text | `label`, `summary`, `steps` and `lenses[].title / lead / steps` come from `shared/i18n/<lang>.json` (translated once, checked in, served instantly; no model call). Ids and `kind` stay English. An object or lens missing from that file falls back to English for that part |
+| Model text | The model is asked to write `answer` in that language |
+| Echo | `show.lang` is the language the library text in this message is in (so `en` when no translation file exists for the request) |
+| Stills and clips | Text drawn inside pictures (`/media/`) is English only for now |
+| Glasses Web App | Shows the translated lens title, lead and captions from `show.lenses` when `show.lang` is not `en`; drawings keep English labels for now |
+
 ## Latency log
 The bridge appends every completed request as one JSON line to `bridge/latency.jsonl` (git-ignored) and serves a summary at `GET /latency` (count, p50, p90 per stage).
