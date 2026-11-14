@@ -915,16 +915,27 @@ class GlassesController(
                 (det.sketch?.let { " sketch='${it.label}' chapters=${it.chapters.size}" } ?: "") +
                 (det.sketchError?.let { " sketchError=$it" } ?: ""))
             val q = question
-            val shown = if (q != null && !det.answer.isNullOrBlank()) {
-                // The wearer asked about this photo: show the model's answer; pinch opens the object's steps if it has any.
-                media.clear()
-                currentSaved = false
-                currentReplay = false
-                explainer = null
-                val known = DetectionParser.tracks(det).isNotEmpty()
-                val shownDet = if (known) det else det.copy(label = "Answer")
-                showAnswer(shownDet, shownDet, q, local = false, startedAt = startedAt)
-            } else present(det, if (demo) ResultSource.DEMO else ResultSource.BRIDGE, startedAt)
+            val tracks = DetectionParser.tracks(det)
+            val source = if (demo) ResultSource.DEMO else ResultSource.BRIDGE
+            val shown = when {
+                // A question about a library object: open its pictures at the lens the question points at.
+                q != null && tracks.isNotEmpty() -> {
+                    val at = AskFlow.visualFor(tracks, q)
+                    log("Question -> " + (at?.let { (l, s) -> "${tracks[l].lensId ?: tracks[l].title} step ${s + 1}" } ?: "overview") +
+                        (det.answer?.takeIf { it.isNotBlank() }?.let { " | model said: $it" } ?: ""))
+                    present(det, source, startedAt, openAt = at)
+                }
+                // Not in the library: there are no pictures, so the model's answer is shown as text.
+                q != null && !det.answer.isNullOrBlank() -> {
+                    media.clear()
+                    currentSaved = false
+                    currentReplay = false
+                    explainer = null
+                    val shownDet = det.copy(label = "Answer")
+                    showAnswer(shownDet, shownDet, q, local = false, startedAt = startedAt)
+                }
+                else -> present(det, source, startedAt)
+            }
             if (shown && receivedAt > 0) ackRendered(det.reqId, receivedAt)
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
             log("Camera timed out: the glasses did not deliver a photo")
@@ -1131,7 +1142,7 @@ class GlassesController(
      * Picks the result screen. An old bridge (no v1 fields) lands on exactly the cards it always did.
      * True when the result card is on the display now (for the `/rendered` ack).
      */
-    private suspend fun present(det: Detection, source: ResultSource, startedAt: Long? = null): Boolean {
+    private suspend fun present(det: Detection, source: ResultSource, startedAt: Long? = null, openAt: Pair<Int, Int>? = null): Boolean {
         media.clear()
         current = det
         currentSaved = source == ResultSource.SAVED || source == ResultSource.REPLAY
@@ -1150,8 +1161,9 @@ class GlassesController(
             is Verdict.NotSure -> { log("Not sure: maybe '${v.guess}'"); setListening(false); show(Cards.notSure(::trigger)) }
             is Verdict.Unrecognised -> { log("Not sure: ${v.answer.orEmpty()}"); setListening(false); show(Cards.notSure(::trigger)) }
             is Verdict.Plain -> { setListening(true); show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, det.standIn)) }
-            is Verdict.Explainer -> showExplainer(ExplainerState(v.tracks))
-            is Verdict.Sketched -> showExplainer(ExplainerState(v.tracks))
+            // [openAt]: the lens and step a spoken question pointed at; else the overview.
+            is Verdict.Explainer -> showExplainer(openAt?.let { ExplainerState(v.tracks, it.first, it.second) } ?: ExplainerState(v.tracks))
+            is Verdict.Sketched -> showExplainer(openAt?.let { ExplainerState(v.tracks, it.first, it.second) } ?: ExplainerState(v.tracks))
         }
         val toCard = if (shown && startedAt != null) SystemClock.elapsedRealtime() - startedAt else null
         if (toCard != null && verdict !is Verdict.NotSure && verdict !is Verdict.Unrecognised) lastToCardMs = toCard

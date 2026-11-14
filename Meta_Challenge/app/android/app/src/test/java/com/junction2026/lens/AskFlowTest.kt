@@ -115,4 +115,24 @@ class AskFlowTest {
         assertTrue(!AskFlow.answerOnPhone(404, "unknown_request", offline = false))
         assertTrue(!AskFlow.answerOnPhone(0, "", offline = false)) // reached but timed out: a real error card
     }
+
+    private val phoneTracks = listOf(
+        Track("phone.inside", "Layers", null, listOf("glass", "touch layer", "battery")),
+        Track("phone.whatif", "What if", null, listOf("a thicker battery")),
+        Track("phone.flow", "Follow the energy", null, listOf("charger", "battery", "screen")),
+        Track("phone.number", "The number", null, listOf("15 watt hours")),
+    )
+
+    @Test fun spokenQuestionOpensTheLensItNames() {
+        // Said on real glasses, 14 Nov: it got a text answer instead of the Layers pictures.
+        assertEquals(0 to 0, AskFlow.visualFor(phoneTracks, "Explaining how the phone works in the construction."))
+        assertEquals(3 to 0, AskFlow.visualFor(phoneTracks, "How much energy does it hold?"))
+        assertEquals(2 to 0, AskFlow.visualFor(phoneTracks, "Where does the energy go?"))
+        assertEquals(1 to 0, AskFlow.visualFor(phoneTracks, "What if the battery was bigger?"))
+    }
+
+    @Test fun spokenQuestionWithNoLensWordFallsBackToTheBestCaptionOrNothing() {
+        assertEquals(0 to 1, AskFlow.visualFor(phoneTracks, "touch"))
+        assertNull(AskFlow.visualFor(phoneTracks, "banana"))
+    }
 }

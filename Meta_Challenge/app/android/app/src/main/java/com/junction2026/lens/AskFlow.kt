@@ -118,6 +118,34 @@ object AskFlow {
         return best
     }
 
+    /** Words in a question that point at a kind of lens (English). The first matching lens the object has wins. */
+    private val LENS_WORDS: List<Pair<List<String>, List<String>>> = listOf(
+        listOf("inside", "construction", "constructed", "built", "build", "made", "layers", "layer", "parts", "part", "components", "open", "apart", "structure", "works", "work") to listOf("inside", "cutaway", "explore", "zoom"),
+        listOf("material", "atoms", "atom", "molecules", "zoom", "microscopic", "feel", "feels") to listOf("zoom", "inside", "cutaway"),
+        listOf("much", "many", "cost", "costs", "number", "numbers", "fast", "long", "big", "heavy") to listOf("number"),
+        listOf("if", "change", "changed", "instead", "moon", "longer", "shorter", "bigger", "smaller") to listOf("whatif"),
+        listOf("compare", "difference", "different", "versus", "bounce", "bounces") to listOf("compare"),
+        listOf("energy", "flow", "power", "electricity", "heat", "sound", "force", "goes", "comes") to listOf("flow"),
+        listOf("move", "moves", "motion", "moving", "why", "vibrate", "vibrates", "swing", "swings", "boil", "boils", "curve", "curves") to listOf("motion", "explore"),
+    )
+
+    /**
+     * Where to open the pictures for a question spoken with the photo: a lens named by the question's words
+     * (step 1), else the step whose caption shares most words with it, else null (the usual overview).
+     */
+    fun visualFor(tracks: List<Track>, question: String): Pair<Int, Int>? {
+        val q = question.lowercase().split(Regex("[^a-z]+")).filter { it.isNotEmpty() }.toSet()
+        for ((words, lenses) in LENS_WORDS) {
+            if (words.none { it in q }) continue
+            for (id in lenses) {
+                // Lens ids look like "phone.inside" or "sketch.flow": the kind is the last part.
+                val li = tracks.indexOfFirst { it.lensId?.substringAfterLast('.') == id && it.steps.isNotEmpty() }
+                if (li >= 0) return li to 0
+            }
+        }
+        return bestStep(tracks, question)
+    }
+
     /**
      * The answer the phone gives by itself: [det] with the question, the matching caption as the answer and a
      * lens hint, shaped like an `/ask` show. With no match the answer is the object's summary and no hint.
