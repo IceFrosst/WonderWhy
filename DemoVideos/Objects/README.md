@@ -10,3 +10,8 @@ Filmed by IceFrost on a Pixel, Sat 14 Nov 2026. 4K HEVC portrait (rotation flag 
 | `gym_air_bike.mp4` | 10.4 s | Someone riding an **air bike** (fan wheel) (IceFrost's trim) | Shot 16, 0:42-0:46 | It is a fan bike, not a magnet bike: show air resistance (the faster you pedal, the harder the air pushes back, roughly with speed cubed for power). The script line *Brakes without touching* must change |
 
 Style: glowing lines on black, palette cyan `#4df0ff`, amber `#ffc247`, green `#6dff9c`, soft `#c9d4ff`, white; Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye). Code-drawn only (no AI imagery).
+
+## Share scene (added 14 Nov 22:25)
+| File | Length | What | Film slot | Explanation to show |
+|---|---|---|---|---|
+| `share_scene_glasses_friend.mp4` | 14.7 s | IceFrost's phone edit (1080x1920, 60 fps): glasses held out over the table (0-3 s), friend turns them over (3-7 s), puts them on (~8 s), looks around, smiles at the camera (10-14.7 s) | Act 7, shots 19-23 (0:54-1:12) | **The glasses explain themselves** (shot 22, *It even explains itself.*): the Neural Band reads tiny electrical signals from the wrist muscles (EMG) and knows a pinch before you see it; the display is light from a tiny projector bent into one eye by a waveguide in the lens |
