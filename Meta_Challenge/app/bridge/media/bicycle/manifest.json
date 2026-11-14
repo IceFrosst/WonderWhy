@@ -20,6 +20,23 @@
       "fps": 15,
       "secondsPerStep": 3
     },
+    "bicycle.whatif": {
+      "kind": "whatif",
+      "title": "What if",
+      "stills": [
+        "whatif/s1.png",
+        "whatif/s2.png"
+      ],
+      "clip": "whatif/clip.mp4",
+      "captions": [
+        "Fewer teeth at the back give more speed for the same pedalling: 44 km/h on the smallest gear, 14 on the largest.",
+        "The small front ring lowers every gear by about a third. You go slower, but each push on the pedal is stronger."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
     "bicycle.flow": {
       "kind": "flow",
       "title": "Follow the force",

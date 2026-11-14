@@ -267,3 +267,129 @@ export function parseNumberSpec(x: unknown): NumberSpec | null {
   }
   return {headline, rows, steps, ...(compare ? {compare} : {}), ...(knob ? {knob} : {})};
 }
+
+export interface CurveAxis {
+  label: string;
+  unit: string;
+  decimals?: number;
+}
+
+export interface CurveXAxis extends CurveAxis {
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+}
+
+export interface CurveSeries {
+  name: string;
+  role: 'main' | 'other';
+  points: Array<[number, number]>;
+}
+
+export interface CurveMark {
+  x: number;
+  label: string;
+}
+
+export interface CurveSpec {
+  x: CurveXAxis;
+  y: CurveAxis;
+  series: CurveSeries[];
+  marks: CurveMark[];
+  steps: Array<{series: string[]}>;
+}
+
+const curveUnit = (x: unknown): string | null => {
+  if (typeof x !== 'string') return null;
+  return x.trim().slice(0, 48);
+};
+
+function parseCurveDecimals(x: unknown): number | null {
+  if (x === undefined) return null;
+  return number(x) ? Math.round(bounded(x, 0, 6)) : NaN;
+}
+
+/** Validate a serialised interactive curve comparison. */
+export function parseCurveSpec(x: unknown): CurveSpec | null {
+  if (!record(x) || !record(x.x) || !record(x.y)) return null;
+  if (!Array.isArray(x.series) || x.series.length < 1 || x.series.length > 2) return null;
+  if (!Array.isArray(x.marks) || !Array.isArray(x.steps) || !x.steps.length) return null;
+
+  const xLabel = shortText(x.x.label);
+  const xUnit = curveUnit(x.x.unit);
+  const xDecimals = parseCurveDecimals(x.x.decimals);
+  const yLabel = shortText(x.y.label);
+  const yUnit = curveUnit(x.y.unit);
+  const yDecimals = parseCurveDecimals(x.y.decimals);
+  if (!xLabel || xUnit === null || Number.isNaN(xDecimals)
+      || !yLabel || yUnit === null || Number.isNaN(yDecimals)) return null;
+  if (!number(x.x.min) || !number(x.x.max) || !number(x.x.step) || !number(x.x.value)) return null;
+  if (x.x.min >= x.x.max || x.x.step <= 0) return null;
+
+  const series: CurveSeries[] = [];
+  const names = new Set<string>();
+  const roles = new Set<string>();
+  for (const item of x.series) {
+    if (!record(item)) return null;
+    const name = shortText(item.name);
+    if (!name || names.has(name) || (item.role !== 'main' && item.role !== 'other') || roles.has(item.role)) return null;
+    if (!Array.isArray(item.points)) return null;
+    const points: Array<[number, number]> = [];
+    for (const point of item.points) {
+      if (!Array.isArray(point) || point.length < 2 || !number(point[0]) || !number(point[1])) continue;
+      points.push([point[0], point[1]]);
+      if (points.length === 64) break;
+    }
+    if (points.length < 2) return null;
+    for (let index = 1; index < points.length; index++) {
+      if (points[index][0] <= points[index - 1][0]) return null;
+    }
+    names.add(name);
+    roles.add(item.role);
+    series.push({name, role: item.role, points});
+  }
+  if (!roles.has('main')) return null;
+
+  const marks: CurveMark[] = [];
+  for (const item of x.marks.slice(0, 3)) {
+    if (!record(item) || !number(item.x)) return null;
+    const label = shortText(item.label);
+    if (!label) return null;
+    marks.push({x: item.x, label});
+  }
+
+  const steps: CurveSpec['steps'] = [];
+  const mainName = series.find(item => item.role === 'main')!.name;
+  for (const item of x.steps) {
+    if (!record(item) || !Array.isArray(item.series)) return null;
+    const shown: string[] = [];
+    for (const raw of item.series) {
+      const name = shortText(raw);
+      if (!name) return null;
+      if (names.has(name) && !shown.includes(name)) shown.push(name);
+    }
+    if (!shown.includes(mainName)) return null;
+    steps.push({series: shown});
+  }
+
+  return {
+    x: {
+      label: xLabel,
+      unit: xUnit,
+      min: x.x.min,
+      max: x.x.max,
+      step: Math.min(x.x.step, x.x.max - x.x.min),
+      value: bounded(x.x.value, x.x.min, x.x.max),
+      ...(xDecimals === null ? {} : {decimals: xDecimals}),
+    },
+    y: {
+      label: yLabel,
+      unit: yUnit,
+      ...(yDecimals === null ? {} : {decimals: yDecimals}),
+    },
+    series,
+    marks,
+    steps,
+  };
+}

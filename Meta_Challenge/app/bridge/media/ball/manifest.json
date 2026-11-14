@@ -39,6 +39,23 @@
       "fps": 15,
       "secondsPerStep": 3
     },
+    "ball.whatif": {
+      "kind": "whatif",
+      "title": "What if",
+      "stills": [
+        "whatif/s1.png",
+        "whatif/s2.png"
+      ],
+      "clip": "whatif/clip.mp4",
+      "captions": [
+        "Change the angle. A flat throw and a steep throw both fall short. 45 degrees goes farthest.",
+        "On the Moon gravity is six times weaker, so every throw flies six times as far. The best angle is still 45."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
     "ball.flow": {
       "kind": "flow",
       "title": "Follow the energy",

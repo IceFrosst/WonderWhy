@@ -26,6 +26,23 @@
       "fps": 15,
       "secondsPerStep": 3
     },
+    "phone.whatif": {
+      "kind": "whatif",
+      "title": "What if",
+      "stills": [
+        "whatif/s1.png",
+        "whatif/s2.png"
+      ],
+      "clip": "whatif/clip.mp4",
+      "captions": [
+        "A 5 watt charger needs over three hours. A 20 watt charger needs under one. Real phones slow down near full.",
+        "A tablet battery holds twice the energy, so every charger takes twice as long to fill it."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
     "phone.flow": {
       "kind": "flow",
       "title": "Follow the energy",

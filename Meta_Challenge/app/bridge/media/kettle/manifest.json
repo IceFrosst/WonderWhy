@@ -20,6 +20,23 @@
       "fps": 15,
       "secondsPerStep": 3
     },
+    "kettle.whatif": {
+      "kind": "whatif",
+      "title": "What if",
+      "stills": [
+        "whatif/s1.png",
+        "whatif/s2.png"
+      ],
+      "clip": "whatif/clip.mp4",
+      "captions": [
+        "Boiling time grows in a straight line with the water. Twice the water needs twice the time and twice the energy.",
+        "Water that starts at 60 C needs only half the heating, so it boils in half the time."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
     "kettle.flow": {
       "kind": "flow",
       "title": "Follow the energy",

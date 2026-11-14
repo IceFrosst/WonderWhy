@@ -20,6 +20,23 @@
       "fps": 15,
       "secondsPerStep": 3
     },
+    "pendulum.whatif": {
+      "kind": "whatif",
+      "title": "What if",
+      "stills": [
+        "whatif/s1.png",
+        "whatif/s2.png"
+      ],
+      "clip": "whatif/clip.mp4",
+      "captions": [
+        "Make the string longer and the swing slows, but the curve flattens. Four times the length only doubles the time.",
+        "On the Moon the same string swings about two and a half times more slowly, because gravity pulls back more gently."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
     "pendulum.flow": {
       "kind": "flow",
       "title": "Follow the energy",

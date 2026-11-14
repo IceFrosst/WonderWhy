@@ -1,6 +1,7 @@
 import {BallScene} from './ball';
 import {BicycleScene} from './bicycle';
 import {BounceScene} from './bounce';
+import {CurveScene} from './curve';
 import {ExplodedScene} from './exploded';
 import {FlowScene} from './flow';
 import {PHONE_SPEC} from './specs/phone';
@@ -8,7 +9,7 @@ import {GuitarScene} from './guitar';
 import {KettleScene} from './kettle';
 import {NumberScene} from './number';
 import {PendulumScene} from './pendulum';
-import {parseFlowSpec, parseNumberSpec} from './specs/types';
+import {parseCurveSpec, parseFlowSpec, parseNumberSpec} from './specs/types';
 import type {Scene} from './types';
 
 export type {Readout, Scene, Step} from './types';
@@ -21,6 +22,10 @@ const FACTORIES: Record<string, (spec?: unknown) => Scene | null> = {
   pendulum: () => new PendulumScene(),
   bounce: () => new BounceScene(),
   'phone-exploded': () => new ExplodedScene(PHONE_SPEC),
+  curve: spec => {
+    const s = parseCurveSpec(spec);
+    return s ? new CurveScene(s) : null;
+  },
   flow: spec => {
     const s = parseFlowSpec(spec);
     return s ? new FlowScene(s) : null;
@@ -33,7 +38,7 @@ const FACTORIES: Record<string, (spec?: unknown) => Scene | null> = {
 
 /**
  * Scene factory id (see Chapter.scene). `spec` is the chapter's drawing data from
- * shared/objects.json for data-driven scenes (flow, number); hand-written scenes ignore it.
+ * shared/objects.json for data-driven scenes (curve, flow, number); hand-written scenes ignore it.
  * Returns null for unknown ids or a spec that does not validate.
  */
 export function createScene(id: string, spec?: unknown): Scene | null {

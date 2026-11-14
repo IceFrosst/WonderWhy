@@ -20,6 +20,23 @@
       "fps": 15,
       "secondsPerStep": 3
     },
+    "guitar.whatif": {
+      "kind": "whatif",
+      "title": "What if",
+      "stills": [
+        "whatif/s1.png",
+        "whatif/s2.png"
+      ],
+      "clip": "whatif/clip.mp4",
+      "captions": [
+        "Each fret shortens the string and raises the note by about 6 percent. Twelve frets double the frequency: one octave.",
+        "A string twice as long sounds one octave lower at every fret. That is why bass instruments are big."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
     "guitar.flow": {
       "kind": "flow",
       "title": "Follow the sound",
