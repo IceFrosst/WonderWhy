@@ -98,11 +98,13 @@ async function callAnthropic({ imageBase64, focusBase64, prompt, env, timeoutMs,
 }
 
 async function callGemini({ imageBase64, focusBase64, prompt, env, timeoutMs, maxTokens }) {
-  const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = env.GEMINI_MODEL || 'gemini-4-carbon';
   const data = await postJson(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     { 'x-goog-api-key': env.GEMINI_API_KEY },
     { contents: [{ role: 'user', parts: [...[imageBase64, focusBase64].filter(Boolean).map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })), { text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0, ...(maxTokens ? { maxOutputTokens: maxTokens } : {}) } }, timeoutMs);
+      // Gemini 3+/4 models think before answering and the thinking counts toward maxOutputTokens,
+      // so a small cap (e.g. 300) truncates the JSON mid-answer. Keep headroom for the thinking.
+      generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: Math.max(maxTokens || 0, 4096) } }, timeoutMs);
   const text = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
   return { text, model };
 }

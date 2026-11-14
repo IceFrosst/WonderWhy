@@ -222,6 +222,6 @@ test('classifier answers are cleaned and capped, and Gemini classification sets 
   globalThis.fetch = async (_url, init) => { body = JSON.parse(init.body); return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: '{"objectId":"unknown","confidence":0,"answer":"ok"}' }] } }] }) }; };
   try {
     await detect({ imageBase64: 'image', objects: [], provider: 'gemini', timeoutMs: 1000, env: { GEMINI_API_KEY: 'test-only' } });
-    assert.equal(body.generationConfig.maxOutputTokens, 300);
+    assert.equal(body.generationConfig.maxOutputTokens, 4096); // thinking models need headroom (see callGemini)
   } finally { globalThis.fetch = originalFetch; }
 });
