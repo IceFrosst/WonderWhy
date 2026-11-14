@@ -55,6 +55,8 @@ data class Detection(
     val standIn: Boolean = false,
     /** `show.reqId`: the request this answers (for the `POST /rendered` ack). */
     val reqId: String? = null,
+    /** `timings.model` (PROTOCOL `show`): `mock`, `forced`, or the model name. Null when absent. */
+    val model: String? = null,
 )
 
 /** A track the wearer can step through: a lens, or the plain `steps` list when the bridge sent no lenses. */
@@ -227,6 +229,7 @@ object DetectionParser {
             sketchError = root.str("sketchError")?.trim()?.ifEmpty { null },
             standIn = root["standIn"] == true,
             reqId = root.str("reqId")?.trim()?.ifEmpty { null },
+            model = (root["timings"] as? Map<*, *>)?.str("model")?.trim()?.ifEmpty { null },
         )
     }
 

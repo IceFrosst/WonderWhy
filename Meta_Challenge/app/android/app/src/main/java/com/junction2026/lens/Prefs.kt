@@ -20,4 +20,10 @@ object Prefs {
     /** First-run consent: the wearer agreed to photos being sent to the bridge and a model. */
     fun consent(c: Context) = sp(c).getBoolean("consent", false)
     fun setConsent(c: Context, v: Boolean) = sp(c).edit().putBoolean("consent", v).apply()
+    /** "Seen today" as JSON ([Journal.toJson]); no pictures. */
+    fun journal(c: Context) = sp(c).getString("journal", "") ?: ""
+    fun setJournal(c: Context, v: String) = sp(c).edit().putString("journal", v).apply()
+    /** "Glasses check" verdicts and notes as JSON ([GlassesCheck.encode]). */
+    fun glassesCheck(c: Context) = sp(c).getString("glassesCheck", "") ?: ""
+    fun setGlassesCheck(c: Context, v: String) = sp(c).edit().putString("glassesCheck", v).apply()
 }

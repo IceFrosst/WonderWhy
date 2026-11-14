@@ -67,6 +67,9 @@ private open class CaptureFailure(val title: String, val detail: String) : Excep
 /** Camera permission refused: its own decision card (DESIGN.md "camera denied"). */
 private class CameraDenied : CaptureFailure("Camera denied", "Allow camera access in Meta AI")
 
+/** Where a result shown by `present` came from. */
+private enum class ResultSource { BRIDGE, DEMO, SAVED, REPLAY }
+
 class GlassesController(
     private val ctx: Context,
     private val scope: CoroutineScope,
@@ -104,6 +107,41 @@ class GlassesController(
     /** Last battery level the glasses reported (for the state card text). */
     @Volatile var batteryLevel: Int? = null
         private set
+
+    // ---- read-only facts for the phone's "Glasses check" hints (never a verdict) ----
+    /** `elapsedRealtime` of the last pinch that came from the glasses' Inputs (not a phone button). */
+    @Volatile var lastPinchAt: Long? = null
+        private set
+    /** Title of the last card that reached the display, and when (`elapsedRealtime`). */
+    @Volatile var lastCardTitle: String? = null
+        private set
+    @Volatile var lastCardAt: Long? = null
+        private set
+    /** Phone-side round trip of the last `/detect` call, ms. */
+    @Volatile var lastDetectMs: Long? = null
+        private set
+    /** Trigger to result card on the display, ms (the last one). */
+    @Volatile var lastToCardMs: Long? = null
+        private set
+    /** Last final transcription from the glasses' microphone. */
+    @Volatile var lastHeard: String? = null
+        private set
+    @Volatile var lastPhotoKb: Int? = null
+        private set
+    @Volatile var cameraDeniedSeen = false
+        private set
+    @Volatile var offlineSeen = false
+        private set
+
+    private var journalBook = Journal.fromJson(Prefs.journal(ctx))
+    private val _journal = MutableStateFlow(journalBook.entries)
+    /** "Seen today", newest first ([Journal]); saved to prefs on every change. */
+    val journal: StateFlow<List<JournalEntry>> = _journal
+    private val _receipt = MutableStateFlow<ReceiptFacts?>(null)
+    /** The receipt of the result itself, put back when the wearer leaves an answer card for its lenses. */
+    private var resultReceipt: ReceiptFacts? = null
+    /** Where the result on screen came from (the phone's receipt line), or null when no result is shown. */
+    val receipt: StateFlow<ReceiptFacts?> = _receipt
 
     private var session: DeviceSession? = null
     private var display: Display? = null
@@ -151,8 +189,10 @@ class GlassesController(
     // Screen state. Touched only on the main thread (inside [scope]).
     private var current: Detection? = null
     private var explainer: ExplainerState? = null
-    /** True while [current] comes from the bundled library (offline), not from a photo. */
+    /** True while [current] comes from the bundled library (offline or a "Seen today" replay), not from a photo. */
     private var currentSaved = false
+    /** [current] is a "Seen today" replay: no offline tag, Back goes to idle (not the offline picker). */
+    private var currentReplay = false
     /** Offline picker, while it is on screen. */
     private var picker: OfflinePicker? = null
     private var pickerIndex = 0
@@ -343,6 +383,7 @@ class GlassesController(
         attached = false
         explainer = null
         current = null
+        _receipt.value = null
         picker = null
         lastContent = null
         notice = null
@@ -472,8 +513,8 @@ class GlassesController(
                     inputs.events.collect { ev ->
                         log("Input #$no: ${ev.javaClass.simpleName}")
                         when (ev) {
-                            is InputEvent.Select -> onSelect()
-                            is InputEvent.Capture -> trigger()
+                            is InputEvent.Select -> { lastPinchAt = SystemClock.elapsedRealtime(); onSelect() }
+                            is InputEvent.Capture -> { lastPinchAt = SystemClock.elapsedRealtime(); trigger() }
                             is InputEvent.Nav -> onNav(ev.direction)
                             is InputEvent.Back -> onBack()
                             is InputEvent.Button, is InputEvent.Drag -> Unit
@@ -527,6 +568,7 @@ class GlassesController(
     private fun onHeard(r: TranscriptionResult) {
         if (!r.isFinal || r.text.isBlank()) return
         log("Heard: \"${r.text}\" (${"%.2f".format(r.confidence)})")
+        lastHeard = r.text
         ask(r.text)
     }
 
@@ -682,7 +724,12 @@ class GlassesController(
         // One card at a time: two sends in the same moment make one of them fail.
         sendLock.withLock {
             d.sendContent(Cards.render(onMain(card)))
-                .onSuccess { ok = true; _glasses.value = card.summary }
+                .onSuccess {
+                    ok = true
+                    _glasses.value = card.summary
+                    lastCardTitle = card.title
+                    lastCardAt = SystemClock.elapsedRealtime()
+                }
                 .onFailure { e, _ -> log("Display error: ${e.description}") }
         }
         return ok
@@ -697,6 +744,7 @@ class GlassesController(
 
     suspend fun showIdle() {
         setListening(false)
+        _receipt.value = null
         show(Cards.idle())
     }
 
@@ -819,10 +867,13 @@ class GlassesController(
 
     private suspend fun runCapture() {
         val startedIn = sessionNo
+        val startedAt = SystemClock.elapsedRealtime()
+        val demo = useFixture
+        _receipt.value = null
         try {
             show(Cards.looking())
             var receivedAt = 0L
-            val det = if (useFixture) {
+            val det = if (demo) {
                 delay(400)
                 nextFixture()
             } else {
@@ -830,8 +881,10 @@ class GlassesController(
                 val (jpeg, focus) = withTimeout(30_000) { takePhotoJpeg() }
                 log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
                 onPhoto(jpeg)
+                lastPhotoKb = jpeg.size / 1024
+                val sentAt = SystemClock.elapsedRealtime()
                 bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null })
-                    .also { receivedAt = SystemClock.elapsedRealtime() }
+                    .also { receivedAt = SystemClock.elapsedRealtime(); lastDetectMs = receivedAt - sentAt }
             }
             log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}" +
                 (if (det.lowConfidence) " lowConfidence" else "") +
@@ -839,7 +892,7 @@ class GlassesController(
                 (det.lang?.let { " lang=$it" } ?: "") + (if (det.media != null) " media" else "") +
                 (det.sketch?.let { " sketch='${it.label}' chapters=${it.chapters.size}" } ?: "") +
                 (det.sketchError?.let { " sketchError=$it" } ?: ""))
-            if (present(det) && receivedAt > 0) ackRendered(det.reqId, receivedAt)
+            if (present(det, if (demo) ResultSource.DEMO else ResultSource.BRIDGE, startedAt) && receivedAt > 0) ackRendered(det.reqId, receivedAt)
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
             log("Camera timed out: the glasses did not deliver a photo")
             showError(Cards.t(Lang.TOOK_TOO_LONG))
@@ -848,6 +901,7 @@ class GlassesController(
             throw e
         } catch (e: CameraDenied) {
             log("Camera permission denied")
+            cameraDeniedSeen = true
             raise(DeviceAlert.CAMERA_DENIED)
         } catch (e: CaptureFailure) {
             log("Capture failed: ${e.message}")
@@ -955,6 +1009,8 @@ class GlassesController(
 
     /** Offline card: pick a saved library object with left/right, open with pinch. */
     private suspend fun showOfflinePicker() {
+        offlineSeen = true
+        _receipt.value = null
         val lib = library()
         if (lib.isEmpty()) { showError(Cards.t(Lang.OFFLINE_TITLE), Cards.t(Lang.OFFLINE_EMPTY)); return }
         val p = OfflinePicker(lib.keys.toList(), pickerIndex.coerceIn(0, lib.size - 1))
@@ -978,7 +1034,38 @@ class GlassesController(
         picker = null
         log("Offline: opening saved card ${o.id}")
         val manifest = readAsset("media/${o.id}/manifest.json")?.toString(Charsets.UTF_8)
-        present(OfflineConvert.toDetection(OfflineCards.toDetect(o), OfflineConvert.media(o.id, manifest)), saved = true)
+        present(OfflineConvert.toDetection(OfflineCards.toDetect(o), OfflineConvert.media(o.id, manifest)), ResultSource.SAVED)
+    }
+
+    /**
+     * "Seen today" on the phone: show [objectId] again from the saved library and bundled stills, no photo
+     * (the offline-card path). False when not connected (the phone shows a hint instead).
+     */
+    fun replay(objectId: String): Boolean {
+        if (session == null) return false
+        scope.launch {
+            if (busy.get()) { log("Seen today: busy, try again in a moment"); return@launch }
+            val o = library()[objectId] ?: run { log("Seen today: '$objectId' is not in the saved library"); return@launch }
+            picker = null
+            consentShown = false
+            _consent.value = false
+            log("Seen today: showing ${o.id} again from saved data (no photo)")
+            val manifest = readAsset("media/${o.id}/manifest.json")?.toString(Charsets.UTF_8)
+            present(OfflineConvert.toDetection(OfflineCards.toDetect(o), OfflineConvert.media(o.id, manifest)), ResultSource.REPLAY)
+        }
+        return true
+    }
+
+    /** Developer "Clear": empties "Seen today" (prefs too). */
+    fun clearJournal() {
+        setJournal(Journal())
+        log("Seen today cleared")
+    }
+
+    private fun setJournal(j: Journal) {
+        journalBook = j
+        _journal.value = j.entries
+        Prefs.setJournal(ctx, j.toJson())
     }
 
     // ---- result and explainer ----
@@ -987,13 +1074,21 @@ class GlassesController(
      * Picks the result screen. An old bridge (no v1 fields) lands on exactly the cards it always did.
      * True when the result card is on the display now (for the `/rendered` ack).
      */
-    private suspend fun present(det: Detection, saved: Boolean = false): Boolean {
+    private suspend fun present(det: Detection, source: ResultSource, startedAt: Long? = null): Boolean {
         media.clear()
         current = det
-        currentSaved = saved
+        currentSaved = source == ResultSource.SAVED || source == ResultSource.REPLAY
+        currentReplay = source == ResultSource.REPLAY
         explainer = null
         answerDet = null
-        return when (val v = DetectionParser.verdict(det)) {
+        _receipt.value = null
+        val verdict = DetectionParser.verdict(det)
+        // "Seen today": every result card except a replay of one (that is already in the list).
+        if (source != ResultSource.REPLAY) {
+            val flag = when (source) { ResultSource.DEMO -> JournalFlag.DEMO; ResultSource.SAVED -> JournalFlag.SAVED; else -> JournalFlag.LIBRARY }
+            Journal.entryFor(det, flag, System.currentTimeMillis())?.let { setJournal(journalBook.add(it)) }
+        }
+        val shown = when (val v = verdict) {
             // The bridge's own words for these go to the log only; the card says what to do.
             is Verdict.NotSure -> { log("Not sure: maybe '${v.guess}'"); setListening(false); show(Cards.notSure(::trigger)) }
             is Verdict.Unrecognised -> { log("Not sure: ${v.answer.orEmpty()}"); setListening(false); show(Cards.notSure(::trigger)) }
@@ -1001,6 +1096,20 @@ class GlassesController(
             is Verdict.Explainer -> showExplainer(ExplainerState(v.tracks))
             is Verdict.Sketched -> showExplainer(ExplainerState(v.tracks))
         }
+        val toCard = if (shown && startedAt != null) SystemClock.elapsedRealtime() - startedAt else null
+        if (toCard != null && verdict !is Verdict.NotSure && verdict !is Verdict.Unrecognised) lastToCardMs = toCard
+        _receipt.value = when (verdict) {
+            is Verdict.NotSure, is Verdict.Unrecognised -> null
+            is Verdict.Sketched -> ReceiptFacts(ReceiptKind.SKETCH, det.model, toCard, det.standIn)
+            else -> when (source) {
+                ResultSource.BRIDGE -> ReceiptFacts(ReceiptKind.LIBRARY, det.model, toCard, det.standIn)
+                ResultSource.DEMO -> ReceiptFacts(ReceiptKind.DEMO)
+                ResultSource.SAVED -> ReceiptFacts(ReceiptKind.SAVED)
+                ResultSource.REPLAY -> ReceiptFacts(ReceiptKind.REPLAY)
+            }
+        }
+        resultReceipt = _receipt.value
+        return shown
     }
 
     /**
@@ -1063,7 +1172,7 @@ class GlassesController(
             answer = if (sk != null) null else det.answer,
             still = still,
             onPrimary = { scope.launch { explainerPrimary() } },
-            saved = currentSaved,
+            saved = currentSaved && !currentReplay,
             sketch = sk != null,
             standIn = det.standIn,
         )
@@ -1115,13 +1224,14 @@ class GlassesController(
                 picker = null
                 answerDet = null
                 val startedIn = sessionNo
+                val startedAt = SystemClock.elapsedRealtime()
                 show(Cards.looking())
                 // Demo data and saved cards have no bridge behind them: the phone answers from the same text.
                 if (useFixture || currentSaved) { showAnswer(det, AskFlow.localAnswer(det, q), q, local = true); return }
                 try {
                     val ans = bridge.ask(q, target.id, lang)
                     val receivedAt = SystemClock.elapsedRealtime()
-                    if (showAnswer(det, ans, q, local = false)) ackRendered(ans.reqId, receivedAt)
+                    if (showAnswer(det, ans, q, local = false, startedAt = startedAt)) ackRendered(ans.reqId, receivedAt)
                 } catch (e: CancellationException) {
                     // Not left on "Looking…" (put-on would restore it).
                     withContext(NonCancellable) { afterCancel(startedIn) { if (navAllowed()) ask(q) } }
@@ -1147,7 +1257,7 @@ class GlassesController(
         show(Cards.error(title, { if (navAllowed()) ask(q) }, detail))
 
     /** True when the answer card is on the display now. */
-    private suspend fun showAnswer(base: Detection, ans: Detection, q: String, local: Boolean): Boolean {
+    private suspend fun showAnswer(base: Detection, ans: Detection, q: String, local: Boolean, startedAt: Long? = null): Boolean {
         // The answer is a normal show for the object; keep the old lenses and media if it came without them.
         val det = if (DetectionParser.tracks(ans).isEmpty()) {
             base.copy(question = ans.question ?: q, answer = ans.answer, lensHint = ans.lensHint)
@@ -1171,6 +1281,10 @@ class GlassesController(
             local = local,
         ))
         setListening(true)
+        setJournal(journalBook.addQuestion(det.objectId, text.question, text.answer))
+        val toCard = if (shown && startedAt != null) SystemClock.elapsedRealtime() - startedAt else null
+        _receipt.value = if (local) ReceiptFacts(ReceiptKind.ANSWER_PHONE, standIn = det.standIn)
+        else ReceiptFacts(ReceiptKind.ANSWER_BRIDGE, ans.model, toCard, ans.standIn)
         return shown
     }
 
@@ -1179,6 +1293,7 @@ class GlassesController(
         val det = answerDet ?: return
         if (!navAllowed()) return
         answerDet = null
+        _receipt.value = resultReceipt
         val tracks = DetectionParser.tracks(det)
         if (tracks.isEmpty()) { showIdle(); return }
         val pos = answerPos
@@ -1264,6 +1379,7 @@ class GlassesController(
             answerDet?.let { a ->
                 // Back from an answer: the object's overview.
                 answerDet = null
+                _receipt.value = resultReceipt
                 val tracks = DetectionParser.tracks(a)
                 if (tracks.isEmpty()) showIdle() else showExplainer(ExplainerState(tracks))
                 return@launch
@@ -1277,7 +1393,7 @@ class GlassesController(
             val b = s.back()
             when {
                 b != null -> showExplainer(b)
-                currentSaved -> { explainer = null; current = null; showOfflinePicker() }
+                currentSaved && !currentReplay -> { explainer = null; current = null; showOfflinePicker() }
                 else -> { explainer = null; showIdle() }
             }
         }

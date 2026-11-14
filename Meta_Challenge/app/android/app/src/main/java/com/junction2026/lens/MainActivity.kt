@@ -80,6 +80,33 @@ class MainActivity : ComponentActivity() {
     private lateinit var consentView: TextView
     private lateinit var logView: TextView
     private lateinit var logScroll: ScrollView
+    private lateinit var scroller: ScrollView
+
+    /** Phone-only receipt line under the mirror ([Receipt]). */
+    private lateinit var receiptLine: TextView
+    // "Seen today" ([Journal]).
+    private lateinit var seenTitle: TextView
+    private lateinit var seenList: LinearLayout
+    private lateinit var seenEmpty: TextView
+    private lateinit var seenMore: Button
+    private lateinit var seenHint: TextView
+    private var seenExpanded = false
+    private var seenHintJob: kotlinx.coroutines.Job? = null
+    /** Thumbnails by asset path, decoded once (null: none). Never written to disk. */
+    private val thumbs = HashMap<String, android.graphics.Bitmap?>()
+    // "Glasses check" ([GlassesCheck]): a full-screen overlay over the phone screen.
+    private lateinit var checkOverlay: View
+    private lateinit var checkScroll: ScrollView
+    private val checkViews = ArrayList<CheckRowViews>()
+    private var checkState: Map<String, CheckResult> = emptyMap()
+    private lateinit var reportCard: LinearLayout
+    private lateinit var reportBox: TextView
+    private var hintJob: kotlinx.coroutines.Job? = null
+    private val checkBack = object : androidx.activity.OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = closeCheck()
+    }
+
+    private class CheckRowViews(val row: CheckRow, val hint: TextView, val buttons: Map<CheckVerdict, Button>, val note: EditText)
 
     // Mock toggles, relabelled after each tap so the button says what it will do next.
     private lateinit var donBtn: Button
@@ -337,6 +364,13 @@ class MainActivity : ComponentActivity() {
         root.addView(previewBox, LinearLayout.LayoutParams(side, side).apply {
             topMargin = dp(16); gravity = Gravity.CENTER_HORIZONTAL
         })
+        // Where the result on screen came from (phone only: the glasses card is at its word cap).
+        receiptLine = label("", 14f, MUTED).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(4), dp(8), dp(4), 0)
+            visibility = View.GONE
+        }
+        root.addView(receiptLine, matchWidth())
 
         // Compact remote for the glasses' inputs.
         root.addView(section("Glasses remote"))
@@ -376,16 +410,25 @@ class MainActivity : ComponentActivity() {
             setPadding(dp(8), dp(4), dp(8), dp(4))
         }, matchWidth(top = 16))
 
+        root.addView(seenSection())
+
         root.addView(developerSection())
 
-        val scroller = ScrollView(this).apply { addView(root); setBackgroundColor(GROUND) }
+        scroller = ScrollView(this).apply { addView(root); setBackgroundColor(GROUND) }
+        checkOverlay = buildCheckScreen()
+        val container = FrameLayout(this).apply {
+            setBackgroundColor(GROUND)
+            addView(scroller, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(checkOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
         // Android 15 draws edge to edge: keep the content out from under the status and navigation bars.
-        scroller.setOnApplyWindowInsetsListener { v, insets ->
+        container.setOnApplyWindowInsetsListener { v, insets ->
             val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
         }
-        setContentView(scroller)
+        setContentView(container)
+        onBackPressedDispatcher.addCallback(this, checkBack)
         updateMockVisibility()
         relabel()
         showConsentStatus()
@@ -421,6 +464,11 @@ class MainActivity : ComponentActivity() {
             updateStatus()
         }
         dev.addView(fixtureSwitch)
+        // Team tools: the real-glasses checklist (Glasses_Test.md) and emptying "Seen today".
+        dev.addView(row(
+            button("Glasses check") { openCheck() },
+            button("Clear Seen today") { controller.clearJournal() },
+        ))
 
         // Mock Device Kit: device states, the speech stand-in and the simulated takeover.
         mockSection = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -588,6 +636,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 launch { while (true) { checkBridge(); kotlinx.coroutines.delay(10_000) } }
+                launch { controller.journal.collect { renderJournal() } }
+                launch { controller.receipt.collect { showReceipt(it) } }
             }
         }
     }
@@ -633,6 +683,8 @@ class MainActivity : ComponentActivity() {
                     Prefs.setLang(this@MainActivity, choice)
                     controller.setLanguage(Lang.effective(choice, Locale.getDefault()))
                     showState(controller.alert.value)
+                    renderJournal()
+                    showReceipt(controller.receipt.value)
                 }
                 override fun onNothingSelected(p: AdapterView<*>?) = Unit
             }
@@ -682,6 +734,353 @@ class MainActivity : ComponentActivity() {
         relabel()
     }
 
+    // ---- receipt line ----
+
+    private fun showReceipt(f: ReceiptFacts?) {
+        if (f == null) { receiptLine.visibility = View.GONE; return }
+        receiptLine.text = Receipt.line(f, Cards.lang)
+        receiptLine.visibility = View.VISIBLE
+    }
+
+    // ---- "Seen today" ----
+
+    /** Title, the last 3 entries (all with "Show all"), the empty line, and the muted hint. */
+    private fun seenSection(): View {
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        seenTitle = section(Cards.t(Lang.SEEN_TITLE)).apply { setPadding(dp(4), dp(24), 0, dp(4)) }
+        box.addView(seenTitle)
+        seenList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        box.addView(seenList, matchWidth())
+        seenEmpty = label(Cards.t(Lang.SEEN_EMPTY), 14f, MUTED).apply { setPadding(dp(4), dp(4), dp(4), dp(4)) }
+        box.addView(seenEmpty)
+        seenHint = label("", 14f, MUTED).apply { setPadding(dp(4), dp(4), dp(4), 0); visibility = View.GONE }
+        box.addView(seenHint)
+        seenMore = button(Cards.t(Lang.SEEN_ALL)) { seenExpanded = !seenExpanded; renderJournal() }.apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, dp(8), 0, 0)
+            }
+            setPadding(dp(16), 0, dp(16), 0)
+            visibility = View.GONE
+        }
+        box.addView(seenMore)
+        return box
+    }
+
+    private fun renderJournal() {
+        if (!::seenList.isInitialized) return
+        val all = controller.journal.value
+        seenTitle.text = Cards.t(Lang.SEEN_TITLE)
+        seenEmpty.text = Cards.t(Lang.SEEN_EMPTY)
+        seenEmpty.visibility = if (all.isEmpty()) View.VISIBLE else View.GONE
+        if (all.isEmpty()) seenHint.visibility = View.GONE
+        seenMore.visibility = if (all.size > SEEN_SHOWN) View.VISIBLE else View.GONE
+        seenMore.text = Cards.t(if (seenExpanded) Lang.SEEN_LESS else Lang.SEEN_ALL)
+        seenList.removeAllViews()
+        for (e in if (seenExpanded) all else all.take(SEEN_SHOWN)) seenList.addView(journalCard(e), matchWidth(top = 8))
+    }
+
+    private fun seenTime(ms: Long): String {
+        val fi = Cards.lang.startsWith("fi")
+        val today = SimpleDateFormat("yyyyMMdd", Locale.US).let { it.format(Date(ms)) == it.format(Date()) }
+        val pattern = if (today) "HH:mm" else if (fi) "d.M. HH:mm" else "d MMM HH:mm"
+        return SimpleDateFormat(pattern, Locale.US).format(Date(ms))
+    }
+
+    /** Compact card: thumbnail left; label, one line, last question and muted time + flag right. */
+    private fun journalCard(e: JournalEntry): View {
+        val fi = Cards.lang.startsWith("fi")
+        val thumb = android.widget.ImageView(this).apply {
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            background = rounded(0xFF000000.toInt(), BORDER, radius = 8)
+            setPadding(dp(2), dp(2), dp(2), dp(2))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            layoutParams = LinearLayout.LayoutParams(dp(56), dp(56)).apply { marginEnd = dp(12) }
+        }
+        e.still?.let { path -> loadThumb(path) { bmp -> if (bmp != null) thumb.setImageBitmap(bmp) } }
+        fun one(t: String, size: Float, color: Int, semi: Boolean = false) = label(t, size, color, semi).apply {
+            maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+            setLineSpacing(0f, 1.2f)
+        }
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            addView(one(e.label, 16f, TEXT, semi = true))
+            val line = e.line.ifBlank { e.lens }
+            if (line.isNotBlank()) addView(one(line, 14f, TEXT))
+            e.qa.lastOrNull()?.let { addView(one("${Cards.t(Lang.QUESTION_PREFIX)} ${it.q} ${if (fi) "V:" else "A:"} ${it.a}", 14f, MUTED)) }
+            val flag = Cards.t(when (e.flag) {
+                JournalFlag.LIBRARY -> Lang.FLAG_LIBRARY
+                JournalFlag.SKETCH -> Lang.FLAG_SKETCH
+                JournalFlag.SAVED -> Lang.FLAG_SAVED
+                JournalFlag.DEMO -> Lang.FLAG_DEMO
+            })
+            val meta = android.text.SpannableStringBuilder(seenTime(e.timeMs)).append(" · ")
+            val start = meta.length
+            meta.append(flag)
+            // DESIGN.md: a sketch is tagged in the loss colour (and by its word).
+            if (e.flag == JournalFlag.SKETCH) meta.setSpan(android.text.style.ForegroundColorSpan(HOT), start, meta.length, 0)
+            addView(one("", 14f, MUTED).apply { text = meta })
+        }
+        return row(thumb, col).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(64)
+            background = rounded(CARD, BORDER)
+            setPadding(dp(8), dp(8), dp(12), dp(8))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onSeenTap(e) }
+        }
+    }
+
+    /** First still of an entry, from the APK's assets; a whole exported frame is cut to its drawing. */
+    private fun loadThumb(path: String, onReady: (android.graphics.Bitmap?) -> Unit) {
+        if (thumbs.containsKey(path)) { onReady(thumbs[path]); return }
+        lifecycleScope.launch {
+            val bmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching {
+                    val src = assets.open(path).use { android.graphics.BitmapFactory.decodeStream(it) } ?: return@runCatching null
+                    val piece = if (StillFrame.isFrame(src.width, src.height)) {
+                        val px = IntArray(src.width * src.height)
+                        src.getPixels(px, 0, src.width, 0, 0, src.width, src.height)
+                        val c = StillFrame.crop(px, src.width, src.height, false)
+                        android.graphics.Bitmap.createBitmap(src, c.left, c.top, c.width, c.height)
+                    } else src
+                    val side = dp(56)
+                    val scale = side.toFloat() / maxOf(piece.width, piece.height)
+                    if (scale < 1f) android.graphics.Bitmap.createScaledBitmap(piece, maxOf(1, (piece.width * scale).toInt()), maxOf(1, (piece.height * scale).toInt()), true)
+                    else piece
+                }.getOrNull()
+            }
+            thumbs[path] = bmp
+            onReady(bmp)
+        }
+    }
+
+    /** Connected: the object again on the glasses from saved data (no photo). Not connected: a muted hint. */
+    private fun onSeenTap(e: JournalEntry) {
+        val hint = when {
+            e.flag == JournalFlag.SKETCH -> Cards.t(Lang.SEEN_NO_REPLAY)
+            controller.replay(e.objectId) -> null
+            else -> Cards.t(Lang.SEEN_HINT)
+        }
+        seenHint.text = hint.orEmpty()
+        seenHint.visibility = if (hint == null) View.GONE else View.VISIBLE
+        // A hint, not a state: it leaves by itself.
+        seenHintJob?.cancel()
+        if (hint != null) seenHintJob = lifecycleScope.launch { kotlinx.coroutines.delay(5_000); seenHint.visibility = View.GONE }
+        if (hint == null) scroller.post { scroller.smoothScrollTo(0, maxOf(0, previewBox.top - dp(8))) }
+    }
+
+    // ---- "Glasses check" (team tool, English only) ----
+
+    private fun buildCheckScreen(): View {
+        checkState = GlassesCheck.decode(Prefs.glassesCheck(this))
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(8), dp(16), dp(24))
+        }
+        val title = label("Glasses check", 20f, TEXT, semi = true).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            setPadding(dp(4), 0, 0, 0)
+        }
+        val close = button("Close") { closeCheck() }.apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setPadding(dp(16), 0, dp(16), 0)
+        }
+        col.addView(row(title, close).apply { gravity = Gravity.CENTER_VERTICAL })
+        col.addView(label("First real-glasses test, from Glasses_Test.md. \"App saw\" is a hint; you decide.", 14f, MUTED).apply {
+            setPadding(dp(4), dp(4), dp(4), dp(8))
+        })
+        checkViews.clear()
+        for (r in GlassesCheck.ROWS) col.addView(checkRowView(r), matchWidth(top = 8))
+
+        val share = button("Share report", primary = true) { shareReport() }.apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56)).apply { setMargins(dp(4), dp(16), dp(4), dp(4)) }
+        }
+        col.addView(share)
+        col.addView(row(button("Start over") { startOver() }))
+        reportBox = TextView(this).apply {
+            textSize = 14f
+            setTextColor(TEXT)
+            setLineSpacing(0f, 1.4f)
+            setTextIsSelectable(true)
+        }
+        reportCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(CARD, BORDER)
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            addView(label("Report (select to copy)", 14f, MUTED, semi = true))
+            addView(reportBox)
+            visibility = View.GONE
+        }
+        col.addView(reportCard, matchWidth(top = 16))
+        checkScroll = ScrollView(this).apply { addView(col) }
+        return FrameLayout(this).apply {
+            setBackgroundColor(GROUND)
+            isClickable = true // nothing under it takes a touch
+            addView(checkScroll)
+            visibility = View.GONE
+        }
+    }
+
+    private fun checkRowView(r: CheckRow): View {
+        val num = GlassesCheck.number(r.id)
+        val head = label("$num  ${r.todo}", 16f, TEXT)
+        val expect = label("See: ${r.expect}", 14f, MUTED)
+        val hint = label("", 14f, SOFT).apply { visibility = View.GONE }
+        val note = field("", "What went wrong (optional)", password = false).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            filters = arrayOf(android.text.InputFilter.LengthFilter(GlassesCheck.NOTE_MAX))
+            contentDescription = "Note $num"
+            visibility = View.GONE
+        }
+        val buttons = CheckVerdict.entries.associateWith { v ->
+            button(verdictName(v)) { setVerdict(r.id, v) }.apply { contentDescription = "${verdictName(v)} $num" }
+        }
+        val views = CheckRowViews(r, hint, buttons, note)
+        checkViews += views
+        note.setText(checkState[r.id]?.note.orEmpty())
+        watch(note) { text ->
+            val next = GlassesCheck.setNote(checkState, r.id, text)
+            if (next != checkState) { checkState = next; saveCheck() }
+        }
+        styleRow(views)
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(CARD, BORDER)
+            setPadding(dp(12), dp(12), dp(12), dp(8))
+            addView(head); addView(expect); addView(hint)
+            addView(row(*CheckVerdict.entries.map { buttons.getValue(it) }.toTypedArray()), matchWidth(top = 4))
+            addView(note)
+        }
+    }
+
+    private fun verdictName(v: CheckVerdict) = when (v) {
+        CheckVerdict.PASS -> "Pass"
+        CheckVerdict.FAIL -> "Fail"
+        CheckVerdict.SKIP -> "Skip"
+    }
+
+    private fun setVerdict(id: String, v: CheckVerdict) {
+        checkState = GlassesCheck.setVerdict(checkState, id, v)
+        saveCheck()
+        checkViews.firstOrNull { it.row.id == id }?.let { views ->
+            // A note stays only on Fail: the field follows the state.
+            val n = checkState[id]?.note.orEmpty()
+            if (views.note.text.toString() != n) views.note.setText(n)
+            styleRow(views)
+            if (checkState[id]?.verdict == CheckVerdict.FAIL) views.note.requestFocus()
+        }
+    }
+
+    /** The chosen verdict reads "● Fail" with a light (Fail: hot) border: never colour alone. */
+    private fun styleRow(v: CheckRowViews) {
+        val chosen = checkState[v.row.id]?.verdict
+        for ((verdict, b) in v.buttons) {
+            val on = verdict == chosen
+            b.text = (if (on) "● " else "") + verdictName(verdict)
+            b.typeface = if (on) semibold else Typeface.DEFAULT
+            b.background = rounded(CARD, if (!on) BORDER else if (verdict == CheckVerdict.FAIL) HOT else TEXT)
+        }
+        v.note.visibility = if (chosen == CheckVerdict.FAIL) View.VISIBLE else View.GONE
+    }
+
+    private fun saveCheck() = Prefs.setGlassesCheck(this, GlassesCheck.encode(checkState))
+
+    private fun startOver() {
+        checkState = emptyMap()
+        saveCheck()
+        for (v in checkViews) { v.note.setText(""); styleRow(v) }
+        reportCard.visibility = View.GONE
+        log("Glasses check: started over")
+    }
+
+    private fun openCheck() {
+        checkOverlay.visibility = View.VISIBLE
+        checkBack.isEnabled = true
+        // The phone screen under the overlay is not drawn meanwhile (nor seen by accessibility and uiautomator).
+        scroller.visibility = View.INVISIBLE
+        checkScroll.scrollTo(0, 0)
+        hintJob?.cancel()
+        hintJob = lifecycleScope.launch {
+            while (true) { refreshHints(); kotlinx.coroutines.delay(1000) }
+        }
+    }
+
+    private fun closeCheck() {
+        hintJob?.cancel()
+        checkOverlay.visibility = View.GONE
+        checkBack.isEnabled = false
+        scroller.visibility = View.VISIBLE
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(checkOverlay.windowToken, 0)
+    }
+
+    private fun refreshHints() {
+        val o = observed()
+        for (v in checkViews) {
+            val h = GlassesCheck.hint(v.row, o)
+            v.hint.text = h.orEmpty()
+            v.hint.visibility = if (h == null) View.GONE else View.VISIBLE
+        }
+    }
+
+    /** What the app saw, from state the controller already keeps (read-only). */
+    private fun observed(): CheckObserved {
+        val now = android.os.SystemClock.elapsedRealtime()
+        return CheckObserved(
+            mock = mockSwitch.isChecked,
+            registration = controller.registration.value,
+            session = controller.sessionStatus.value,
+            display = controller.displayStatus.value,
+            speech = controller.speechStatus.value,
+            battery = controller.batteryLevel,
+            device = controller.device.value.takeIf { it != "Worn: -" }.orEmpty(),
+            pinchAgoMs = controller.lastPinchAt?.let { now - it },
+            lastCard = controller.lastCardTitle,
+            lastCardAgoMs = controller.lastCardAt?.let { now - it },
+            lastDetectMs = controller.lastDetectMs,
+            lastToCardMs = controller.lastToCardMs,
+            lastHeard = controller.lastHeard,
+            lastPhotoKb = controller.lastPhotoKb,
+            cameraDeniedSeen = controller.cameraDeniedSeen,
+            offlineSeen = controller.offlineSeen,
+            bridgeHealth = if (fixtureSwitch.isChecked) null else bridgeHealth,
+            lang = controller.lang,
+            consent = Prefs.consent(this),
+        )
+    }
+
+    private fun shareReport() {
+        val version = runCatching {
+            val p = packageManager.getPackageInfo(packageName, 0)
+            "${p.versionName} (${p.longVersionCode})"
+        }.getOrDefault("?")
+        val text = GlassesCheck.report(
+            CheckReportInfo(
+                atMs = System.currentTimeMillis(),
+                timeZone = java.util.TimeZone.getDefault(),
+                phone = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
+                android = "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})",
+                appVersion = version,
+                mock = mockSwitch.isChecked,
+                bridgeUrl = urlField.text.toString(),
+            ),
+            checkState,
+            secrets = listOf(tokenField.text.toString()),
+        )
+        reportBox.text = text
+        reportCard.visibility = View.VISIBLE
+        checkScroll.post { checkScroll.smoothScrollTo(0, reportCard.top) }
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Physics Lens glasses check")
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        runCatching { startActivity(Intent.createChooser(send, "Share report")) }
+            .onFailure { log("Share failed: ${it.message}") }
+    }
+
     private fun log(msg: String) {
         android.util.Log.i("PhysicsLens", msg)
         runOnUiThread {
@@ -702,6 +1101,10 @@ class MainActivity : ComponentActivity() {
         const val MUTED = 0xFF9AA3AD.toInt()
         const val ACCENT = 0xFF4DF0FF.toInt()
         const val HOT = 0xFFFF8A4D.toInt()
+        /** DESIGN.md "Label" soft: secondary text (the check screen's "App saw" hints). */
+        const val SOFT = 0xFFC9D4FF.toInt()
+        /** "Seen today" entries shown before "Show all". */
+        const val SEEN_SHOWN = 3
         /** Light 1 dp stroke of a secondary action on a card. */
         const val LIGHT_STROKE = 0xFF6B7480.toInt()
         /** The mock "Say" button's question (one of the demo questions). */
