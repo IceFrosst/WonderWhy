@@ -5,7 +5,7 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 2, 1:19)
+# Video script: "Never stop asking why" (draft 3, ~1:21; demo objects to be picked)
 
 > [!summary]
 > Story in colour: **gold (child) → grey (adult) → gold + glowing lines (glasses)**. Readable muted: every shot has its text. Source key: **AI** = generated still/clip · **REAL** = filmed today · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our video-kit clip (clean, black background, Screen blend).
@@ -16,22 +16,23 @@ updated: 2026-11-14
 | 1 | 0:00-0:02 | AI | Child in tall summer grass, face close to one blade lit by low sun | Slow push-in, warm grade, film grain | *Why is the grass green?* | Kid's voice: "Why is the grass green?" · soft piano |
 | 2 | 0:02-0:04 | AI | The child looks up at the sky; dandelion seeds drift past | Seeds blow towards the camera and blur: **transition** | *How does the world work?* | Kid: "How does the world work?" · music cuts on the last word |
 
-## Act 2: the adult (0:04-0:08) — grey, very fast, mundane, real
-Fast cuts, 0.3-0.5 s each, on a dull ticking beat. Desaturated, cold. Nobody looks at anything.
+## Act 2: the adult (0:04-0:08) — grey, very fast, real
+Fast cuts on a dull ticking beat. Desaturated, cold. Nobody looks at anything.
 | # | Time | Source | Shot | On-screen text | Audio |
 |---|---|---|---|---|---|
-| 3 | 0:04-0:05 | REAL | **Match cut**: the seed blur becomes a phone alarm snoozed by a thumb | *You used to ask why.* | Alarm, cut short |
-| 4 | 0:05-0:06 | REAL | Thumb scrolling a feed · coffee-machine button pressed without looking · laptop opens | (text stays) | Tick, tick, tick |
-| 5 | 0:06-0:07 | REAL | Walking past the 3D printer, robot arm and sauna door, eyes on the phone | *Then you stopped.* | Footsteps, hum |
-| 6 | 0:07-0:08 | REAL | The same person, glasses on, stops and looks up at the 3D printer. Close on the band hand | (hold) | Ticking stops. Silence. **Click** on the pinch |
+| 3 | 0:04-0:05 | REAL | **Match cut**: the seed blur becomes a thumb snoozing a phone alarm | *You used to ask why.* | Alarm, cut short |
+| 4 | 0:05-0:06 | REAL | Thumb scrolling a feed | (text stays) | Tick, tick |
+| 5 | 0:06-0:07 | REAL | **IceFrost sitting in the grass** (same setting as the child, now adult), head down in the phone, ignoring everything around | *Then you stopped.* | Tick, distant wind |
+| 6 | 0:07-0:08 | REAL | **IceFrost walking through a crowd**, zoned out, noise all around, eyes empty | (hold) | Crowd noise rises, muffled |
+| 7 | 0:08-0:09 | REAL | The same person, glasses on, stops and looks up at the demo object. Close on the band hand | | Noise cuts to silence. **Click** on the pinch |
 
-## Act 3: the reveal + intro line (0:08-0:14)
+## Act 3: the reveal + intro lines (0:09-0:16)
 | # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
 |---|---|---|---|---|---|---|
-| 7 | 0:08-0:11 | REAL + RENDER | Pinch. Glowing cyan lines appear in a **fixed square, right of centre** (the display is in one eye; lines are not stuck to the object): melting filament, layers stacking | 4-frame fade in, grade snaps back to gold | **Look at anything.** | Music back in, brighter |
-| 8 | 0:11-0:14 | GLASS | Real recording from the glasses of the same card, yellow system frame left in | Small corner tag "Recorded on the glasses" | **See how it really works.** · *Physics Lens* | Music continues |
+| 8 | 0:09-0:12 | REAL + RENDER | Pinch. Glowing cyan lines appear in a **fixed square, right of centre** (the display is in one eye; lines are not stuck to the object) | 4-frame fade in, grade snaps back to gold | **Look at anything.** · **See how it really works.** | Music back in, brighter |
+| 9 | 0:12-0:16 | GLASS | Real recording from the glasses of the same card, yellow system frame left in | Corner tag "Recorded on the glasses" | **Feed your curiosity. Grow.** · *Physics Lens* | Music continues |
 
-## Act 4: how it works for you (0:14-0:36) — one real run
+## Act 4: how it works for you (0:16-0:38, retime after objects are picked) — one real run
 | # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
 |---|---|---|---|---|---|---|
 | 10 | 0:14-0:18 | REAL | Wearer at the **robot arm**, looks, pinches | Close on hand, then face | *Look. Pinch.* | Click |
