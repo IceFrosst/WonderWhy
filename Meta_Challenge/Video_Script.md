@@ -63,10 +63,10 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 | 2 | 0:02-0:04 | CODE | Child looks up; seeds blow towards camera, fill frame and blur | *How does the world work?* | Child: "How does the world work?" · music cuts on "work" |
 
 ## Act 2: the adult, shut off (0:04-0:09) — grey, fast, real
-Desaturated, cold. **Earbuds in the whole act**: outside sound muffled (low-pass), only a dull tick is clear.
+Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pass), only a dull tick is clear.
 | # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
-| 3 | 0:04-0:05 | REAL | Match cut: seed blur → close-up of fingers pushing the **earbuds in** | *You used to ask why.* | Sound drops to muffled as they go in |
+| 3 | 0:04-0:05 | REAL | Match cut: seed blur → hand taking the **earbuds out of the case** (no close-up of them going in) | *You used to ask why.* | Case click; sound drops to muffled on the cut to shot 4 |
 | 4 | 0:05-0:07 | REAL | IceFrost on grass outside, earbuds in, head down, scrolling (shot A) | *Then you stopped.* | Muffled wind, tick |
 | 5 | 0:07-0:09 | REAL | Walking through the hackathon crowd, zoned out | (stays) | Crowd as a muffled wall |
 
@@ -115,28 +115,28 @@ Third person films; IceFrost wears one pair, friend sits next to him.
 All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index: `raw/INDEX.md`, made by [video/ingest.sh](video/ingest.sh)). Pixel clips: 4K HEVC 60 fps portrait. iPhone clips (MrNetwork, `friend-next` → `DemoVideos/` and `DemoVideos/New/`, split parts re-joined): 4K HEVC portrait; `A001_*` are 24 fps.
 | Shot | Clip | What it shows | Status |
 |---|---|---|---|
-| 3 earbuds in | — | close-up of fingers pushing earbuds in | **missing** (earbud visible in ear in `A001_11141516_C098_2` at ~50%) |
+| 3 earbuds from case | `icefrost-trims/PXL_20261114_145509708~3.mp4` (phone trim), raw `icefrost/PXL_20261114_145509708.mp4` | taking the earbuds out of the case | ok (decided: no close-up of them going in) |
 | 4 grass, scrolling | `mrnetwork/A001_11141516_C098_2.MOV` (26 s, 24 fps) | lying on grass, phone, earbuds in | ok |
 | 24 grass ending / B1 | `mrnetwork/A001_11141518_C099_2.MOV` (21 s), `A001_11141519_C100.MOV` (21 s) | on the grass with the glasses, arms up, touching grass | ok |
 | 5 crowd walk | `mrnetwork/IMG_5554.MOV` (3.5 s, from behind, 30 fps), `IMG_5556.MOV` (2 s, from behind), `IMG_5545.MOV` (19 s), `IMG_5546.MOV` (7 s) | walking the hall | ok, but glasses already on in 5545/5546: a back-view crowd walk **without glasses** is missing |
-| 6 glasses on | `icefrost/PXL_20261114_153315589.mp4` (12 s) | putting the glasses on in the crowd | ok |
-| 6 alt | `mrnetwork/IMG_5543.MOV`, `IMG_5544.MOV` (6 s each) | wearing the glasses, close-up (tilted) | ok |
+| 6 glasses on | `mrnetwork/IMG_5543.MOV` / `IMG_5544.MOV` or a trim of IMG_5557 (`icefrost-trims/IMG_5557~2.mp4`) | glasses on | ok |
 | 8 earbuds in palm | `icefrost/PXL_20261114_145509708.mp4` (5 s) | open earbuds case on a table | ok |
 | 8 alt | `mrnetwork/IMG_5560.MOV` (10 s) | hand with the glasses' charging case | b-roll |
 | 11-13 printers | `icefrost/PXL_20261114_153800338.mp4`, `PXL_20261114_153844169.mp4` (8 s each) | Prusa Core One printing + second printer beside it | ok (identify printer 2 for the comparison) |
-| 15 sauna | `icefrost/PXL_20261114_135130437.mp4` (15 s) | sauna benches, stove | ok (check for water/steam moment) |
-| 16 gym bike | `mrnetwork/A001_11141614_C103.MOV` (13 s, 24 fps) | someone on an **air bike** (fan wheel) | ok, but **it is a fan bike, not a magnet bike**: change the line to air resistance (*The harder you push, the harder the air pushes back*) or film a magnet spin bike |
+| 15 sauna | `icefrost/PXL_20261114_135130437.mp4` (15 s; trim `icefrost-trims/PXL_20261114_135130437~2.mp4`) | sauna benches, stove | ok (check for water/steam moment) |
+| 16 gym bike | `mrnetwork/A001_11141614_C103.MOV` (trim: `icefrost-trims/A001_11141614_C103~2.mp4`) (13 s, 24 fps) | someone on an **air bike** (fan wheel) | ok, but **it is a fan bike, not a magnet bike**: change the line to air resistance (*The harder you push, the harder the air pushes back*) or film a magnet spin bike |
 | 18 / 21 / 23 band, glasses on a face | `mrnetwork/IMG_5557.MOV` (24 s), `IMG_5561.MOV` (8 s) | facing camera with glasses; at the table with glasses | ok |
-| 19-23 share scene | — | — | **missing on laptop** (friend's uploads) |
+| 19-23 share scene | `icefrost/PXL_20261114_153315589.mp4` (12 s) | 0-2 s glasses held out over the table (19), 3-5 s friend turns them over (20), 6.5 s puts them on (23), 8-11 s looks, smiles at camera (23/24) | ok; shots 21-22 (IceFrost pinches at the pair, GLASS of the glasses explaining themselves) still to record |
 | B-roll | `PXL_20261113_*` (6 clips), `PXL_20261114_135208665` (balcony), `PXL_20261114_141728301` (CRT TV wall) | hall, stage, robot, tables | spare |
 | GLASS 10, 12, 14, 22 | — | "Record display" on the glasses | **to record** |
+Phone trims (the `~2`/`~3` files from IceFrost's phone folder `Movies/WonderWhy/DemoVideos/`) are in `raw/icefrost-trims/`; trimmed grass clips there too.
 App renders (earbuds, ball, bicycle, guitar, kettle, pendulum, phone, spoon) are in `raw/mrnetwork-friend-next/` and `app/bridge/media/`.
 
 ## To make
 | What | How | Who | Blocker |
 |---|---|---|---|
 | Act 1 variant pick | Watch `act1/out/{A,B,C}.mp4` | IceFrost | render in progress |
-| Missing clips (earbuds in, grass shot A, B1, B3, gym bike, share scene) | Copy from the phone that filmed them → `ingest.sh` | IceFrost / friend | — |
+| Remaining shots: 21 (pinch at the pair), GLASS 10/12/14/22 | Phone + Record display | IceFrost | — |
 | Second printer type | Read its label | IceFrost | — |
 | Custom object animations: printer + comparison, sauna, gym bike, glasses/band, grass | Code renders on black, palette cyan #4df0ff, amber #ffc247, green #6dff9c | team (Alex owns some, see issue #22) | — |
 | GLASS recordings 10, 12, 14, 22 | Meta AI "Record display", two takes each | IceFrost | objects in the library |
