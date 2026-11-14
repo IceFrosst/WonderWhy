@@ -22,7 +22,7 @@ iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:6px;ba
 <section><h2>Camera</h2>
 <video id="v" autoplay playsinline muted></video>
 <button class="big" id="cap">Pinch / capture (Space)</button>
-<div class="row"><label>Size <select id="size"><option value="360x640">LOW 360x640</option><option value="504x896" selected>MEDIUM 504x896</option><option value="720x1280">HIGH 720x1280</option></select></label><label>Language <select id="lang"><option value="en">en</option><option value="fi">fi</option><option value="sv">sv</option><option value="de">de</option><option value="es">es</option><option value="fr">fr</option></select></label></div>
+<div class="row"><label>Size <select id="size"><option value="360x640">LOW 360x640</option><option value="504x896" selected>MEDIUM 504x896</option><option value="720x1280">HIGH 720x1280</option></select></label><label>Language <select id="lang"><option value="en">en</option><option value="fi">fi</option><option value="sv">sv</option><option value="de">de</option><option value="es">es</option><option value="fr">fr</option></select></label><label><input type="checkbox" id="wait"> Wait for sketch</label></div>
 <div class="row"><input type="text" id="q" placeholder="Optional question (stands in for speech)"></div>
 <div class="row"><label>Simulated glasses&rarr;phone delay <b id="dl">0</b> ms</label><input type="range" id="delay" min="0" max="3000" step="50" value="0"></div>
 <div id="status">Starting...</div></section>
@@ -49,11 +49,13 @@ $('lang').onchange=()=>localStorage.setItem('lens.lang',$('lang').value);
 const authHeaders=h=>lensToken?{...h,'X-Lens-Token':lensToken}:h;
 const wsUrl=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
 let ws,locked=false;const rows=[];
+function showSketch(sketch){if(!sketch)return;const titles=(sketch.chapters||[]).map(c=>c.title).join(', ');$('status').textContent=sketch.label+(titles?' - '+titles:'');}
 function connect(){ws=new WebSocket(wsUrl);
  ws.onopen=()=>ws.send(JSON.stringify({type:'hello',client:'phone',ua:navigator.userAgent,token:lensToken}));
  ws.onmessage=e=>{const m=JSON.parse(e.data);
   if(m.type==='latency'){const r=rows.find(x=>x.reqId===m.reqId);if(r)Object.assign(r,m);else rows.push(m);render();refreshSummary();}
-  if(m.type==='state')$('status').textContent='Glasses at '+m.objectId+' step '+m.step;};
+  if(m.type==='state')$('status').textContent='Glasses at '+m.objectId+' step '+m.step;
+  if(m.type==='sketch'&&m.sketch)showSketch(m.sketch);};
  ws.onclose=e=>{if(e.code===4401){locked=true;$('status').innerHTML='<span class="bad">Bridge locked: open this page with ?k=&lt;token&gt;</span>';return;}if(!locked)setTimeout(connect,1000);};}
 const send=m=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify(m));else $('status').textContent='WebSocket not connected';};
 connect();
@@ -78,10 +80,10 @@ async function capture(force){
  if(!force&&!img){$('status').innerHTML='<span class="bad">No camera frame</span>';busy=false;return;}
  const d=Number($('delay').value);if(d)await new Promise(r=>setTimeout(r,d));
  $('status').textContent='Sending\u2026';
- try{const r=await fetch('/detect',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,lang:$('lang').value,t_capture,preUploadMs:Date.now()-t_capture})});
+ try{const r=await fetch('/detect',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,lang:$('lang').value,waitSketch:$('wait').checked,t_capture,preUploadMs:Date.now()-t_capture})});
   const j=await r.json();
   if(!r.ok){$('status').innerHTML='<span class="bad">'+(j.error||r.status)+': '+(j.message||'')+'</span>';}
-  else{$('status').innerHTML='<span class="ok">'+j.objectId+' ('+Math.round(j.confidence*100)+'%) via '+j.timings.model+'</span>'+(j.answer?' - '+j.answer:'');
+  else{$('status').innerHTML='<span class="ok">'+j.objectId+' ('+Math.round(j.confidence*100)+'%) via '+j.timings.model+'</span>'+(j.answer?' - '+j.answer:'');if(j.sketch)showSketch(j.sketch);
    $('prov').textContent='model: '+j.timings.model;
    rows.push({reqId,objectId:j.objectId,captureToReceivedMs:j.timings.preUploadMs,detectMs:j.timings.detectMs,detectedToRenderedMs:null,totalMs:null});render();}
  }catch(e){$('status').innerHTML='<span class="bad">'+e.message+'</span>';}

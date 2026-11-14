@@ -1,0 +1,65 @@
+{
+  "label": "Desk stapler",
+  "answer": "A long lever drives a staple through paper and bends it closed.",
+  "verified": false,
+  "chapters": [
+    {
+      "lens": "flow",
+      "scene": "flow",
+      "title": "Follow the force",
+      "lead": "The long handle multiplies your push before the staple reaches the paper.",
+      "captions": [
+        "Your hand pushes 10 to 30 N on the long end of the top lever.",
+        "The lever gives about a 4 to 1 force advantage at the driver blade.",
+        "The blade drives the staple legs through the paper with roughly 100 N.",
+        "The anvil bends the 6 mm legs inward, clamping about 20 sheets."
+      ],
+      "knobs": [null, null, null, null],
+      "spec": {
+        "kind": "force",
+        "nodes": [
+          { "id": "hand", "label": "Hand", "sub": "10 to 30 N" },
+          { "id": "lever", "label": "Lever arm", "sub": "about 4 to 1" },
+          { "id": "driver", "label": "Driver blade", "sub": "roughly 100 N" },
+          { "id": "staple", "label": "Staple", "sub": "6 mm legs" },
+          { "id": "paper", "label": "Paper", "sub": "up to 20 sheets" },
+          { "id": "anvil", "label": "Anvil", "sub": "bends legs inward" }
+        ],
+        "losses": [
+          { "at": "lever", "label": "Pivot friction and flex", "share": 0.1 }
+        ],
+        "steps": [
+          { "upTo": 2, "focus": ["hand", "lever"], "losses": false },
+          { "upTo": 3, "focus": ["lever", "driver"], "losses": true },
+          { "upTo": 5, "focus": ["driver", "staple", "paper"], "losses": true },
+          { "upTo": 6, "focus": ["staple", "paper", "anvil"], "losses": true }
+        ]
+      }
+    },
+    {
+      "lens": "number",
+      "scene": "number",
+      "title": "Typical forces and sizes",
+      "lead": "A small hand push becomes a much larger force at the staple.",
+      "captions": [
+        "The long handle gives about a 4 to 1 lever advantage.",
+        "A typical 10 to 30 N hand push can produce roughly 100 N at the staple.",
+        "Standard 6 mm staple legs usually fasten up to about 20 sheets."
+      ],
+      "spec": {
+        "headline": { "value": 4, "unit": "to 1", "label": "typical lever advantage", "decimals": 0 },
+        "rows": [
+          { "value": 20, "unit": "N", "label": "typical hand push", "decimals": 0, "scales": false },
+          { "value": 100, "unit": "N", "label": "force at the staple", "decimals": 0, "scales": false },
+          { "value": 6, "unit": "mm", "label": "standard staple leg", "decimals": 0, "scales": false },
+          { "value": 20, "unit": "sheets", "label": "typical capacity", "decimals": 0, "scales": false }
+        ],
+        "steps": [
+          { "show": "headline" },
+          { "show": "rows" },
+          { "show": "rows" }
+        ]
+      }
+    }
+  ]
+}

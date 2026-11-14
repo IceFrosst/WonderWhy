@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { buildSketchPrompt, parseSketchReply } from './sketch.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const OBJECTS_PATH = path.join(here, '..', 'shared', 'objects.json');
@@ -81,23 +82,23 @@ async function postJson(url, headers, body, timeoutMs) {
   }
 }
 
-async function callAnthropic({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
+async function callAnthropic({ imageBase64, focusBase64, prompt, env, timeoutMs, maxTokens }) {
   const model = env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
   const data = await postJson('https://api.anthropic.com/v1/messages',
     { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    { model, max_tokens: 300, messages: [{ role: 'user', content: [
+    { model, max_tokens: maxTokens || 300, messages: [{ role: 'user', content: [
       ...[imageBase64, focusBase64].filter(Boolean).map((data) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
       { type: 'text', text: prompt } ] }] }, timeoutMs);
   const text = (data.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
   return { text, model };
 }
 
-async function callGemini({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
+async function callGemini({ imageBase64, focusBase64, prompt, env, timeoutMs, maxTokens }) {
   const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
   const data = await postJson(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     { 'x-goog-api-key': env.GEMINI_API_KEY },
     { contents: [{ role: 'user', parts: [...[imageBase64, focusBase64].filter(Boolean).map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })), { text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 } }, timeoutMs);
+      generationConfig: { responseMimeType: 'application/json', temperature: 0, ...(maxTokens ? { maxOutputTokens: maxTokens } : {}) } }, timeoutMs);
   const text = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
   return { text, model };
 }
@@ -107,7 +108,7 @@ async function callGemini({ imageBase64, focusBase64, prompt, env, timeoutMs }) 
  * (e.g. a Claude subscription), so no API key is needed. Slow (a new process per photo) and tied
  * to one person's account: use an API key provider for the demo.
  */
-function callPi({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
+function callPi({ imageBase64, focusBase64, prompt, env, timeoutMs, purpose }) {
   const model = env.PI_DETECT_MODEL || 'anthropic/claude-haiku-4-5';
   const dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
   const file = path.join(dir, 'photo.jpg');
@@ -118,8 +119,9 @@ function callPi({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
     writeFileSync(focus, Buffer.from(focusBase64, 'base64'));
     files.push(`@${focus}`);
   }
+  const systemPrompt = purpose === 'sketch' ? 'You explain photographed objects with validated JSON only.' : 'You are an image classifier. Output JSON only.';
   const args = ['-p', '--no-session', '--no-tools', '--no-skills', '--no-context-files', '--no-prompt-templates', '--no-mcp',
-    '--thinking', 'off', '--system-prompt', 'You are an image classifier. Output JSON only.', '--model', model, ...files, prompt];
+    '--thinking', 'off', '--system-prompt', systemPrompt, '--model', model, ...files, prompt];
   return new Promise((resolve, reject) => {
     const child = spawn(env.PI_BIN || 'pi', args, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '', err = '';
@@ -145,13 +147,14 @@ export const STAND_INS = new Set(['pi', 'claude']);
  * process per photo, several seconds) and it spends that person's subscription, so it must be chosen
  * explicitly with DETECT_PROVIDER=claude and must never run on the droplet.
  */
-function callClaudeCli({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
+function callClaudeCli({ imageBase64, focusBase64, prompt, env, timeoutMs, purpose }) {
   // The model name goes on a shell command line on Windows, so keep it to a safe alphabet.
   const model = /^[A-Za-z0-9._-]{1,64}$/.test(env.CLAUDE_DETECT_MODEL || '') ? env.CLAUDE_DETECT_MODEL : 'haiku';
   const dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
   writeFileSync(path.join(dir, 'photo.jpg'), Buffer.from(imageBase64, 'base64'));
   if (focusBase64) writeFileSync(path.join(dir, 'focus.jpg'), Buffer.from(focusBase64, 'base64'));
-  const ask = `You are an image classifier. Read ${focusBase64 ? 'photo.jpg (image 1) and focus.jpg (image 2)' : 'photo.jpg'} in the current folder with the Read tool, then reply with the JSON only.\n\n${prompt}`;
+  const role = purpose === 'sketch' ? 'You explain photographed objects.' : 'You are an image classifier.';
+  const ask = `${role} Read ${focusBase64 ? 'photo.jpg (image 1) and focus.jpg (image 2)' : 'photo.jpg'} in the current folder with the Read tool, then reply with the JSON only.\n\n${prompt}`;
   // No argument contains a space: on Windows the command is a .cmd shim and needs a shell.
   const args = ['-p', '--model', model, '--tools', 'Read', '--allowedTools', 'Read', '--strict-mcp-config', '--output-format', 'text'];
   const win = process.platform === 'win32';
@@ -198,4 +201,26 @@ export async function detect({ imageBase64, focusBase64, question, forceObjectId
   const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs });
   const parsed = parseModelJson(text, objects);
   return { ...parsed, model, provider: prov, detectMs: Date.now() - t0 };
+}
+
+/** Returns {sketch, model, ms}. Throws sketch_failed or sketch_timeout. */
+export async function sketch({ imageBase64, focusBase64, hint = '', lang = 'en', objects = loadObjects(), env = process.env, provider, timeoutMs }) {
+  const t0 = Date.now();
+  const prov = provider || pickProvider(env);
+  timeoutMs = timeoutMs || (STAND_INS.has(prov) ? 60000 : 20000);
+  try {
+    if (prov === 'mock') throw codeErr('sketch_failed', 'Sketches are unavailable with the mock provider');
+    if (!imageBase64) throw codeErr('sketch_failed', 'No image supplied');
+    if (prov === 'anthropic' && !env.ANTHROPIC_API_KEY) throw codeErr('sketch_failed', 'ANTHROPIC_API_KEY not set');
+    if (prov === 'gemini' && !env.GEMINI_API_KEY) throw codeErr('sketch_failed', 'GEMINI_API_KEY not set');
+    const prompt = buildSketchPrompt({ objects, lang, hint });
+    const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : prov === 'claude' ? callClaudeCli : callGemini;
+    const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs, maxTokens: 1800, purpose: 'sketch' });
+    const parsed = parseSketchReply(text);
+    if (!parsed) throw codeErr('sketch_failed', 'No usable sketch in model reply');
+    return { sketch: parsed, model, ms: Date.now() - t0 };
+  } catch (error) {
+    if (error.code === 'sketch_timeout' || error.code === 'detect_timeout') throw codeErr('sketch_timeout', error.message);
+    throw codeErr('sketch_failed', error.message || 'Sketch generation failed');
+  }
 }

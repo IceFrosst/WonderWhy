@@ -4,7 +4,8 @@ import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
-import { detect, detectTimeout, loadObjects, pickProvider, STAND_INS } from './detect.js';
+import { detect, detectTimeout, loadObjects, pickProvider, sketch as generateSketch, STAND_INS } from './detect.js';
+import { validateSketch } from './sketch.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BODY_LIMIT = 5 * 1024 * 1024;
@@ -76,6 +77,9 @@ export function start({
   detectFn = detect,
   provider = pickProvider(),
   detectTimeoutMs = detectTimeout(process.env, provider),
+  sketchProvider = process.env.SKETCH_PROVIDER || '',
+  sketchFn = generateSketch,
+  sketchTimeoutMs,
   mediaRoot = path.join(here, 'media'),
   i18nRoot = path.join(here, '..', 'shared', 'i18n'),
 } = {}) {
@@ -84,6 +88,9 @@ export function start({
   const i18nBase = path.resolve(i18nRoot);
   const translations = new Map();
   const originAllowlist = new Set(String(allowedOrigins).split(',').map((s) => s.trim()).filter(Boolean));
+  const requestedSketchMode = sketchProvider === 'fixture' || sketchProvider === 'auto' ? sketchProvider : 'off';
+  const sketchMode = requestedSketchMode === 'auto' && provider === 'mock' ? 'off' : requestedSketchMode;
+  const sketchDeadlineMs = positive(sketchTimeoutMs ?? process.env.SKETCH_TIMEOUT_MS, STAND_INS.has(provider) ? 60000 : 20000);
   const glasses = new Set(); const phones = new Set();
   const pending = new Map(); const records = []; const timers = new Set();
   let lastProvider = null; let lastShow = null; let lastShowAt = 0; let closing = false;
@@ -96,6 +103,47 @@ export function start({
   const sendOne = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
   const send = (set, msg) => { const text = JSON.stringify(msg); for (const ws of set) if (ws.readyState === 1) ws.send(text); };
   const both = (msg) => { send(glasses, msg); send(phones, msg); };
+
+  function runSketch(args) {
+    let timeout;
+    const deadline = new Promise((_, reject) => {
+      timeout = timer(() => {
+        const error = new Error(`Sketch timed out after ${sketchDeadlineMs} ms`);
+        error.code = 'sketch_timeout'; reject(error);
+      }, sketchDeadlineMs);
+    });
+    const work = sketchMode === 'fixture'
+      ? new Promise((resolve, reject) => timer(() => {
+        try {
+          const fixture = JSON.parse(readFileSync(path.join(here, 'fixtures', 'sketch-stapler.json'), 'utf8'));
+          resolve({ sketch: fixture, model: 'fixture', ms: 300 });
+        } catch (error) { reject(error); }
+      }, 300))
+      : Promise.resolve().then(() => sketchFn(args));
+    return Promise.race([work, deadline]).then((result) => {
+      const cleaned = validateSketch(result?.sketch ?? result);
+      if (!cleaned) { const error = new Error('Invalid sketch'); error.code = 'sketch_failed'; throw error; }
+      return { sketch: cleaned, model: result?.model || (sketchMode === 'fixture' ? 'fixture' : 'unknown'), ms: result?.ms };
+    }).finally(() => clearTimer(timeout));
+  }
+
+  function finishSketch(reqId, args) {
+    return runSketch(args).then(({ sketch }) => {
+      if (lastShow?.reqId === reqId) {
+        const { sketchPending: _pending, sketchError: _error, ...remembered } = lastShow;
+        lastShow = { ...remembered, sketch };
+      }
+      both({ type: 'sketch', reqId, sketch, ...(sketchMode === 'auto' && STAND_INS.has(provider) ? { standIn: true } : {}) });
+      return { sketch };
+    }, () => {
+      if (lastShow?.reqId === reqId) {
+        const { sketchPending: _pending, ...remembered } = lastShow;
+        lastShow = remembered;
+      }
+      both({ type: 'sketch', reqId, error: 'sketch_failed' });
+      return { error: 'sketch_failed' };
+    });
+  }
 
   function cors(req) {
     const headers = { 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type, x-lens-token', vary: 'Origin' };
@@ -255,9 +303,22 @@ export function start({
         timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: result.detectMs, model: result.model },
         t_sent: Date.now(),
       };
+      const shouldSketch = sketchMode !== 'off' && result.objectId === 'unknown' && !body.forceObjectId && validJpegBase64(body.imageBase64);
+      if (shouldSketch) show.sketchPending = true;
       pending.set(reqId, show); if (pending.size > 200) pending.delete(pending.keys().next().value);
       lastShow = show; lastShowAt = Date.now();
-      both(show); json(req, res, 200, show);
+      both(show);
+      if (!shouldSketch) return json(req, res, 200, show);
+      const outcome = finishSketch(reqId, {
+        imageBase64: body.imageBase64, focusBase64, hint: result.answer || '', lang,
+        objects, env: process.env, provider, timeoutMs: sketchDeadlineMs,
+      });
+      if (!body.waitSketch) return json(req, res, 200, show);
+      const settled = await outcome;
+      const { sketchPending: _pending, ...responseShow } = show;
+      if (settled.sketch) responseShow.sketch = settled.sketch;
+      else responseShow.sketchError = 'sketch_failed';
+      return json(req, res, 200, responseShow);
     } catch (e) {
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
       both({ type: 'error', code, message: e.message, reqId });
@@ -281,7 +342,7 @@ export function start({
       }
       if (req.method === 'GET' && url.pathname === '/last') return json(req, res, 200, currentLast());
       if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
-      if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
+      if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, sketch: sketchMode, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
       if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), res, headers, 'public, max-age=300', MEDIA_EXTS)) return;
       if (req.method === 'GET' && serveGlasses(url.pathname, res, headers)) return;

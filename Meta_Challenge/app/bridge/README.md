@@ -21,6 +21,8 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 | `LAST_TTL_MS` | How long `/last` and glasses replay retain a `show`; default 120000 |
 | `HEARTBEAT_MS` | App and WebSocket heartbeat interval; default 10000 |
 | `DETECT_PROVIDER` | `anthropic` / `gemini` / `mock` / `pi` / `claude`; unset = anthropic if key, else gemini if key, else mock |
+| `SKETCH_PROVIDER` | `off` / `fixture` / `auto`; unset is off. `auto` uses the detect provider and is disabled with `mock` |
+| `SKETCH_TIMEOUT_MS` | Sketch deadline; default 20000, or 60000 for a dev stand-in provider |
 | `CLAUDE_DETECT_MODEL` | Only for `claude`: a **dev-only stand-in** that runs the local `claude` command with the login of whoever runs the bridge (default model `haiku`, timeout 60 s, about 10 s per photo). It spends that person's subscription, so it is opt-in, answers carry `standIn: true`, and it must never run on the droplet |
 | `PI_DETECT_MODEL`, `DETECT_TIMEOUT_MS` | Only for `pi`: runs the local `pi` CLI with that machine's model login (no API key). Dev only: about 7 s per photo, default model `anthropic/claude-haiku-4-5`, default timeout 25 s |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | default model `claude-haiku-5-5` |
@@ -38,6 +40,10 @@ Protected when `LENS_TOKEN` is set: `POST /detect`, `GET /last`, and `GET /laten
 ## Languages
 
 `POST /detect` accepts `lang` (`en`, `fi`, `sv`, `de`, `es`, or `fr`), and `GET /objects?lang=fi` returns the localized library. The bridge lazily reads and caches `../shared/i18n/<lang>.json`. Missing files, objects, lenses, and fields fall back to English; translated caption arrays are used only when their length matches the English array. To add a language, add it to the bridge's accepted language list and model language names, add it to the phone selector, then create the corresponding JSON file under `shared/i18n` using the existing files as the schema.
+
+## Sketches
+
+Set `SKETCH_PROVIDER=fixture` for the recorded stapler demo or `SKETCH_PROVIDER=auto` to generate explanations for unknown real photos. Auto mode costs one extra model call for each unknown object. Every generated sketch is marked `verified: false`; its numbers are estimates and are not checked facts.
 
 ## Lock it
 
