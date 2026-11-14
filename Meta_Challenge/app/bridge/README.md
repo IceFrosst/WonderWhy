@@ -33,7 +33,7 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 
 Open: `GET /health`, `GET /objects`, `GET /phone`, the glasses app at `/`, and exported files under `GET /media/*`.
 
-Protected when `LENS_TOKEN` is set: `POST /detect`, `GET /last`, and `GET /latency`. Send the key in `X-Lens-Token`. WebSocket `/ws` clients send it as `token` in their first `hello` frame.
+Protected when `LENS_TOKEN` is set: `POST /detect`, `POST /ask`, `GET /last`, and `GET /latency`. Send the key in `X-Lens-Token`. WebSocket `/ws` clients send it as `token` in their first `hello` frame.
 
 `GET /last` returns the most recent `show` while it is inside `LAST_TTL_MS`. A late glasses connection receives the same show with `replay: true` and `ageMs`; a phone `clear` removes it.
 
@@ -44,6 +44,14 @@ Protected when `LENS_TOKEN` is set: `POST /detect`, `GET /last`, and `GET /laten
 ## Sketches
 
 Set `SKETCH_PROVIDER=fixture` for the recorded stapler demo or `SKETCH_PROVIDER=auto` to generate explanations for unknown real photos. Auto mode costs one extra model call for each unknown object. Every generated sketch is marked `verified: false`; its numbers are estimates and are not checked facts.
+
+## Follow-up questions
+
+`POST /ask` answers a question about a library object and points the glasses to the best lens and step. It still works without a model: mock mode matches words locally and uses the chosen library caption as the answer.
+
+```sh
+curl -X POST localhost:8787/ask -H "Content-Type: application/json" -d '{"question":"Why does it click off?","aboutObjectId":"kettle","lang":"en"}'
+```
 
 ## Lock it
 

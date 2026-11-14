@@ -4,7 +4,8 @@ import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
-import { detect, detectTimeout, loadObjects, pickProvider, sketch as generateSketch, STAND_INS } from './detect.js';
+import { ask as answerQuestion, detect, detectTimeout, loadObjects, pickProvider, sketch as generateSketch, STAND_INS } from './detect.js';
+import { pickStep } from './ask.js';
 import { validateSketch } from './sketch.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -75,6 +76,7 @@ export function start({
   minConfidence = positive(process.env.MIN_CONFIDENCE, 0.6),
   objects = loadObjects(),
   detectFn = detect,
+  askFn = answerQuestion,
   provider = pickProvider(),
   detectTimeoutMs = detectTimeout(process.env, provider),
   sketchProvider = process.env.SKETCH_PROVIDER || '',
@@ -262,10 +264,45 @@ export function start({
     } catch { return {}; }
   }
 
+  function libraryPresentation(objectId, lang) {
+    const object = byId[objectId];
+    const translation = loadTranslation(lang);
+    const translated = object ? translationFor(translation, object.id) : null;
+    const libraryObject = translated ? mergeObject(object, translated) : object;
+    const libraryLang = object ? (translated ? lang : 'en') : (translation ? lang : 'en');
+    return {
+      object, translated, libraryObject, libraryLang, translation,
+      fields: {
+        label: libraryObject ? libraryObject.label : (typeof translation?.unknown_label === 'string' ? translation.unknown_label : 'Unknown object'),
+        lang: libraryLang,
+        ...objectFields(libraryObject), ...mediaFields(objectId),
+      },
+    };
+  }
+
+  function askObject(object, libraryObject, translated) {
+    if (!translated || !Array.isArray(object?.chapters) || !Array.isArray(libraryObject?.chapters)) return object;
+    return {
+      ...libraryObject,
+      chapters: libraryObject.chapters.map((chapter, index) => ({
+        ...chapter,
+        englishTitle: object.chapters[index]?.title,
+        englishLead: object.chapters[index]?.lead,
+        englishCaptions: object.chapters[index]?.captions,
+      })),
+    };
+  }
+
   function runDetect(args) {
     let timeout;
     const deadline = new Promise((_, reject) => { timeout = timer(() => { const e = new Error(`Detection timed out after ${detectTimeoutMs} ms`); e.code = 'detect_timeout'; reject(e); }, detectTimeoutMs); });
     return Promise.race([Promise.resolve().then(() => detectFn(args)), deadline]).finally(() => clearTimer(timeout));
+  }
+
+  function runAsk(args) {
+    let timeout;
+    const deadline = new Promise((_, reject) => { timeout = timer(() => { const e = new Error(`Detection timed out after ${detectTimeoutMs} ms`); e.code = 'detect_timeout'; reject(e); }, detectTimeoutMs); });
+    return Promise.race([Promise.resolve().then(() => askFn(args)), deadline]).finally(() => clearTimer(timeout));
   }
 
   async function handleDetect(req, res) {
@@ -286,20 +323,15 @@ export function start({
       const focusBase64 = validJpegBase64(body.focusBase64) ? body.focusBase64 : undefined;
       const result = await runDetect({ imageBase64: body.imageBase64, focusBase64, question: body.question, forceObjectId: body.forceObjectId, lang, objects, provider, timeoutMs: detectTimeoutMs });
       if (result.provider !== 'forced') lastProvider = { provider: result.provider, model: result.model };
-      const t_detected = Date.now(); const obj = byId[result.objectId];
-      const translation = loadTranslation(lang);
-      const translated = obj ? translationFor(translation, obj.id) : null;
-      const libraryObject = translated ? mergeObject(obj, translated) : obj;
-      const libraryLang = obj ? (translated ? lang : 'en') : (translation ? lang : 'en');
+      const t_detected = Date.now(); const presentation = libraryPresentation(result.objectId, lang);
+      const obj = presentation.object;
       const show = {
         type: 'show', reqId, objectId: result.objectId,
-        label: libraryObject ? libraryObject.label : (typeof translation?.unknown_label === 'string' ? translation.unknown_label : 'Unknown object'),
-        lang: libraryLang, confidence: result.confidence,
+        ...presentation.fields, confidence: result.confidence,
         ...(body.question ? { question: body.question } : {}),
         ...(result.answer ? { answer: result.answer } : {}),
         ...(!body.forceObjectId && result.provider !== 'forced' && result.objectId !== 'unknown' && obj && result.confidence < minConfidence ? { lowConfidence: true } : {}),
         ...(STAND_INS.has(result.provider) ? { standIn: true } : {}),
-        ...objectFields(libraryObject), ...mediaFields(result.objectId),
         timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: result.detectMs, model: result.model },
         t_sent: Date.now(),
       };
@@ -326,11 +358,66 @@ export function start({
     }
   }
 
+  async function handleAsk(req, res) {
+    let body;
+    try { body = JSON.parse(await readBody(req) || '{}'); }
+    catch (e) { return json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
+    if (!record(body)) body = {};
+    const reqId = body.reqId || randomUUID();
+    const lang = normalizeLang(body.lang);
+    const question = typeof body.question === 'string' ? body.question.trim() : '';
+    const object = typeof body.aboutObjectId === 'string' ? byId[body.aboutObjectId] : null;
+    const t_received = Date.now();
+    both({ type: 'detecting', reqId, timeoutMs: detectTimeoutMs + 2000, t_sent: Date.now() });
+    if (!question || question.length > 200 || !object) {
+      const message = !object ? 'A library aboutObjectId is required' : 'Question must be 1 to 200 characters';
+      both({ type: 'error', code: 'bad_request', message, reqId });
+      return json(req, res, 400, { error: 'bad_request' });
+    }
+    try {
+      const presentation = libraryPresentation(object.id, lang);
+      const scoringObject = askObject(object, presentation.libraryObject, presentation.translated);
+      const result = await runAsk({ object: scoringObject, question, lang, env: process.env, provider, timeoutMs: detectTimeoutMs });
+      let lensId = result?.lensId;
+      let step = result?.step;
+      const chapter = object.chapters?.find((item) => `${object.id}.${item.lens}` === lensId);
+      if (!chapter || !Number.isInteger(step) || step < 1 || step > (chapter.captions?.length || 0)) {
+        const local = pickStep(scoringObject, question);
+        lensId = local?.lensId || null;
+        step = local?.step || null;
+      }
+      const t_detected = Date.now();
+      const model = typeof result?.model === 'string' ? result.model : 'unknown';
+      const detectMs = Number.isFinite(result?.ms) ? result.ms : t_detected - t_received;
+      if (result?.provider) lastProvider = { provider: result.provider, model };
+      const show = {
+        type: 'show', reqId, objectId: object.id,
+        ...presentation.fields, confidence: 1, question,
+        answer: typeof result?.answer === 'string' ? result.answer.slice(0, 300) : '',
+        ...(lensId && step ? { lensHint: { id: lensId, step } } : {}),
+        ...(STAND_INS.has(result?.provider) ? { standIn: true } : {}),
+        timings: {
+          t_capture: t_received, t_received, t_detected, preUploadMs: null,
+          detectMs, model,
+        },
+        t_sent: Date.now(),
+      };
+      pending.set(reqId, show); if (pending.size > 200) pending.delete(pending.keys().next().value);
+      lastShow = show; lastShowAt = Date.now();
+      both(show);
+      return json(req, res, 200, show);
+    } catch (e) {
+      const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
+      both({ type: 'error', code, message: e.message, reqId });
+      return json(req, res, 502, { error: code, message: e.message, reqId });
+    }
+  }
+
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x'); const headers = cors(req);
     if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
     try {
-      const protectedRoute = (req.method === 'POST' && url.pathname === '/detect') || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
+      const protectedRoute = (req.method === 'POST' && ['/detect', '/ask'].includes(url.pathname)) || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
       if (protectedRoute && !authorized(req)) return json(req, res, 401, { error: 'unauthorized' });
       if (req.method === 'GET' && url.pathname === '/phone') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...headers }); return res.end(readFileSync(path.join(here, 'public', 'phone.html'))); }
       if (req.method === 'GET' && url.pathname === '/objects') {
@@ -344,6 +431,7 @@ export function start({
       if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
       if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, sketch: sketchMode, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
+      if (req.method === 'POST' && url.pathname === '/ask') return await handleAsk(req, res);
       if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), res, headers, 'public, max-age=300', MEDIA_EXTS)) return;
       if (req.method === 'GET' && serveGlasses(url.pathname, res, headers)) return;
       json(req, res, 404, { error: 'not_found' });

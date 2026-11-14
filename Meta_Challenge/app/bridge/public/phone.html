@@ -10,7 +10,7 @@ section{background:var(--panel);border:1px solid var(--line);border-radius:8px;p
 h2{margin:0 0 8px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
 video{width:100%;border-radius:6px;background:#000;max-height:260px;object-fit:cover}
 button,select,input{font:inherit;color:var(--fg);background:#252c36;border:1px solid var(--line);border-radius:6px;padding:6px 10px}
-button{cursor:pointer}button:hover{border-color:var(--acc)}
+button{cursor:pointer}button:hover{border-color:var(--acc)}button:disabled{cursor:not-allowed;opacity:.5}
 .big{width:100%;padding:16px;font-size:18px;background:var(--acc);color:#04111f;font-weight:700;margin:8px 0}
 .row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0;align-items:center}
 input[type=text]{flex:1;min-width:120px}input[type=range]{flex:1;padding:0}
@@ -26,6 +26,7 @@ iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:6px;ba
 <div class="row"><input type="text" id="q" placeholder="Optional question (stands in for speech)"></div>
 <div class="row"><label>Simulated glasses&rarr;phone delay <b id="dl">0</b> ms</label><input type="range" id="delay" min="0" max="3000" step="50" value="0"></div>
 <div id="status">Starting...</div></section>
+<section><h2>Ask about what is on the glasses</h2><div class="row"><input type="text" id="askq" maxlength="200" placeholder="Ask a follow-up question"><button id="ask" disabled>Ask</button></div><div id="askhint">Waiting for the glasses state.</div></section>
 <section><h2>Force object (skips model)</h2><div class="row" id="objs"></div></section>
 <section><h2>Neural Band stand-in</h2><div class="row" id="nav"></div></section>
 <section><h2>Device state</h2><div class="row" id="dev"></div><div class="row"><button id="err">Send test error</button></div></section>
@@ -48,13 +49,14 @@ if(['en','fi','sv','de','es','fr'].includes(savedLang))$('lang').value=savedLang
 $('lang').onchange=()=>localStorage.setItem('lens.lang',$('lang').value);
 const authHeaders=h=>lensToken?{...h,'X-Lens-Token':lensToken}:h;
 const wsUrl=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
-let ws,locked=false;const rows=[];
+let ws,locked=false,lastState=null,latestAskText='';const rows=[];
+function updateAsk(){const id=lastState&&lastState.objectId;const unavailable=!id||id==='unknown'||id==='sketch';$('ask').disabled=unavailable;$('askhint').textContent=!id?'Waiting for the glasses state.':unavailable?'Follow-up questions need a library object.':'Ready to ask about '+id+'.';}
 function showSketch(sketch){if(!sketch)return;const titles=(sketch.chapters||[]).map(c=>c.title).join(', ');$('status').textContent=sketch.label+(titles?' - '+titles:'');}
 function connect(){ws=new WebSocket(wsUrl);
  ws.onopen=()=>ws.send(JSON.stringify({type:'hello',client:'phone',ua:navigator.userAgent,token:lensToken}));
  ws.onmessage=e=>{const m=JSON.parse(e.data);
   if(m.type==='latency'){const r=rows.find(x=>x.reqId===m.reqId);if(r)Object.assign(r,m);else rows.push(m);render();refreshSummary();}
-  if(m.type==='state')$('status').textContent='Glasses at '+m.objectId+' step '+m.step;
+  if(m.type==='state'){lastState=m;updateAsk();if(!latestAskText)$('status').textContent='Glasses at '+m.objectId+' step '+m.step;}
   if(m.type==='sketch'&&m.sketch)showSketch(m.sketch);};
  ws.onclose=e=>{if(e.code===4401){locked=true;$('status').innerHTML='<span class="bad">Bridge locked: open this page with ?k=&lt;token&gt;</span>';return;}if(!locked)setTimeout(connect,1000);};}
 const send=m=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify(m));else $('status').textContent='WebSocket not connected';};
@@ -75,6 +77,7 @@ function grab(){const v=$('v');if(!v.videoWidth)return null;const [w,h]=$('size'
 let busy=false;
 async function capture(force){
  if(busy)return;busy=true;
+ latestAskText='';
  const t_capture=Date.now();const reqId=crypto.randomUUID();
  const img=force?null:grab();
  if(!force&&!img){$('status').innerHTML='<span class="bad">No camera frame</span>';busy=false;return;}
@@ -89,6 +92,17 @@ async function capture(force){
  }catch(e){$('status').innerHTML='<span class="bad">'+e.message+'</span>';}
  busy=false;}
 $('cap').onclick=()=>capture();
+$('ask').onclick=async()=>{
+ const question=$('askq').value.trim();const id=lastState&&lastState.objectId;
+ if(!question){$('status').innerHTML='<span class="bad">Enter a follow-up question</span>';return;}
+ if(!id||id==='unknown'||id==='sketch'){updateAsk();return;}
+ $('ask').disabled=true;$('status').textContent='Asking\u2026';
+ try{const r=await fetch('/ask',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId:crypto.randomUUID(),question,aboutObjectId:id,lang:$('lang').value})});
+  const j=await r.json();
+  if(!r.ok){latestAskText='';$('status').innerHTML='<span class="bad">'+(j.error||r.status)+': '+(j.message||'')+'</span>';}
+  else{const hint=j.lensHint?' - '+j.lensHint.id+' step '+j.lensHint.step:'';latestAskText=j.answer+hint;$('status').textContent=latestAskText;}
+ }catch(e){latestAskText='';$('status').innerHTML='<span class="bad">'+e.message+'</span>';}
+ updateAsk();};
 addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();capture();}});
 const f=v=>v==null?'\u2026':Math.round(v);
 function render(){$('rows').innerHTML=rows.slice(-10).reverse().map(r=>`<tr><td>${r.reqId.slice(0,6)}</td><td>${r.objectId}</td><td>${f(r.captureToReceivedMs)}</td><td>${f(r.detectMs)}</td><td>${f(r.detectedToRenderedMs)}</td><td>${f(r.totalMs)}</td></tr>`).join('');}
