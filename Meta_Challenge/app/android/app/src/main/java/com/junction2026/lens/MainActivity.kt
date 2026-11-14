@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var urlField: EditText
     private lateinit var mockSwitch: Switch
     private lateinit var previewBox: FrameLayout
+    private lateinit var photoView: android.widget.ImageView
+    private lateinit var photoLabel: TextView
     private lateinit var mockRow: LinearLayout
     private lateinit var regView: TextView
     private lateinit var sessionView: TextView
@@ -70,6 +72,12 @@ class MainActivity : ComponentActivity() {
             scope = lifecycleScope,
             bridge = bridge,
             log = ::log,
+            onPhoto = { jpeg ->
+                runOnUiThread {
+                    photoView.setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size))
+                    photoLabel.text = "Last photo sent (${jpeg.size / 1024} KB, not saved)"
+                }
+            },
             requestCameraPermission = {
                 val d = CompletableDeferred<DatResult<PermissionStatus, PermissionError>>()
                 pendingGlassesPermission = d
@@ -170,6 +178,11 @@ class MainActivity : ComponentActivity() {
 
         previewBox = FrameLayout(this)
         root.addView(previewBox, LinearLayout.LayoutParams(dp(300), dp(300)).apply { topMargin = dp(8) })
+
+        photoLabel = TextView(this).apply { text = "Last photo sent: none yet"; textSize = 12f }
+        root.addView(photoLabel)
+        photoView = android.widget.ImageView(this).apply { adjustViewBounds = true; setBackgroundColor(0xFFDDDDDD.toInt()) }
+        root.addView(photoView, LinearLayout.LayoutParams(dp(135), dp(240)).apply { topMargin = dp(4) })
 
         logView = TextView(this).apply { typeface = Typeface.MONOSPACE; textSize = 11f }
         logScroll = ScrollView(this).apply { addView(logView) }

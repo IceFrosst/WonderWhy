@@ -44,3 +44,10 @@ APK: `app/build/outputs/apk/debug/app-debug.apk` (~41 MB, SDK native libs).
 - Everything on real glasses is untested: registration deep-link handling, camera permission flow, Inputs, HEIC photo path.
 - Not run on a device or emulator at all yet (only built and linted).
 - Mock → real without an app restart; app icon; no unit tests.
+
+## Testing notes (14 Nov, Pixel 8, mock mode)
+- The full loop runs on a Pixel 8 (Android 17) in mock mode: connect, pinch, photo, bridge, result card.
+- There is no live camera preview by design (the glasses have no viewfinder and the camera is only on when asked). The phone screen shows **"Last photo sent"**: the exact picture that went to the bridge. It is not saved.
+- In mock mode the phone's back camera stands in for the glasses camera; sideways frames are turned upright.
+- Bridge URL: `http://127.0.0.1:8787` with `adb reverse tcp:8787 tcp:8787` (USB), or the hosted bridge `https://lens.167-71-139-39.sslip.io` (no cable needed).
+- Recognition without an API key: start the bridge with `DETECT_PROVIDER=pi` (dev only, about 7 s per photo).

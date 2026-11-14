@@ -49,6 +49,7 @@ class BridgeClient(var baseUrl: String) {
             .put("imageBase64", Base64.encodeToString(jpeg, Base64.NO_WRAP))
             .put("question", JSONObject.NULL)
             .put("t_capture", tCapture)
+            .put("preUploadMs", System.currentTimeMillis() - tCapture)
             .toString()
         var c: HttpURLConnection? = null
         try {

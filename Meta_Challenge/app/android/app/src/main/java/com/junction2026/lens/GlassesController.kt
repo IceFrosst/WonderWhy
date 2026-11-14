@@ -56,6 +56,8 @@ class GlassesController(
     /** Shows the Meta AI camera-permission screen (needs an Activity result launcher). */
     private val requestCameraPermission: suspend () -> DatResult<PermissionStatus, PermissionError>,
     private val onUpdateRequired: () -> Unit,
+    /** The exact JPEG sent to the bridge, for an on-phone thumbnail. Never stored. */
+    private val onPhoto: (ByteArray) -> Unit = {},
 ) {
     private val _registration = MutableStateFlow("-")
     private val _session = MutableStateFlow("not connected")
@@ -83,7 +85,11 @@ class GlassesController(
     // ---- connect / disconnect ----
 
     /** Registers (real mode) and starts a device session. Mock must already be enabled by the caller. */
+    /** The mock feeds the phone camera in sensor orientation (sideways); real glasses frames are already upright. */
+    private var rotateLandscape = false
+
     suspend fun connect(activity: Activity, mock: Boolean) {
+        rotateLandscape = mock
         if (connecting || session != null) { log("Already connected or connecting"); return }
         connecting = true
         try {
@@ -254,6 +260,7 @@ class GlassesController(
             val tCapture = System.currentTimeMillis()
             val jpeg = withTimeout(30_000) { takePhotoJpeg() }
             log("Photo ${jpeg.size / 1024} KB, sending")
+            onPhoto(jpeg)
             val det = bridge.detect(jpeg, tCapture)
             log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}")
             if (det.objectId == "unknown" || det.confidence < 0.5) {
@@ -338,10 +345,14 @@ class GlassesController(
                     ?: throw CaptureFailure("Photo failed", "Could not decode the image")
             }
         }
-        val scale = 896f / maxOf(bmp.width, bmp.height)
-        val out = if (scale < 1f) {
-            Bitmap.createScaledBitmap(bmp, (bmp.width * scale).toInt(), (bmp.height * scale).toInt(), true)
+        val upright = if (rotateLandscape && bmp.width > bmp.height) {
+            val m = android.graphics.Matrix().apply { postRotate(90f) }
+            Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
         } else bmp
+        val scale = 896f / maxOf(upright.width, upright.height)
+        val out = if (scale < 1f) {
+            Bitmap.createScaledBitmap(upright, (upright.width * scale).toInt(), (upright.height * scale).toInt(), true)
+        } else upright
         return ByteArrayOutputStream().also { out.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
     }
 }
