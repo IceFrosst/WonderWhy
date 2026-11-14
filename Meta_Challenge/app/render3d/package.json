@@ -1,0 +1,14 @@
+{
+  "name": "render3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Offline three.js renderer for the Explore lens (MODEL3D.md): per-beat clips, stills and label tracks.",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.55.0",
+    "three": "0.170.0"
+  }
+}
