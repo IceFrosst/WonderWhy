@@ -1,6 +1,14 @@
 # Physics Lens: simulator test rig
 
-Look at an object, pinch, see the physics inside it. 5 objects are **prerendered** (content and scenes ship in the app), so the demo works even if the model or Wi-Fi is slow.
+Look at an object, pinch, see the physics inside it. 6 objects are **prerendered** (content and scenes ship in the app), so the demo works even if the model or Wi-Fi is slow. Each object has several **lenses** (Motion, Inside, Compare, Flow, The number, ...): swipe left/right changes lens, pinch goes deeper, up/down changes the one thing that step lets you vary.
+
+| Where things live | |
+|---|---|
+| Explanation text, lenses, drawing data | [shared/objects.json](shared/objects.json): one source for the glasses app, the bridge and the phone app |
+| Visual direction | [shared/DESIGN.md](shared/DESIGN.md) |
+| Contract (auth, `/detect`, `/last`, WebSocket frames) | [shared/PROTOCOL.md](shared/PROTOCOL.md) |
+| Stills and clips for the phone-app-only route | `bridge/media/` (made by `npm run export:media` in `glasses/`), served at `/media/` |
+| Lock the live bridge, add the model key | [deploy/README.md](deploy/README.md) "Lock it" |
 
 | Part | Folder | Stands in for |
 |---|---|---|
