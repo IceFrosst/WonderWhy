@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var rig: MockRig
 
     private lateinit var urlField: EditText
+    private lateinit var tokenField: EditText
     private lateinit var mockSwitch: Switch
     private lateinit var previewBox: FrameLayout
     private lateinit var photoView: android.widget.ImageView
@@ -65,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        bridge = BridgeClient(Prefs.bridge(this))
+        bridge = BridgeClient(Prefs.bridge(this), Prefs.bridgeToken(this))
         rig = MockRig(applicationContext)
         controller = GlassesController(
             ctx = applicationContext,
@@ -157,6 +158,14 @@ class MainActivity : ComponentActivity() {
         }
         root.addView(urlField)
 
+        tokenField = EditText(this).apply {
+            setText(Prefs.bridgeToken(context))
+            hint = "Bridge token (blank = none)"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine()
+        }
+        root.addView(tokenField)
+
         mockSwitch = Switch(this).apply {
             text = "Mock glasses (no hardware)"
             isChecked = Prefs.mock(context)
@@ -223,6 +232,9 @@ class MainActivity : ComponentActivity() {
         val url = urlField.text.toString().trim()
         Prefs.setBridge(this, url)
         bridge.baseUrl = url
+        val token = tokenField.text.toString().trim()
+        Prefs.setBridgeToken(this, token)
+        bridge.token = token
         val mock = mockSwitch.isChecked
         lifecycleScope.launch {
             if (mock) {

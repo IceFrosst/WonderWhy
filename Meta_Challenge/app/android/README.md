@@ -11,6 +11,7 @@ Phone app that drives Meta Ray-Ban Display glasses (or the SDK's Mock Device Kit
 | Capture | Camera starts, ONE photo, camera released in `finally` (never stored on disk) |
 | Detect | JPEG (≤896 px, q80) → `POST {bridge}/detect`; "Looking..." card meanwhile |
 | Result | Label, concept (from `GET /objects`), optional answer; "Again" / "Done". Confidence <0.5 or `unknown` → "Not sure what this is" |
+| Token | Optional "Bridge token" field (password-style, saved in app prefs, no default). Sent as `X-Lens-Token` on `/detect`; blank = no header. A 401 shows "Bridge token is wrong or missing. Set it in the phone app." |
 | Errors | Cards with "Try again" for network, bridge, camera, permission, session stop, glasses off |
 
 ## Build
@@ -20,6 +21,9 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties   # not committed
 ./gradlew --no-daemon assembleDebug
 ```
 APK: `app/build/outputs/apk/debug/app-debug.apk` (~41 MB, SDK native libs).
+
+## Tests
+`./gradlew --no-daemon -q testDebugUnitTest` (JVM unit tests for the token header and 401 mapping).
 
 ## Install and run (mock mode, no glasses)
 | Setup | Commands / bridge URL |
@@ -43,7 +47,7 @@ APK: `app/build/outputs/apk/debug/app-debug.apk` (~41 MB, SDK native libs).
 - Animation images / video on the glasses display (text cards only).
 - Everything on real glasses is untested: registration deep-link handling, camera permission flow, Inputs, HEIC photo path.
 - Not run on a device or emulator at all yet (only built and linted).
-- Mock → real without an app restart; app icon; no unit tests.
+- Mock → real without an app restart; app icon; unit tests cover only the token/401 logic.
 
 ## Testing notes (14 Nov, Pixel 8, mock mode)
 - The full loop runs on a Pixel 8 (Android 17) in mock mode: connect, pinch, photo, bridge, result card.

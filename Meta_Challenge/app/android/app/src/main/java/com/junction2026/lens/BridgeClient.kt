@@ -16,9 +16,14 @@ data class Detection(
 )
 
 /** A failure with text that is safe to show on the glasses. */
-class BridgeException(val userMessage: String, cause: Throwable? = null) : Exception(userMessage, cause)
+class BridgeException(
+    val userMessage: String,
+    cause: Throwable? = null,
+    /** True when the bridge answered 401: the token is wrong or missing. */
+    val unauthorized: Boolean = false,
+) : Exception(userMessage, cause)
 
-class BridgeClient(var baseUrl: String) {
+class BridgeClient(var baseUrl: String, var token: String = "") {
     private fun url(path: String) = URL(baseUrl.trim().trimEnd('/') + path)
 
     /** objectId -> one-line concept. Empty map on any failure (concept line is optional). */
@@ -61,6 +66,7 @@ class BridgeClient(var baseUrl: String) {
             c.connectTimeout = 5000
             c.readTimeout = 28000 // API providers answer in a few seconds; the dev-only pi provider needs up to 25 s
             c.setRequestProperty("Content-Type", "application/json")
+            BridgeAuth.headers(token).forEach { (k, v) -> c.setRequestProperty(k, v) }
             c.outputStream.use { it.write(body.toByteArray()) }
             val code = c.responseCode
             val text = (if (code in 200..299) c.inputStream else c.errorStream)
@@ -68,10 +74,11 @@ class BridgeClient(var baseUrl: String) {
             if (code !in 200..299) {
                 val err = runCatching { JSONObject(text) }.getOrNull()
                 val kind = err?.optString("error").orEmpty()
-                throw BridgeException(
-                    if (kind == "detect_timeout") "Detection timed out"
-                    else "Bridge error (${kind.ifEmpty { "HTTP $code" }})",
-                )
+                throw when (BridgeAuth.kindFor(code, kind)) {
+                    BridgeAuth.ErrorKind.TOKEN -> BridgeException(BridgeAuth.TOKEN_ERROR, unauthorized = true)
+                    BridgeAuth.ErrorKind.TIMEOUT -> BridgeException("Detection timed out")
+                    BridgeAuth.ErrorKind.BRIDGE -> BridgeException("Bridge error (${kind.ifEmpty { "HTTP $code" }})")
+                }
             }
             val j = JSONObject(text)
             Detection(

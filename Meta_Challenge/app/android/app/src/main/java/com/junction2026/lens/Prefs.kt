@@ -9,4 +9,6 @@ object Prefs {
     fun setMock(c: Context, v: Boolean) = sp(c).edit().putBoolean("mock", v).apply()
     fun bridge(c: Context) = sp(c).getString("bridge", DEFAULT_BRIDGE) ?: DEFAULT_BRIDGE
     fun setBridge(c: Context, v: String) = sp(c).edit().putString("bridge", v).apply()
+    fun bridgeToken(c: Context) = sp(c).getString("bridgeToken", "") ?: ""
+    fun setBridgeToken(c: Context, v: String) = sp(c).edit().putString("bridgeToken", v).apply()
 }
