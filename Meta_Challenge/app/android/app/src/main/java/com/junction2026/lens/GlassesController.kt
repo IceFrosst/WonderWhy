@@ -57,6 +57,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -898,15 +900,15 @@ class GlassesController(
                 nextFixture()
             } else {
                 val tCapture = System.currentTimeMillis()
-                val (jpeg, focus) = withTimeout(30_000) { takePhotoJpeg() }
+                val (jpeg, focus) = withProgress("Taking the photo", PHOTO_EXPECTED_MS) { withTimeout(30_000) { takePhotoJpeg() } }
                 log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
                 onPhoto(jpeg)
                 lastPhotoKb = jpeg.size / 1024
                 question = listenForQuestion()
-                show(Cards.looking())
                 val sentAt = SystemClock.elapsedRealtime()
-                bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null }, question)
-                    .also { receivedAt = SystemClock.elapsedRealtime(); lastDetectMs = receivedAt - sentAt }
+                withProgress(if (question != null) "Thinking about your question" else "Thinking", DETECT_EXPECTED_MS) {
+                    bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null }, question)
+                }.also { receivedAt = SystemClock.elapsedRealtime(); lastDetectMs = receivedAt - sentAt }
             }
             log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}" +
                 (if (det.lowConfidence) " lowConfidence" else "") +
@@ -963,6 +965,24 @@ class GlassesController(
             log("Unexpected: $e")
             showError(Cards.t(Lang.ERR_GENERIC))
         }
+    }
+
+    /**
+     * Runs [block] while a progress card counts up on the glasses: [stage], a bar that moves towards
+     * [expectedMs] and slows down after it (it never reaches the end before the answer), and the seconds.
+     */
+    private suspend fun <T> withProgress(stage: String, expectedMs: Long, block: suspend () -> T): T = coroutineScope {
+        val t0 = SystemClock.elapsedRealtime()
+        val ticker = launch {
+            while (isActive) {
+                val ms = SystemClock.elapsedRealtime() - t0
+                // 1 - e^(-t/T): about 63% at the expected time, 86% at twice it, never 100%.
+                val f = (1.0 - kotlin.math.exp(-ms.toDouble() / expectedMs)).toFloat() * 0.95f
+                show(Cards.progress(stage, f, (ms / 1000).toInt()), record = false)
+                delay(PROGRESS_TICK_MS)
+            }
+        }
+        try { block() } finally { ticker.cancel() }
     }
 
     /**
@@ -1298,7 +1318,7 @@ class GlassesController(
                 // Demo data and saved cards have no bridge behind them: the phone answers from the same text.
                 if (useFixture || currentSaved) { showAnswer(det, AskFlow.localAnswer(det, q), q, local = true); return }
                 try {
-                    val ans = bridge.ask(q, target.id, lang)
+                    val ans = withProgress("Thinking about your question", DETECT_EXPECTED_MS) { bridge.ask(q, target.id, lang) }
                     val receivedAt = SystemClock.elapsedRealtime()
                     if (showAnswer(det, ans, q, local = false, startedAt = startedAt)) ackRendered(ans.reqId, receivedAt)
                 } catch (e: CancellationException) {
@@ -1550,6 +1570,11 @@ class GlassesController(
     }
 
     companion object {
+        /** Progress card refresh. One card per second is light enough for the Bluetooth link. */
+        const val PROGRESS_TICK_MS = 1_000L
+        /** Typical times seen on real glasses (14 Nov): photo over Bluetooth 6 to 15 s, gemini-4-carbon 7 to 15 s. */
+        const val PHOTO_EXPECTED_MS = 8_000L
+        const val DETECT_EXPECTED_MS = 10_000L
         /** How long the "What should I explain?" card waits for speech to start, then for the sentence to end. */
         const val QUESTION_WAIT_MS = 6_000L
         const val QUESTION_FINISH_MS = 6_000L
