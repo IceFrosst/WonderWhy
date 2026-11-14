@@ -1,8 +1,9 @@
 """Shared helpers for the Explore generators (guitar, bicycle, phone): locked write of one explore chapter."""
 import json, os, time
 
-OBJECTS = r"E:\Documents\Github\Junction-2026\Meta_Challenge\app\shared\objects.json"
-LOCK = r"E:\Documents\Github\Junction-2026\Meta_Challenge\app\shared\.objects.lock"
+_APP = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+OBJECTS = os.path.join(_APP, "shared", "objects.json")
+LOCK = os.path.join(_APP, "shared", ".objects.lock")
 
 
 def r2(v):

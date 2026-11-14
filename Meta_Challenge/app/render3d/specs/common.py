@@ -1,8 +1,8 @@
 """Shared helpers for the Explore generators: safe objects.json write, test render, rotation maths."""
 import json, math, os, subprocess, sys, time
 
-REPO = r"E:\Documents\Github\Junction-2026"
-APP = os.path.join(REPO, "Meta_Challenge", "app")
+APP = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+REPO = os.path.abspath(os.path.join(APP, "..", ".."))
 OBJECTS = os.path.join(APP, "shared", "objects.json")
 LOCK = os.path.join(APP, "shared", ".objects.lock")
 RENDER = os.path.join(APP, "render3d")
