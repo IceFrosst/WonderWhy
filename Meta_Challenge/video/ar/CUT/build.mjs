@@ -10,7 +10,7 @@ for (const s of edl.shots) {
   if (frame !== 'card') {
     if (!s.raw) throw new Error(`shot ${s.id}: raw missing`);
     const slot = { in: s.in || 0, speed, start: r3(t), duration: s.dur };
-    if (frame === 'asset') { slot.path = path.resolve(MC, s.raw); if (!fs.existsSync(slot.path)) console.warn(`warning: ${s.id}: asset ${slot.path} not found (placeholder)`); }
+    if (frame === 'asset') { const abs = path.resolve(MC, s.raw); slot.path = path.relative(D, abs).split(path.sep).join('/'); if (!fs.existsSync(abs)) console.warn(`warning: ${s.id}: asset ${abs} not found (placeholder)`); }
     else slot.raw = s.raw;
     if (frame === 'fit') slot.size = [608, 1080];
     if (frame === 'fill') { const y = s.focusY ?? 0.5; slot.vf = `crop=iw:min(ih\\,iw*9/16):0:(ih-min(ih\\,iw*9/16))*${y}`; }
