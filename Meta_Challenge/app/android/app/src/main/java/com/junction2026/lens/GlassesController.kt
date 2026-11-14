@@ -31,6 +31,7 @@ import com.meta.wearable.dat.display.types.DisplayState
 import com.meta.wearable.dat.inputs.addInputs
 import com.meta.wearable.dat.inputs.removeInputs
 import com.meta.wearable.dat.inputs.types.InputEvent
+import com.meta.wearable.dat.inputs.types.DragAction
 import com.meta.wearable.dat.inputs.types.InputsConfiguration
 import com.meta.wearable.dat.inputs.types.InputsState
 import com.meta.wearable.dat.inputs.types.NavDirection
@@ -520,13 +521,18 @@ class GlassesController(
                 // pinch never reaches it (README "Known issues": a kit defect; Disconnect + Connect fixes it).
                 inputsJobs += scope.launch {
                     inputs.events.collect { ev ->
-                        log("Input #$no: ${ev.javaClass.simpleName}")
+                        if (ev is InputEvent.Drag) {
+                            log("Input #$no: Drag ${ev.action} x=${"%.2f".format(ev.x)} y=${"%.2f".format(ev.y)} dx=${"%.2f".format(ev.dx)} dy=${"%.2f".format(ev.dy)} ${ev.source}")
+                        } else log("Input #$no: ${ev.javaClass.simpleName} ${(ev as? InputEvent.Nav)?.direction ?: ""}")
                         when (ev) {
                             is InputEvent.Select -> { lastPinchAt = SystemClock.elapsedRealtime(); onSelect() }
                             is InputEvent.Capture -> { lastPinchAt = SystemClock.elapsedRealtime(); trigger() }
                             is InputEvent.Nav -> onNav(ev.direction)
                             is InputEvent.Back -> onBack()
-                            is InputEvent.Button, is InputEvent.Drag -> Unit
+                            is InputEvent.Button -> Unit
+                            // On real glasses (14 Nov) a Neural Band pinch arrives as a Drag DOWN..UP with no Select.
+                            // A short drag that barely moves counts as a pinch; a longer one is a swipe left/right.
+                            is InputEvent.Drag -> onDrag(ev)
                         }
                     }
                 }
@@ -1425,6 +1431,37 @@ class GlassesController(
         }
     }
 
+    private var dragDownAt = 0L
+    private var dragDownX = 0f
+    private var dragDownY = 0f
+    private var dragMoved = 0f
+
+    /** Neural Band drag: DOWN..UP. Small and short = pinch (select); a clear horizontal move = left/right. */
+    private fun onDrag(ev: InputEvent.Drag) {
+        when (ev.action) {
+            DragAction.DOWN -> { dragDownAt = SystemClock.elapsedRealtime(); dragDownX = ev.x; dragDownY = ev.y; dragMoved = 0f }
+            DragAction.MOVE -> dragMoved = maxOf(dragMoved, kotlin.math.abs(ev.x - dragDownX), kotlin.math.abs(ev.y - dragDownY))
+            DragAction.UP -> {
+                if (dragDownAt == 0L) return
+                val ms = SystemClock.elapsedRealtime() - dragDownAt
+                val dx = ev.x - dragDownX
+                val moved = maxOf(dragMoved, kotlin.math.abs(dx), kotlin.math.abs(ev.y - dragDownY))
+                dragDownAt = 0L
+                when {
+                    ms <= DRAG_TAP_MS && moved <= DRAG_TAP_MOVE -> {
+                        log("Drag read as a pinch (${ms} ms, moved ${"%.2f".format(moved)})")
+                        lastPinchAt = SystemClock.elapsedRealtime(); onSelect()
+                    }
+                    kotlin.math.abs(dx) >= DRAG_SWIPE_MOVE -> {
+                        log("Drag read as a swipe ${if (dx > 0) "right" else "left"} (${ms} ms, dx ${"%.2f".format(dx)})")
+                        onNav(if (dx > 0) NavDirection.RIGHT else NavDirection.LEFT)
+                    }
+                    else -> log("Drag ignored (${ms} ms, moved ${"%.2f".format(moved)})")
+                }
+            }
+        }
+    }
+
     /**
      * D-pad (`InputEvent.Nav`). Explainer: left/right changes lens (starts at its step 1), down/up steps
      * forward/back. Offline picker: left/right changes the object. Public for the phone's D-pad buttons.
@@ -1570,6 +1607,10 @@ class GlassesController(
     }
 
     companion object {
+        /** Neural Band drag read as a pinch: up within this time and this much movement (SDK units, guessed: 0..1). */
+        const val DRAG_TAP_MS = 700L
+        const val DRAG_TAP_MOVE = 0.08f
+        const val DRAG_SWIPE_MOVE = 0.25f
         /** Progress card refresh. One card per second is light enough for the Bluetooth link. */
         const val PROGRESS_TICK_MS = 1_000L
         /** Typical times seen on real glasses (14 Nov): photo over Bluetooth 6 to 15 s, gemini-4-carbon 7 to 15 s. */
