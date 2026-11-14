@@ -97,6 +97,23 @@ The Display Simulator (Chrome extension) only fakes the Web App screen. Mock Dev
 
 Test rig: `Meta_Challenge/app/` (glasses Web App + bridge + phone stand-in page).
 
+## New route to test: the glasses' own photo button (idea 14 Nov, IceFrost)
+The wearer takes a normal photo with the glasses' capture button, then opens our Web App and asks what to explain. No toolkit session is used, so nothing clashes with the Web App and the animation can be live.
+
+| Step | Fact or unknown |
+|---|---|
+| Glasses take a photo by themselves | Yes, built in |
+| Web App reads that photo | **No.** The Web App has no camera and no access to the glasses' photos |
+| Where the photo goes | It is imported to the phone (Meta AI app, then the phone's photo gallery) |
+| What we would add | A small watcher in our Android app: when a new glasses photo lands in the gallery, send it to `/detect`. The Web App already replays the last result when it opens (`GET /last`) |
+| The question | Spoken in the Web App through a text field (dictation) |
+
+| # | Ask Meta / test on real glasses | Why | Answer |
+|---|---|---|---|
+| 20 | **Stopwatch: press the capture button, then time until the photo is in the phone's gallery.** Is import automatic, and does it need the Meta AI app open? | Under about 5 s this route could beat the stills route. Much longer and it is too slow | |
+| 21 | Does the capture button still take a photo while a Web App is open on the Display? | Otherwise the wearer has to leave the app to take the photo | |
+| 22 | Can a third-party Android app read the imported glasses photos (which folder), and on iPhone? | The watcher needs it | |
+
 ## After the booth
 - Answer 1 or 2 is **yes**: build option 2. The animation player becomes a Web App on Saturday.
 - Only 1b is yes: option 1 first, handover as a stretch goal.
