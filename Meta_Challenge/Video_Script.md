@@ -5,7 +5,7 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 10; current viewing cut 1:30.13)
+# Video script: "Never stop asking why" (draft 11; current viewing cut 1:28.93)
 
 > [!summary]
 > **Product: WonderWhy** (Meta Ray-Ban Display + Neural Band). **Max 1:30.** Every shot readable muted (phone viewer, first 3 s must hold).
@@ -17,7 +17,7 @@ updated: 2026-11-14
 Changes 14 Nov 22:10: the earbuds-case-on-table shot (old shot 3) is cut (weak); Act 2 opens on the grass.
 Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), not AI · footage now mapped to real clip names (see [Footage map](#footage-map)) · object animations are **custom from scratch** (team, added later).
 
-**Latest edit:** owner removed the second-printer video, its follow-up question and comparison answer (shots 13–14; edit items 5/D). First printer + answer remain. `cinematic_v4.mp4` is **1:30.13** (0.13 s over 1:30); every retained segment is unchanged. Shot/caption IDs stay stable; scene time ranges below are story targets, not the current whole-clip viewing timeline. **Pending:** first-printer and glasses explanation placeholders, listening review, and an approved final timing adjustment. **Checked:** full audio/video decode; only items 5/D removed; all retained frames, durations, grades and captions match v3; local preview returns HTTP 200. **Next:** insert the first-printer explanation.
+**Latest edit:** owner also removed the short rear-view crowd walk (shot 5; `IMG_5554.MOV`, reveal frames 64–99 / 1.2 s). Grass now cuts directly to the standing/glasses shot. The second-printer video, follow-up question and comparison answer remain removed (shots 13–14; edit items 5/D); first printer + answer stay. `cinematic_v5.mp4` is **1:28.93**, under 1:30. All other segments retain their frames/durations; reveal cues move 1.2 s earlier and *Then you stopped.* remains readable over the standing shot. Shot/caption IDs stay stable; scene time ranges below are story targets, not the current whole-clip viewing timeline. **Pending:** first-printer and glasses explanation placeholders, listening review. **Checked:** full audio/video decode; exact 36-frame removal and sample-exact matching audio cut; all other segment frames/captions unchanged; cut/reveal frames visually checked; local preview HTTP 200. **Next:** insert the first-printer explanation.
 
 ## All on-screen copy, in order
 | # | Line | Style |
@@ -68,7 +68,6 @@ Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pas
 | # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
 | 4 | 0:04-0:07 | REAL | Match cut: seed blur → IceFrost on grass outside, earbuds in, head down, scrolling | *You used to ask why.* → *Then you stopped.* | Sound drops to muffled, wind, tick |
-| 5 | 0:07-0:09 | REAL | Walking through the hackathon crowd, zoned out | (stays) | Crowd as a muffled wall |
 
 ## Act 3: the reveal (0:09-0:20) — earbuds
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -118,7 +117,7 @@ All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index:
 |---|---|---|---|
 | 4 grass, scrolling | `mrnetwork/A001_11141516_C098_2.MOV` (26 s, 24 fps) | lying on grass, phone, earbuds in | ok |
 | 24 grass ending / B1 | `mrnetwork/A001_11141518_C099_2.MOV` (21 s), `A001_11141519_C100.MOV` (21 s) | on the grass with the glasses, arms up, touching grass | ok |
-| 5 crowd walk | `mrnetwork/IMG_5554.MOV` (3.5 s, from behind, 30 fps), `IMG_5556.MOV` (2 s, from behind), `IMG_5545.MOV` (19 s), `IMG_5546.MOV` (7 s) | walking the hall | ok, but glasses already on in 5545/5546: a back-view crowd walk **without glasses** is missing |
+| Removed shot 5 (archive only) | `mrnetwork/IMG_5554.MOV` | short rear-view walk through the crowd | excluded at owner's request; original footage preserved |
 | 6 glasses on | `mrnetwork/IMG_5543.MOV` / `IMG_5544.MOV` or a trim of IMG_5557 (`icefrost-trims/IMG_5557~2.mp4`) | glasses on | ok |
 | 8 earbuds in palm | `icefrost/PXL_20261114_145509708.mp4` (5 s) | open earbuds case on a table | ok |
 | 8 alt | `mrnetwork/IMG_5560.MOV` (10 s) | hand with the glasses' charging case | b-roll |
