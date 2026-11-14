@@ -77,3 +77,21 @@ The `/phone` page is a browser test tool, not a production phone client. The `pi
 `curl localhost:8787/latency` returns `{count, provider, captureToReceivedMs, detectMs, detectedToRenderedMs, totalMs}` with `p50`/`p90` each, plus the last 10 `recent` records. Those existing fields cover requests with a glasses or phone paint acknowledgement. The `requests` field covers the last 500 finished detect and ask requests whether acknowledged or not, including detect-time percentiles and counts by provider and object. Every acknowledged request is also a line in `latency.jsonl`. `captureToReceivedMs` includes the phone page's simulated Bluetooth delay slider.
 The summary is in memory and resets on restart; the JSONL file persists until its 20 MB safety cap. When `preUploadMs` is absent, `captureToReceivedMs` is `null` and `totalMs` covers server receive through paint only.
 Detection timeout is 8 s (`detect_timeout`); any other model failure is `detect_failed`, with a 502 to the caller.
+
+## Glasses emulator on a phone (`/emulator`)
+Your phone camera stands in for the glasses: the real Web App is drawn over the camera view the way the lens adds light (black is see-through), and gestures act like the Neural Band.
+
+| Gesture | Glasses |
+|---|---|
+| Tap | Pinch (selects the focused control) |
+| Swipe left, right, up, down | D-pad |
+| Long press or two-finger tap | Back |
+| Round button at the bottom | Look and explain: sends the camera frame to `/detect`, like a pinch on the phone app |
+| Web App "Take photo" | The emulator answers it with the phone camera (it joins the bridge as the phone) |
+
+Top right: eye = clean view for recording (leave it with three quick taps in the top-right corner), fullscreen, sliders (panel size, brightness, position, camera, hide touch marks, language). Record with Android's own screen recorder (Quick Settings).
+
+Phone browsers allow the camera only on HTTPS or `localhost`:
+- **Phone on USB to the laptop running the bridge:** `adb reverse tcp:8787 tcp:8787`, then open `http://localhost:8787/emulator` in the phone's Chrome.
+- **Deployed bridge:** `https://<bridge host>/emulator#k=<LENS_TOKEN>`.
+

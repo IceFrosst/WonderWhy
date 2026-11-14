@@ -38,6 +38,8 @@ const SECURITY_HEADERS = {
 };
 
 const PHONE_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; frame-src 'self' http://localhost:* http://127.0.0.1:*; base-uri 'none'; form-action 'none'";
+// The emulator page frames the glasses app from the same origin and uses the phone camera (secure context: HTTPS or localhost).
+const EMULATOR_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; frame-src 'self'; base-uri 'none'; form-action 'none'";
 
 function serveFile(root, rel, req, res, headers, cache, allowedExts, readFile = readFileSync) {
   let decoded;
@@ -731,6 +733,13 @@ export function start({
         try { page = readFileFn(path.join(here, 'public', 'phone.html')); }
         catch { return json(req, res, 500, { error: 'server_error' }); }
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': PHONE_CSP, ...headers });
+        return res.end(page);
+      }
+      if (req.method === 'GET' && url.pathname === '/emulator') {
+        let page;
+        try { page = readFileFn(path.join(here, 'public', 'emulator.html')); }
+        catch { return json(req, res, 500, { error: 'server_error' }); }
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': EMULATOR_CSP, 'permissions-policy': 'camera=(self), fullscreen=(self)', 'cache-control': 'no-cache', ...headers });
         return res.end(page);
       }
       if (req.method === 'GET' && url.pathname === '/objects') {
