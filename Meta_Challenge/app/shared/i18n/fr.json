@@ -3,6 +3,7 @@
   "lang": "fr",
   "unknown_label": "Objet inconnu",
   "lens_names": {
+    "explore": "Explorer",
     "motion": "Mouvement",
     "inside": "Intérieur",
     "cutaway": "Coupe",
@@ -19,6 +20,125 @@
       "tagline": "Ondes stationnaires",
       "short": "Guitare",
       "chapters": {
+        "explore": {
+          "title": "Comment ça marche",
+          "captions": [
+            "Pincez une corde et toute la guitare chante. Le son naît dans la corde.",
+            "Une guitare : six cordes au-dessus d'une caisse en bois creuse à table fine.",
+            "Une corde pincée vibre des centaines de fois par seconde, mais déplace peu d'air.",
+            "La corde fait vibrer le chevalet, qui fait vibrer la table, et la table pousse l'air.",
+            "Appuyer sur une frette raccourcit la corde : elle vibre plus vite, la note monte.",
+            "110 vibrations par seconde : la corde de la à vide. À la frette 12, 220."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Caisse creuse"
+              },
+              {
+                "label": "Table fine"
+              },
+              {
+                "label": "Rosace"
+              },
+              {
+                "label": "Chevalet"
+              },
+              {
+                "label": "Manche"
+              },
+              {
+                "label": "Tête"
+              },
+              {
+                "label": "Sillet"
+              },
+              {
+                "label": "Mécanique"
+              },
+              {
+                "label": "Mécanique"
+              },
+              {
+                "label": "Mécanique"
+              },
+              {
+                "label": "Mécanique"
+              },
+              {
+                "label": "Mécanique"
+              },
+              {
+                "label": "Mécanique"
+              },
+              {
+                "label": "Frette 1"
+              },
+              {
+                "label": "Frette 2"
+              },
+              {
+                "label": "Frette 3"
+              },
+              {
+                "label": "Frette 4"
+              },
+              {
+                "label": "Frette 5"
+              },
+              {
+                "label": "Frette 6"
+              },
+              {
+                "label": "Frette 7"
+              },
+              {
+                "label": "Frette 8"
+              },
+              {
+                "label": "Frette 9"
+              },
+              {
+                "label": "Frette 10"
+              },
+              {
+                "label": "Frette 11"
+              },
+              {
+                "label": "Frette 12"
+              },
+              {
+                "label": "Six cordes"
+              },
+              {
+                "label": "Corde de la"
+              },
+              {
+                "label": "Partie qui vibre"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {},
+                  {
+                    "text": "49 cm"
+                  }
+                ]
+              },
+              {
+                "number": {
+                  "label": "corde de la à vide",
+                  "unit": "Hz"
+                }
+              }
+            ]
+          }
+        },
         "motion": {
           "title": "Ondes stationnaires",
           "captions": [
@@ -156,6 +276,109 @@
       "tagline": "Mouvement parabolique",
       "short": "Balle",
       "chapters": {
+        "explore": {
+          "title": "Comment ça marche",
+          "captions": [
+            "Toute balle lancée retombe en courbe. Deux forces dessinent tout le vol.",
+            "Sous l'enveloppe : une chambre en caoutchouc, de l'air plus pressé que dehors.",
+            "La gravité tire sans cesse vers le bas : la vitesse montante baisse, s'annule, s'inverse.",
+            "L'air freine le mouvement et vole de la vitesse : le vrai lancer tombe plus court.",
+            "Au rebond, l'air comprimé agit comme un ressort et relance la balle.",
+            "Lancée à 10 mètres par seconde et 45 degrés, elle retombe à environ 10 mètres."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Enveloppe"
+              },
+              {
+                "label": "Enveloppe"
+              },
+              {
+                "label": "Couture"
+              },
+              {
+                "label": "Valve"
+              },
+              {
+                "label": "Couture"
+              },
+              {
+                "label": "Couture"
+              },
+              {
+                "label": "Couture"
+              },
+              {
+                "label": "Couture"
+              },
+              {
+                "label": "Couture"
+              },
+              {
+                "label": "Couture"
+              },
+              {
+                "label": "Chambre en caoutchouc"
+              },
+              {
+                "label": "Sol"
+              },
+              {
+                "label": "Portée"
+              },
+              {
+                "label": "Zone de contact"
+              },
+              {
+                "label": "Balle en vol"
+              },
+              {
+                "label": "Balle en vol"
+              },
+              {
+                "label": "Sans air"
+              },
+              {
+                "label": "Atterrissage"
+              },
+              {
+                "label": "Air comprimé"
+              },
+              {
+                "label": "Avec air"
+              },
+              {
+                "label": "Gravité"
+              },
+              {
+                "label": "Vitesse"
+              },
+              {
+                "label": "Résistance de l'air"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "portée à 10 m/s, sans air",
+                  "unit": "m"
+                },
+                "fx": [
+                  {
+                    "text": "10.2 m"
+                  },
+                  {}
+                ]
+              }
+            ]
+          }
+        },
         "motion": {
           "title": "Mouvement de projectile",
           "captions": [
@@ -307,6 +530,120 @@
       "tagline": "Rapport de transmission",
       "short": "Vélo",
       "chapters": {
+        "explore": {
+          "title": "Comment ça marche",
+          "captions": [
+            "Un tour de pédales peut faire avancer un vélo de plus de six mètres. Les vitesses décident.",
+            "Les pédales font tourner un grand plateau ; la chaîne transmet le tour à un petit pignon.",
+            "48 dents devant, 16 derrière : la roue arrière fait trois tours par tour de pédale.",
+            "Le prix : la roue tourne plus vite, mais le pneu pousse la route bien plus doucement.",
+            "Chaque tour de roue avance d'environ 2.1 mètres : un tour de pédale, 6.3 mètres.",
+            "À 80 tours de pédale par minute, cela fait 30 kilomètres à l'heure."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Plateau, 48 dents"
+              },
+              {
+                "label": "Axe du pédalier"
+              },
+              {
+                "label": "Manivelle"
+              },
+              {
+                "label": "Pédale"
+              },
+              {
+                "label": "Manivelle gauche"
+              },
+              {
+                "label": "Pédale gauche"
+              },
+              {
+                "label": "Chaîne"
+              },
+              {
+                "label": "Pignon, 16 dents"
+              },
+              {
+                "label": "Roue arrière"
+              },
+              {
+                "label": "Pneu"
+              },
+              {
+                "label": "Moyeu"
+              },
+              {
+                "label": "Rayon"
+              },
+              {
+                "label": "Rayon"
+              },
+              {
+                "label": "Rayon"
+              },
+              {
+                "label": "Rayon"
+              },
+              {
+                "label": "Base arrière"
+              },
+              {
+                "label": "Hauban"
+              },
+              {
+                "label": "Tube de selle"
+              },
+              {
+                "label": "Tube horizontal"
+              },
+              {
+                "label": "Tube diagonal"
+              },
+              {
+                "label": "Fourche"
+              },
+              {
+                "label": "Guidon"
+              },
+              {
+                "label": "Selle"
+              },
+              {
+                "label": "Roue avant"
+              },
+              {
+                "label": "Pneu avant"
+              },
+              {
+                "label": "2.1 m"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "un tour de roue"
+                  },
+                  {},
+                  {}
+                ]
+              },
+              {
+                "number": {
+                  "label": "avance par tour de pédale",
+                  "unit": "m"
+                }
+              }
+            ]
+          }
+        },
         "motion": {
           "title": "Rapport de vitesse",
           "captions": [
@@ -444,6 +781,76 @@
       "tagline": "Convection et ébullition",
       "short": "Bouilloire",
       "chapters": {
+        "explore": {
+          "title": "Comment ça marche",
+          "captions": [
+            "Une bouilloire porte un litre d'eau à ébullition en trois minutes environ.",
+            "À l'intérieur : une résistance sous le fond, l'eau et un interrupteur à vapeur.",
+            "Le courant forcé dans la résistance transforme l'énergie électrique en chaleur.",
+            "L'eau au contact du fond chaud se dilate, s'allège et monte ; l'eau plus froide descend.",
+            "La vapeur atteint un disque bimétal qui se courbe à chaud et coupe le courant.",
+            "2000 joules par seconde : de quoi réchauffer un litre d'un demi-degré."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Socle électrique"
+              },
+              {
+                "label": "Connecteur"
+              },
+              {
+                "label": "Cordon"
+              },
+              {
+                "label": "Corps"
+              },
+              {
+                "label": "Fond"
+              },
+              {
+                "label": "Résistance"
+              },
+              {
+                "label": "Eau"
+              },
+              {
+                "label": "Couvercle"
+              },
+              {
+                "label": "Bouton du couvercle"
+              },
+              {
+                "label": "Bec"
+              },
+              {
+                "label": "Poignée"
+              },
+              {
+                "label": "Conduit de vapeur"
+              },
+              {
+                "label": "Interrupteur à vapeur"
+              },
+              {
+                "label": "Disque bimétal"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "puissance de chauffe",
+                  "unit": "W"
+                }
+              }
+            ]
+          }
+        },
         "motion": {
           "title": "Convection et ébullition",
           "captions": [
@@ -595,6 +1002,125 @@
       "tagline": "Période d’oscillation",
       "short": "Clés",
       "chapters": {
+        "explore": {
+          "title": "Comment ça marche",
+          "captions": [
+            "Des clés au bout d'un cordon battent la mesure, grands ou petits balancements.",
+            "Trois choses comptent : le pivot, la longueur du cordon et la gravité.",
+            "La gravité ramène les clés vers le milieu : elles accélèrent en tombant.",
+            "En bas, elles vont le plus vite, dépassent, remontent de l'autre côté et s'arrêtent.",
+            "Des clés plus lourdes oscillent pareil : seule la longueur change le rythme.",
+            "25 cm de cordon : un aller-retour dure environ une seconde."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Crochet mural"
+              },
+              {
+                "label": "Pivot"
+              },
+              {
+                "label": "Cordon"
+              },
+              {
+                "label": "Anneau"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Clés"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Crochet mural"
+              },
+              {
+                "label": "Pivot"
+              },
+              {
+                "label": "Même longueur"
+              },
+              {
+                "label": "Anneau"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Clés plus lourdes"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Porte-clés"
+              },
+              {
+                "label": "Cordon"
+              },
+              {
+                "label": "Anneau"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Lâchez ici"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Cordon"
+              },
+              {
+                "label": "Anneau"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "S'arrête, repart"
+              },
+              {
+                "label": "Clé"
+              },
+              {
+                "label": "Trajet du balancement"
+              }
+            ],
+            "beats": [
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "25 cm"
+                  },
+                  {}
+                ]
+              },
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "un aller-retour",
+                  "unit": "s"
+                }
+              }
+            ]
+          }
+        },
         "motion": {
           "title": "Durée d'oscillation",
           "captions": [
@@ -728,6 +1254,118 @@
       "tagline": "Ce qu’il y a dedans",
       "short": "Téléphone",
       "chapters": {
+        "explore": {
+          "title": "Comment ça marche",
+          "captions": [
+            "Un téléphone loge ordinateur, radio et batterie dans moins d'un centimètre.",
+            "Sous la vitre : une grille tactile, un écran lumineux, un circuit et une batterie.",
+            "Votre doigt change le champ électrique aux croisements de la grille : le téléphone sait où.",
+            "Chaque pixel OLED fait sa propre lumière ; un pixel noir est simplement éteint.",
+            "Des ions lithium circulent dans la batterie et poussent le courant vers les puces.",
+            "15 wattheures dans une batterie pleine : une bouilloire de 2 kW les use en 28 secondes."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Vitre arrière"
+              },
+              {
+                "label": "Caméra"
+              },
+              {
+                "label": "Objectif"
+              },
+              {
+                "label": "Objectif"
+              },
+              {
+                "label": "Bobine de charge"
+              },
+              {
+                "label": "Châssis"
+              },
+              {
+                "label": "Boutons de volume"
+              },
+              {
+                "label": "Boutons de volume"
+              },
+              {
+                "label": "Batterie"
+              },
+              {
+                "label": "Circuit imprimé"
+              },
+              {
+                "label": "Processeur"
+              },
+              {
+                "label": "Mémoire"
+              },
+              {
+                "label": "Puce radio"
+              },
+              {
+                "label": "Écran"
+              },
+              {
+                "label": "Pixel allumé"
+              },
+              {
+                "label": "Pixel allumé"
+              },
+              {
+                "label": "Pixel allumé"
+              },
+              {
+                "label": "Pixel éteint"
+              },
+              {
+                "label": "Grille tactile"
+              },
+              {
+                "label": "Grille tactile"
+              },
+              {
+                "label": "Grille tactile"
+              },
+              {
+                "label": "Grille tactile"
+              },
+              {
+                "label": "Grille tactile"
+              },
+              {
+                "label": "Grille tactile"
+              },
+              {
+                "label": "Grille tactile"
+              },
+              {
+                "label": "Vitre avant"
+              },
+              {
+                "label": "Doigt"
+              },
+              {
+                "label": "Ongle"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "énergie d'une batterie pleine",
+                  "unit": "Wh"
+                }
+              }
+            ]
+          }
+        },
         "inside": {
           "title": "Couches",
           "captions": [
@@ -871,6 +1509,88 @@
       "tagline": "Pourquoi le métal semble froid",
       "short": "Cuillère",
       "chapters": {
+        "explore": {
+          "title": "Comment ça marche",
+          "captions": [
+            "Laissez une cuillère en métal dans du thé chaud : le manche chauffe vite.",
+            "La chaleur va du thé, par le creux, jusqu'au manche puis à vos doigts.",
+            "Le thé chaud agite les atomes du métal ; des électrons libres portent vite cette agitation.",
+            "Le bois n'a pas d'électrons libres : la chaleur y avance bien plus lentement.",
+            "100 fois : la rapidité de la chaleur dans l'acier par rapport au bois.",
+            "Voilà pourquoi les manches de casseroles sont en bois ou plastique, et le fond en cuivre."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Tasse"
+              },
+              {
+                "label": "Anse de la tasse"
+              },
+              {
+                "label": "Thé chaud"
+              },
+              {
+                "label": "Creux"
+              },
+              {
+                "label": "Acier"
+              },
+              {
+                "label": "Manche"
+              },
+              {
+                "label": "Votre doigt"
+              },
+              {
+                "label": "Votre doigt"
+              },
+              {
+                "label": "Ongle"
+              },
+              {
+                "label": "Tasse"
+              },
+              {
+                "label": "Anse de la tasse"
+              },
+              {
+                "label": "Thé chaud"
+              },
+              {
+                "label": "Cuillère en bois"
+              },
+              {
+                "label": "Bois"
+              },
+              {
+                "label": "Casserole"
+              },
+              {
+                "label": "Fond en cuivre"
+              },
+              {
+                "label": "Support en acier"
+              },
+              {
+                "label": "Manche en bois"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "acier contre bois",
+                  "unit": "fois"
+                }
+              },
+              {}
+            ]
+          }
+        },
         "zoom": {
           "title": "Zoom avant",
           "lead": "Le métal est un réseau d'atomes dans une mer d'électrons libres.",

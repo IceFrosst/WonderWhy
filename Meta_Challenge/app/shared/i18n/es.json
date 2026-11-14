@@ -10,7 +10,8 @@
     "zoom": "Zoom",
     "whatif": "¿Y si...?",
     "compare": "Comparar",
-    "number": "El número"
+    "number": "El número",
+    "explore": "Explorar"
   },
   "objects": {
     "guitar": {
@@ -146,6 +147,125 @@
               "label": "La de afinación, dos octavas más",
               "unit": "Hz"
             }
+          }
+        },
+        "explore": {
+          "title": "Cómo funciona",
+          "captions": [
+            "Pulsa una cuerda y suena toda la guitarra. El sonido nace en la cuerda.",
+            "Una guitarra son seis cuerdas sobre una caja de madera hueca con tapa fina.",
+            "Una cuerda pulsada vibra cientos de veces por segundo, pero mueve poco aire.",
+            "La cuerda sacude el puente, el puente sacude la tapa y la tapa empuja el aire.",
+            "Al pisar un traste la cuerda se acorta, vibra más rápido y la nota sube.",
+            "110 vibraciones por segundo: la cuerda La al aire. El traste 12 la dobla a 220."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Caja hueca"
+              },
+              {
+                "label": "Tapa fina"
+              },
+              {
+                "label": "Boca"
+              },
+              {
+                "label": "Puente"
+              },
+              {
+                "label": "Mástil"
+              },
+              {
+                "label": "Clavijero"
+              },
+              {
+                "label": "Cejuela"
+              },
+              {
+                "label": "Clavija"
+              },
+              {
+                "label": "Clavija"
+              },
+              {
+                "label": "Clavija"
+              },
+              {
+                "label": "Clavija"
+              },
+              {
+                "label": "Clavija"
+              },
+              {
+                "label": "Clavija"
+              },
+              {
+                "label": "Traste 1"
+              },
+              {
+                "label": "Traste 2"
+              },
+              {
+                "label": "Traste 3"
+              },
+              {
+                "label": "Traste 4"
+              },
+              {
+                "label": "Traste 5"
+              },
+              {
+                "label": "Traste 6"
+              },
+              {
+                "label": "Traste 7"
+              },
+              {
+                "label": "Traste 8"
+              },
+              {
+                "label": "Traste 9"
+              },
+              {
+                "label": "Traste 10"
+              },
+              {
+                "label": "Traste 11"
+              },
+              {
+                "label": "Traste 12"
+              },
+              {
+                "label": "Seis cuerdas"
+              },
+              {
+                "label": "Una cuerda"
+              },
+              {
+                "label": "Parte que vibra"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {},
+                  {
+                    "text": "49 cm"
+                  }
+                ]
+              },
+              {
+                "number": {
+                  "label": "cuerda La al aire",
+                  "unit": "Hz"
+                }
+              }
+            ]
           }
         }
       }
@@ -298,6 +418,109 @@
               "unit": "m"
             }
           }
+        },
+        "explore": {
+          "title": "Cómo funciona",
+          "captions": [
+            "Toda pelota lanzada vuelve al suelo en curva. Dos fuerzas marcan el vuelo.",
+            "Dentro de la cubierta: una cámara de goma con aire a más presión que el exterior.",
+            "La gravedad tira hacia abajo siempre: la velocidad hacia arriba baja, se anula y se invierte.",
+            "El aire frena el movimiento y roba velocidad, así que el tiro real cae más corto.",
+            "En el bote, el aire comprimido actúa como un muelle y lanza la pelota hacia arriba.",
+            "Lanzada a 10 metros por segundo y 45 grados, cae a unos 10 metros."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Cubierta"
+              },
+              {
+                "label": "Cubierta"
+              },
+              {
+                "label": "Costura"
+              },
+              {
+                "label": "Válvula"
+              },
+              {
+                "label": "Costura"
+              },
+              {
+                "label": "Costura"
+              },
+              {
+                "label": "Costura"
+              },
+              {
+                "label": "Costura"
+              },
+              {
+                "label": "Costura"
+              },
+              {
+                "label": "Costura"
+              },
+              {
+                "label": "Cámara de goma"
+              },
+              {
+                "label": "Suelo"
+              },
+              {
+                "label": "Alcance"
+              },
+              {
+                "label": "Zona de contacto"
+              },
+              {
+                "label": "Pelota en vuelo"
+              },
+              {
+                "label": "Pelota en vuelo"
+              },
+              {
+                "label": "Sin aire"
+              },
+              {
+                "label": "Aterrizaje"
+              },
+              {
+                "label": "Aire comprimido"
+              },
+              {
+                "label": "Con aire"
+              },
+              {
+                "label": "Gravedad"
+              },
+              {
+                "label": "Velocidad"
+              },
+              {
+                "label": "Resistencia del aire"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "alcance a 10 m/s, sin aire",
+                  "unit": "m"
+                },
+                "fx": [
+                  {
+                    "text": "10.2 m"
+                  },
+                  {}
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -434,6 +657,120 @@
               "label": "Marcha corta, 34 y 34: triple empuje, pero solo",
               "unit": "m/vuelta"
             }
+          }
+        },
+        "explore": {
+          "title": "Cómo funciona",
+          "captions": [
+            "Una vuelta de pedales puede llevar la bici más de seis metros. Las marchas deciden cuánto.",
+            "Los pedales giran un plato grande; la cadena lleva ese giro a un piñón pequeño.",
+            "48 dientes delante, 16 detrás: la rueda trasera da tres vueltas por pedalada.",
+            "El precio: la rueda gira más rápido, pero el neumático empuja el suelo con mucha menos fuerza.",
+            "Cada vuelta de rueda avanza unos 2.1 metros: una pedalada te mueve 6.3 metros.",
+            "A 80 pedaladas por minuto, son 30 kilómetros por hora."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Plato, 48 dientes"
+              },
+              {
+                "label": "Eje de pedalier"
+              },
+              {
+                "label": "Biela"
+              },
+              {
+                "label": "Pedal"
+              },
+              {
+                "label": "Biela izquierda"
+              },
+              {
+                "label": "Pedal izquierdo"
+              },
+              {
+                "label": "Cadena"
+              },
+              {
+                "label": "Piñón, 16 dientes"
+              },
+              {
+                "label": "Rueda trasera"
+              },
+              {
+                "label": "Neumático"
+              },
+              {
+                "label": "Buje"
+              },
+              {
+                "label": "Radio"
+              },
+              {
+                "label": "Radio"
+              },
+              {
+                "label": "Radio"
+              },
+              {
+                "label": "Radio"
+              },
+              {
+                "label": "Vaina"
+              },
+              {
+                "label": "Tirante"
+              },
+              {
+                "label": "Tubo del sillín"
+              },
+              {
+                "label": "Tubo superior"
+              },
+              {
+                "label": "Tubo diagonal"
+              },
+              {
+                "label": "Horquilla"
+              },
+              {
+                "label": "Manillar"
+              },
+              {
+                "label": "Sillín"
+              },
+              {
+                "label": "Rueda delantera"
+              },
+              {
+                "label": "Neumático delantero"
+              },
+              {
+                "label": "2.1 m"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "una vuelta de rueda"
+                  },
+                  {},
+                  {}
+                ]
+              },
+              {
+                "number": {
+                  "label": "avance por pedalada",
+                  "unit": "m"
+                }
+              }
+            ]
           }
         }
       }
@@ -586,6 +923,76 @@
               "unit": "L"
             }
           }
+        },
+        "explore": {
+          "title": "Cómo funciona",
+          "captions": [
+            "Un hervidor lleva un litro de agua a ebullición en unos tres minutos.",
+            "Dentro: una resistencia bajo el fondo, el agua y un interruptor de vapor.",
+            "La corriente, al forzar su paso por la resistencia, convierte energía eléctrica en calor.",
+            "El agua junto al fondo caliente se dilata, pesa menos y sube; la fría baja.",
+            "El vapor llega a un disco bimetálico que se curva con el calor y corta la corriente.",
+            "2000 julios cada segundo: bastan para subir medio grado un litro."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Base eléctrica"
+              },
+              {
+                "label": "Conector"
+              },
+              {
+                "label": "Cable"
+              },
+              {
+                "label": "Jarra"
+              },
+              {
+                "label": "Fondo"
+              },
+              {
+                "label": "Resistencia"
+              },
+              {
+                "label": "Agua"
+              },
+              {
+                "label": "Tapa"
+              },
+              {
+                "label": "Pomo de la tapa"
+              },
+              {
+                "label": "Pico"
+              },
+              {
+                "label": "Asa"
+              },
+              {
+                "label": "Canal de vapor"
+              },
+              {
+                "label": "Interruptor de vapor"
+              },
+              {
+                "label": "Disco bimetálico"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "potencia de calentamiento",
+                  "unit": "W"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -718,6 +1125,125 @@
               "label": "Las mismas llaves en la Luna oscilan en",
               "unit": "s"
             }
+          }
+        },
+        "explore": {
+          "title": "Cómo funciona",
+          "captions": [
+            "Unas llaves en un cordón marcan un ritmo fijo, con vaivén grande o pequeño.",
+            "Solo importan tres cosas: el pivote, la longitud del cordón y la gravedad.",
+            "La gravedad tira de las llaves hacia el centro, y aceleran al caer.",
+            "Abajo van más rápido, se pasan, suben por el otro lado y frenan hasta pararse.",
+            "Unas llaves más pesadas tardan lo mismo; solo la longitud cambia el ritmo.",
+            "25 cm de cordón: una oscilación de ida y vuelta dura casi un segundo."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Gancho de pared"
+              },
+              {
+                "label": "Pivote"
+              },
+              {
+                "label": "Cordón"
+              },
+              {
+                "label": "Llavero"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Llaves"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Gancho de pared"
+              },
+              {
+                "label": "Pivote"
+              },
+              {
+                "label": "Misma longitud"
+              },
+              {
+                "label": "Llavero"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Llaves más pesadas"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Colgante"
+              },
+              {
+                "label": "Cordón"
+              },
+              {
+                "label": "Llavero"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Se suelta aquí"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Cordón"
+              },
+              {
+                "label": "Llavero"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Se para y vuelve"
+              },
+              {
+                "label": "Llave"
+              },
+              {
+                "label": "Trayectoria"
+              }
+            ],
+            "beats": [
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "25 cm"
+                  },
+                  {}
+                ]
+              },
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "una oscilación, ida y vuelta",
+                  "unit": "s"
+                }
+              }
+            ]
           }
         }
       }
@@ -862,6 +1388,118 @@
               "unit": "segundos"
             }
           }
+        },
+        "explore": {
+          "title": "Cómo funciona",
+          "captions": [
+            "Un móvil junta ordenador, radio y batería en menos de un centímetro.",
+            "Bajo el cristal: una rejilla táctil, una pantalla que da luz, una placa y una batería.",
+            "Tu dedo cambia el campo eléctrico donde se cruzan los hilos de la rejilla, y el móvil sabe dónde.",
+            "Cada píxel OLED da su propia luz; un píxel negro está simplemente apagado.",
+            "Iones de litio se mueven dentro de la batería y empujan corriente por los chips.",
+            "15 vatios-hora en una batería llena: un hervidor de 2 kW los gasta en 28 segundos."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Cristal trasero"
+              },
+              {
+                "label": "Cámara"
+              },
+              {
+                "label": "Lente de cámara"
+              },
+              {
+                "label": "Lente de cámara"
+              },
+              {
+                "label": "Bobina de carga"
+              },
+              {
+                "label": "Marco"
+              },
+              {
+                "label": "Botones de volumen"
+              },
+              {
+                "label": "Botones de volumen"
+              },
+              {
+                "label": "Batería"
+              },
+              {
+                "label": "Placa de circuitos"
+              },
+              {
+                "label": "Procesador"
+              },
+              {
+                "label": "Memoria"
+              },
+              {
+                "label": "Chip de radio"
+              },
+              {
+                "label": "Pantalla"
+              },
+              {
+                "label": "Píxel encendido"
+              },
+              {
+                "label": "Píxel encendido"
+              },
+              {
+                "label": "Píxel encendido"
+              },
+              {
+                "label": "Píxel apagado"
+              },
+              {
+                "label": "Rejilla táctil"
+              },
+              {
+                "label": "Rejilla táctil"
+              },
+              {
+                "label": "Rejilla táctil"
+              },
+              {
+                "label": "Rejilla táctil"
+              },
+              {
+                "label": "Rejilla táctil"
+              },
+              {
+                "label": "Rejilla táctil"
+              },
+              {
+                "label": "Rejilla táctil"
+              },
+              {
+                "label": "Cristal frontal"
+              },
+              {
+                "label": "Dedo"
+              },
+              {
+                "label": "Uña"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "energía de la batería llena",
+                  "unit": "Wh"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -982,6 +1620,88 @@
               "label": "La plata conduce mejor que el acero",
               "unit": "veces"
             }
+          }
+        },
+        "explore": {
+          "title": "Cómo funciona",
+          "captions": [
+            "Deja una cuchara de metal en té caliente y el mango pronto quema.",
+            "El calor viaja del té, por el cazo, mango arriba hasta tus dedos.",
+            "El té caliente agita los átomos del metal; los electrones libres llevan esa agitación rápido por el mango.",
+            "La madera no tiene electrones libres: el calor avanza mucho más despacio por una cuchara de madera.",
+            "100 veces: lo más rápido que pasa el calor por el acero que por la madera.",
+            "Por eso los mangos de sartén son de madera o plástico, y las buenas sartenes tienen fondo de cobre."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Taza"
+              },
+              {
+                "label": "Asa de la taza"
+              },
+              {
+                "label": "Té caliente"
+              },
+              {
+                "label": "Cazo"
+              },
+              {
+                "label": "Acero"
+              },
+              {
+                "label": "Asa"
+              },
+              {
+                "label": "Tu dedo"
+              },
+              {
+                "label": "Tu dedo"
+              },
+              {
+                "label": "Uña"
+              },
+              {
+                "label": "Taza"
+              },
+              {
+                "label": "Asa de la taza"
+              },
+              {
+                "label": "Té caliente"
+              },
+              {
+                "label": "Cazo de madera"
+              },
+              {
+                "label": "Madera"
+              },
+              {
+                "label": "Cazuela"
+              },
+              {
+                "label": "Fondo de cobre"
+              },
+              {
+                "label": "Soporte de acero"
+              },
+              {
+                "label": "Mango de madera"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "acero frente a madera",
+                  "unit": "veces"
+                }
+              },
+              {}
+            ]
           }
         }
       }

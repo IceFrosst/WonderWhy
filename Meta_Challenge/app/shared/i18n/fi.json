@@ -10,7 +10,8 @@
     "zoom": "Lähikuva",
     "whatif": "Entä jos",
     "compare": "Vertailu",
-    "number": "Luku"
+    "number": "Luku",
+    "explore": "Toiminta"
   },
   "objects": {
     "guitar": {
@@ -146,6 +147,125 @@
               "label": "Viritys-A kaksi oktaavia ylempänä",
               "unit": "Hz"
             }
+          }
+        },
+        "explore": {
+          "title": "Näin se toimii",
+          "captions": [
+            "Näpäytä yhtä kieltä, niin koko kitara soi. Ääni syntyy kielessä.",
+            "Kitarassa on kuusi kieltä ontelon puulaatikon päällä, jonka kansi on ohut.",
+            "Näpäytetty kieli heiluu satoja kertoja sekunnissa, mutta liikuttaa vähän ilmaa.",
+            "Kieli ravistaa talaa, tala leveää kantta, ja kansi työntää ilmaa.",
+            "Nauhaa painamalla kieli lyhenee, heiluu nopeammin ja sävel nousee.",
+            "110 heilahdusta sekunnissa: avoin A-kieli. Nauha 12 puolittaa pituuden: 220."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Ontto runko"
+              },
+              {
+                "label": "Ohut kansi"
+              },
+              {
+                "label": "Ääniaukko"
+              },
+              {
+                "label": "Tala"
+              },
+              {
+                "label": "Kaula"
+              },
+              {
+                "label": "Kielikoneisto"
+              },
+              {
+                "label": "Satula"
+              },
+              {
+                "label": "Viritysavain"
+              },
+              {
+                "label": "Viritysavain"
+              },
+              {
+                "label": "Viritysavain"
+              },
+              {
+                "label": "Viritysavain"
+              },
+              {
+                "label": "Viritysavain"
+              },
+              {
+                "label": "Viritysavain"
+              },
+              {
+                "label": "Nauha 1"
+              },
+              {
+                "label": "Nauha 2"
+              },
+              {
+                "label": "Nauha 3"
+              },
+              {
+                "label": "Nauha 4"
+              },
+              {
+                "label": "Nauha 5"
+              },
+              {
+                "label": "Nauha 6"
+              },
+              {
+                "label": "Nauha 7"
+              },
+              {
+                "label": "Nauha 8"
+              },
+              {
+                "label": "Nauha 9"
+              },
+              {
+                "label": "Nauha 10"
+              },
+              {
+                "label": "Nauha 11"
+              },
+              {
+                "label": "Nauha 12"
+              },
+              {
+                "label": "Kuusi kieltä"
+              },
+              {
+                "label": "A-kieli"
+              },
+              {
+                "label": "Värähtelevä osa"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {},
+                  {
+                    "text": "49 cm"
+                  }
+                ]
+              },
+              {
+                "number": {
+                  "label": "avoin A-kieli",
+                  "unit": "Hz"
+                }
+              }
+            ]
           }
         }
       }
@@ -298,6 +418,109 @@
               "unit": "m"
             }
           }
+        },
+        "explore": {
+          "title": "Näin se toimii",
+          "captions": [
+            "Jokainen heitetty pallo kaartuu takaisin maahan. Kaksi voimaa muokkaa lennon.",
+            "Kuoren sisällä on kumipussi, jonka ilmanpaine on ulkoilmaa suurempi.",
+            "Painovoima vetää koko ajan alas, joten nousunopeus hupenee, nollautuu ja kääntyy.",
+            "Ilma vastustaa liikettä ja vie vauhtia, joten oikea heitto jää lyhyemmäksi.",
+            "Pomppussa puristunut ilma toimii kuin jousi ja heittää pallon takaisin ylös.",
+            "Heitettynä 10 metriä sekunnissa 45 asteen kulmaan se laskeutuu noin 10 metrin päähän."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Kuori"
+              },
+              {
+                "label": "Kuori"
+              },
+              {
+                "label": "Sauma"
+              },
+              {
+                "label": "Venttiili"
+              },
+              {
+                "label": "Sauma"
+              },
+              {
+                "label": "Sauma"
+              },
+              {
+                "label": "Sauma"
+              },
+              {
+                "label": "Sauma"
+              },
+              {
+                "label": "Sauma"
+              },
+              {
+                "label": "Sauma"
+              },
+              {
+                "label": "Kumipussi"
+              },
+              {
+                "label": "Maa"
+              },
+              {
+                "label": "Kantama"
+              },
+              {
+                "label": "Kosketuskohta"
+              },
+              {
+                "label": "Lentävä pallo"
+              },
+              {
+                "label": "Lentävä pallo"
+              },
+              {
+                "label": "Ilman ilmaa"
+              },
+              {
+                "label": "Laskeutuminen"
+              },
+              {
+                "label": "Puristunut ilma"
+              },
+              {
+                "label": "Ilman kanssa"
+              },
+              {
+                "label": "Painovoima"
+              },
+              {
+                "label": "Nopeus"
+              },
+              {
+                "label": "Ilmanvastus"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "kantama 10 m/s heitolla, ei ilmaa",
+                  "unit": "m"
+                },
+                "fx": [
+                  {
+                    "text": "10.2 m"
+                  },
+                  {}
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -434,6 +657,120 @@
               "label": "Pieni vaihde 34/34: työntö 3-kertainen, matka vain",
               "unit": "m/kierros"
             }
+          }
+        },
+        "explore": {
+          "title": "Näin se toimii",
+          "captions": [
+            "Yksi poljinkierros voi viedä pyörää yli kuusi metriä. Vaihteet ratkaisevat, kuinka pitkälle.",
+            "Poljin pyörittää isoa eturatasta; ketju vie liikkeen pienelle takarattaalle.",
+            "Edessä 48 hammasta, takana 16: takapyörä pyörii kolme kertaa poljinkierroksessa.",
+            "Hinta: pyörä pyörii nopeammin, mutta rengas työntää tietä paljon lempeämmin.",
+            "Yksi pyöränkierros vierii noin 2.1 metriä, joten poljinkierros vie 6.3 metriä.",
+            "80 poljinkierroksella minuutissa vauhti on 30 kilometriä tunnissa."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Eturatas, 48 hammasta"
+              },
+              {
+                "label": "Poljinakseli"
+              },
+              {
+                "label": "Poljinkampi"
+              },
+              {
+                "label": "Poljin"
+              },
+              {
+                "label": "Vasen poljinkampi"
+              },
+              {
+                "label": "Vasen poljin"
+              },
+              {
+                "label": "Ketju"
+              },
+              {
+                "label": "Takaratas, 16 hammasta"
+              },
+              {
+                "label": "Takapyörä"
+              },
+              {
+                "label": "Rengas"
+              },
+              {
+                "label": "Napa"
+              },
+              {
+                "label": "Pinna"
+              },
+              {
+                "label": "Pinna"
+              },
+              {
+                "label": "Pinna"
+              },
+              {
+                "label": "Pinna"
+              },
+              {
+                "label": "Ketjuhaarukka"
+              },
+              {
+                "label": "Istuinhaarukka"
+              },
+              {
+                "label": "Satulaputki"
+              },
+              {
+                "label": "Yläputki"
+              },
+              {
+                "label": "Alaputki"
+              },
+              {
+                "label": "Etuhaarukka"
+              },
+              {
+                "label": "Ohjaustanko"
+              },
+              {
+                "label": "Satula"
+              },
+              {
+                "label": "Etupyörä"
+              },
+              {
+                "label": "Eturengas"
+              },
+              {
+                "label": "2.1 m"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "yksi pyöränkierros"
+                  },
+                  {},
+                  {}
+                ]
+              },
+              {
+                "number": {
+                  "label": "eteneminen poljinkierroksella",
+                  "unit": "m"
+                }
+              }
+            ]
           }
         }
       }
@@ -586,6 +923,76 @@
               "unit": "L"
             }
           }
+        },
+        "explore": {
+          "title": "Näin se toimii",
+          "captions": [
+            "Vedenkeitin kuumentaa litran vettä kiehuvaksi noin kolmessa minuutissa.",
+            "Sisällä: lämmitysvastus pohjan alla, vesi ja höyrykytkin.",
+            "Vastuksen läpi pakotettu virta muuttaa sähköenergian lämmöksi.",
+            "Kuumaa pohjaa koskeva vesi laajenee, kevenee ja nousee; kylmempi vesi laskeutuu.",
+            "Höyry saavuttaa bimetallilevyn, joka taipuu kuumana ja katkaisee virran.",
+            "2000 joulea sekunnissa: riittää lämmittämään litran vettä puoli astetta."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Virtajalusta"
+              },
+              {
+                "label": "Virtaliitin"
+              },
+              {
+                "label": "Johto"
+              },
+              {
+                "label": "Kannu"
+              },
+              {
+                "label": "Pohja"
+              },
+              {
+                "label": "Lämmitysvastus"
+              },
+              {
+                "label": "Vesi"
+              },
+              {
+                "label": "Kansi"
+              },
+              {
+                "label": "Kannen nuppi"
+              },
+              {
+                "label": "Nokka"
+              },
+              {
+                "label": "Kahva"
+              },
+              {
+                "label": "Höyrykanava"
+              },
+              {
+                "label": "Höyrykytkin"
+              },
+              {
+                "label": "Bimetallilevy"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "lämmitysteho",
+                  "unit": "W"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -718,6 +1125,125 @@
               "label": "Samat avaimet Kuussa heilahtavat ajassa",
               "unit": "s"
             }
+          }
+        },
+        "explore": {
+          "title": "Näin se toimii",
+          "captions": [
+            "Avainnauhassa heiluvat avaimet pitävät tasaista tahtia, heilahdus laaja tai pieni.",
+            "Vain kolme asiaa merkitsee: ripustuskohta, nauhan pituus ja painovoima.",
+            "Painovoima vetää avaimia kohti keskikohtaa, joten ne kiihtyvät pudotessaan.",
+            "Alhaalla vauhti on suurin, avaimet menevät yli, nousevat toiselle puolelle ja pysähtyvät.",
+            "Painavammat avaimet heiluvat samassa ajassa; vain pituus muuttaa tahtia.",
+            "25 cm nauhaa: yksi heilahdus edestakaisin kestää noin sekunnin."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Seinäkoukku"
+              },
+              {
+                "label": "Ripustuskohta"
+              },
+              {
+                "label": "Avainnauha"
+              },
+              {
+                "label": "Avainrengas"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Avaimet"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Seinäkoukku"
+              },
+              {
+                "label": "Ripustuskohta"
+              },
+              {
+                "label": "Sama pituus"
+              },
+              {
+                "label": "Avainrengas"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Painavammat avaimet"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Avaimenperä"
+              },
+              {
+                "label": "Avainnauha"
+              },
+              {
+                "label": "Avainrengas"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Päästä irti tästä"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Avainnauha"
+              },
+              {
+                "label": "Avainrengas"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Pysähtyy, kääntyy"
+              },
+              {
+                "label": "Avain"
+              },
+              {
+                "label": "Heilahdusrata"
+              }
+            ],
+            "beats": [
+              {},
+              {
+                "fx": [
+                  {
+                    "text": "25 cm"
+                  },
+                  {}
+                ]
+              },
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "yksi heilahdus edestakaisin",
+                  "unit": "s"
+                }
+              }
+            ]
           }
         }
       }
@@ -862,6 +1388,118 @@
               "unit": "sekuntia"
             }
           }
+        },
+        "explore": {
+          "title": "Näin se toimii",
+          "captions": [
+            "Puhelimeen mahtuu tietokone, radio ja akku alle sentin paksuuteen.",
+            "Lasin alla: kosketusruudukko, valoa tuottava näyttö, piirilevy ja akku.",
+            "Sormesi muuttaa sähkökenttää ruudukon risteävissä johtimissa, joten puhelin tietää paikan.",
+            "Jokainen OLED-piste tuottaa oman valonsa; musta piste on vain sammutettu.",
+            "Litiumionit liikkuvat akun sisällä ja työntävät virtaa piirien läpi.",
+            "15 wattituntia täydessä akussa: 2 kW:n keitin kuluttaa sen 28 sekunnissa."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Takalasi"
+              },
+              {
+                "label": "Kamera"
+              },
+              {
+                "label": "Kameran linssi"
+              },
+              {
+                "label": "Kameran linssi"
+              },
+              {
+                "label": "Latauskela"
+              },
+              {
+                "label": "Runko"
+              },
+              {
+                "label": "Äänenvoimakkuuspainikkeet"
+              },
+              {
+                "label": "Äänenvoimakkuuspainikkeet"
+              },
+              {
+                "label": "Akku"
+              },
+              {
+                "label": "Piirilevy"
+              },
+              {
+                "label": "Prosessori"
+              },
+              {
+                "label": "Muisti"
+              },
+              {
+                "label": "Radiopiiri"
+              },
+              {
+                "label": "Näyttö"
+              },
+              {
+                "label": "Palava piste"
+              },
+              {
+                "label": "Palava piste"
+              },
+              {
+                "label": "Palava piste"
+              },
+              {
+                "label": "Sammunut piste"
+              },
+              {
+                "label": "Kosketusruudukko"
+              },
+              {
+                "label": "Kosketusruudukko"
+              },
+              {
+                "label": "Kosketusruudukko"
+              },
+              {
+                "label": "Kosketusruudukko"
+              },
+              {
+                "label": "Kosketusruudukko"
+              },
+              {
+                "label": "Kosketusruudukko"
+              },
+              {
+                "label": "Kosketusruudukko"
+              },
+              {
+                "label": "Suojalasi"
+              },
+              {
+                "label": "Sormi"
+              },
+              {
+                "label": "Sormenkynsi"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "täyden akun energia",
+                  "unit": "Wh"
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -982,6 +1620,88 @@
               "label": "Hopea johtaa paremmin kuin teräs",
               "unit": "kertaa"
             }
+          }
+        },
+        "explore": {
+          "title": "Näin se toimii",
+          "captions": [
+            "Jätä metallilusikka kuumaan teehen, ja varsi lämpenee pian.",
+            "Lämmön täytyy kulkea teestä kuppiosan ja varren kautta sormiisi.",
+            "Kuuma tee ravistaa metallin atomeja; vapaat elektronit kuljettavat värinän nopeasti varteen.",
+            "Puussa ei ole vapaita elektroneja, joten lämpö etenee puulusikassa paljon hitaammin.",
+            "100 kertaa: näin paljon nopeammin lämpö kulkee teräksessä kuin puussa.",
+            "Siksi pannunvarret ovat puuta tai muovia ja hyvissä pannuissa on kuparipohja."
+          ],
+          "spec": {
+            "parts": [
+              {
+                "label": "Muki"
+              },
+              {
+                "label": "Mukin korva"
+              },
+              {
+                "label": "Kuuma tee"
+              },
+              {
+                "label": "Kuppiosa"
+              },
+              {
+                "label": "Teräs"
+              },
+              {
+                "label": "Varsi"
+              },
+              {
+                "label": "Sormesi"
+              },
+              {
+                "label": "Sormesi"
+              },
+              {
+                "label": "Kynsi"
+              },
+              {
+                "label": "Muki"
+              },
+              {
+                "label": "Mukin korva"
+              },
+              {
+                "label": "Kuuma tee"
+              },
+              {
+                "label": "Puinen kuppiosa"
+              },
+              {
+                "label": "Puu"
+              },
+              {
+                "label": "Kasari"
+              },
+              {
+                "label": "Kuparipohja"
+              },
+              {
+                "label": "Teräskannake"
+              },
+              {
+                "label": "Puinen varsi"
+              }
+            ],
+            "beats": [
+              {},
+              {},
+              {},
+              {},
+              {
+                "number": {
+                  "label": "teräs vs. puu",
+                  "unit": "kertaa"
+                }
+              },
+              {}
+            ]
           }
         }
       }
