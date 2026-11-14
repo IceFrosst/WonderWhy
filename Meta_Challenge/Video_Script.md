@@ -5,79 +5,76 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 4, ~1:21)
-
-> **Objects (picked 14 Nov):** grass (reveal, answers the child's question), 3D printer (the real demo run, Act 4), sauna and a gym machine (montage, Act 5), the glasses explaining themselves (ending, Act 7). Only these get built; Act 4 and 5 rows below still need rewriting for them.
+# Video script: "Never stop asking why" (draft 5, 1:22)
 
 > [!summary]
-> Story in colour: **gold (child) → grey (adult) → gold + glowing lines (glasses)**. Readable muted: every shot has its text. Source key: **AI** = generated still/clip · **REAL** = filmed today · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our video-kit clip (clean, black background, Screen blend).
+> Story in colour: **gold (child) → grey (adult) → gold + glowing lines (glasses)**. Every shot readable muted.
+> **Objects:** grass (child only), **noise-cancelling earbuds** (reveal), **3D printer** (real demo run), **sauna** and **gym machine** (montage), **the glasses explaining themselves** (ending).
+> **Source key:** **AI** = generated still/clip · **REAL** = filmed today · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean animation on black, Screen-blended over real footage in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 
-## Act 1: the child (0:00-0:04) — gold, 2 shots only
-| # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
+## Lines (all on-screen text, in order)
+1. *Why is the grass green?* · 2. *How does the world work?* · 3. *You used to ask why.* · 4. *Then you stopped.* · 5. **Look at anything. See how it really works.** · 6. **Feed your curiosity. Grow.** · 7. *Look. Pinch. Ask.* · 8. *Real wait: NN s (sped up)* · 9. *Opens the part you asked about* · 10. *Swipe for a new way to see it* · 11. *Why steam bites* · 12. *Lighter than it feels* · 13. *One photo, only when you pinch. Not saved.* · 14. *Says when it's not sure* · 15. *Any language. No sound needed.* · 16. *Even this?* · 17. *It even explains itself.* · 18. **Never stop asking why.** · End card: **Physics Lens. See how the world really works.**
+
+## Act 1: the child (0:00-0:04) — gold, dreamy
+| # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 1 | 0:00-0:02 | AI | Child in tall summer grass, face close to one blade lit by low sun | Slow push-in, warm grade, film grain | *Why is the grass green?* | Kid's voice: "Why is the grass green?" · soft piano |
-| 2 | 0:02-0:04 | AI | The child looks up at the sky; dandelion seeds drift past | Seeds blow towards the camera and blur: **transition** | *How does the world work?* | Kid: "How does the world work?" · music cuts on the last word |
+| 1 | 0:00-0:02 | AI | A child in tall summer grass, face close to one sunlit blade | Slow push-in, warm grade, film grain | *Why is the grass green?* | Kid's voice: "Why is the grass green?" · soft piano |
+| 2 | 0:02-0:04 | AI | The child looks up at the sky; dandelion seeds blow towards the camera | Seeds fill the frame and blur | *How does the world work?* | Kid: "How does the world work?" · music cuts on "work" |
 
-## Act 2: the adult (0:04-0:08) — grey, very fast, real
-Fast cuts on a dull ticking beat. Desaturated, cold. Nobody looks at anything.
-| # | Time | Source | Shot | On-screen text | Audio |
+## Act 2: the adult (0:04-0:09) — grey, fast cuts, real
+Desaturated and cold, a dull ticking beat, 0.5-1 s cuts. Nobody looks at anything.
+| # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
-| 3 | 0:04-0:05 | REAL | **Match cut**: the seed blur becomes a thumb snoozing a phone alarm | *You used to ask why.* | Alarm, cut short |
-| 4 | 0:05-0:06 | REAL | Thumb scrolling a feed | (text stays) | Tick, tick |
-| 5 | 0:06-0:07 | REAL | **IceFrost sitting in the grass** (same setting as the child, now adult), head down in the phone, ignoring everything around | *Then you stopped.* | Tick, distant wind |
-| 6 | 0:07-0:08 | REAL | **IceFrost walking through a crowd**, zoned out, noise all around, eyes empty | (hold) | Crowd noise rises, muffled |
-| 7 | 0:08-0:09 | REAL | Back in the grass: you put the phone down, glasses on, and look at **one blade of grass** (the child's shot 1, now you). Close on the band hand | | Noise cuts to silence. **Click** on the pinch |
+| 3 | 0:04-0:05 | REAL | Match cut: the seed blur becomes a thumb snoozing a phone alarm | *You used to ask why.* | Alarm, cut short |
+| 4 | 0:05-0:06 | REAL | A thumb scrolling a feed | (stays) | Tick, tick |
+| 5 | 0:06-0:07 | REAL | IceFrost sitting on grass outside, head down in the phone | *Then you stopped.* | Tick, distant wind |
+| 6 | 0:07-0:09 | REAL | IceFrost walking through the hackathon crowd, zoned out | (stays) | Crowd noise swells, overwhelming |
 
-## Act 3: the reveal + intro lines (0:09-0:16)
-| # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
+## Act 3: the reveal — earbuds (0:09-0:18)
+| # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 8 | 0:09-0:12 | REAL + RENDER | Pinch. **The child's question answered**: sunlight splits into colours, red and blue are absorbed by the leaf, green bounces back to your eye. Glowing lines in a **fixed square, right of centre** (the display is in one eye; lines are not stuck to the object) | 4-frame fade in, grade snaps back to gold | **Look at anything.** · **See how it really works.** | Music back in, brighter |
-| 9 | 0:12-0:16 | GLASS | Real recording from the glasses of the same card, yellow system frame left in | Corner tag "Recorded on the glasses" | **Feed your curiosity. Grow.** · *Physics Lens* | Music continues |
+| 7 | 0:09-0:10 | REAL | IceFrost puts in noise-cancelling earbuds | | | **Hard cut to silence** |
+| 8 | 0:10-0:11 | REAL | Glasses on, IceFrost looks at the earbud case in the hand, pinches with the band | Close on the band hand | | One sharp click |
+| 9 | 0:11-0:14 | REAL + RENDER | The noise wave, an opposite "anti-noise" wave, the two merging into a **flat line** | 4-frame fade in, grade snaps back to gold | **Look at anything. See how it really works.** | Music in, bright |
+| 10 | 0:14-0:18 | GLASS | Real recording of the same answer on the glasses, yellow system frame left in | Corner tag *Recorded on the glasses* | **Feed your curiosity. Grow.** · *Physics Lens* | Music continues |
 
-## Act 4: how it works for you (0:16-0:38, retime after objects are picked) — one real run
-| # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
+## Act 4: a real run — 3D printer (0:18-0:38)
+| # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 10 | 0:14-0:18 | REAL | Wearer at the **robot arm**, looks, pinches | Close on hand, then face | *Look. Pinch.* | Click |
-| 11 | 0:18-0:21 | GLASS | "What should I explain?" card | | *Ask anything* | Wearer says: "How does it lift that?" |
-| 12 | 0:21-0:24 | GLASS | Progress card, sped up | Speed ramp, real number on screen | *Real wait: 12 s (sped up)* | Ticking, compressed |
-| 13 | 0:24-0:30 | GLASS | The answer: robot-arm lens opens at the part asked about (torque at each joint), step 1 → 2 | Cut on each pinch | *Opens the part you asked about* | Click per step |
-| 14 | 0:30-0:36 | GLASS | Swipe: another lens (The number, What if) | Quick slide transition | *Swipe = a new way to see it* | Whoosh on swipe |
+| 11 | 0:18-0:21 | REAL | IceFrost at the 3D printer, looks, pinches | Close on the hand, then the face | *Look. Pinch. Ask.* | Printer hum, click |
+| 12 | 0:21-0:24 | GLASS | "What should I explain?" card | | | IceFrost: "How does it build this?" |
+| 13 | 0:24-0:26 | GLASS | Progress card | Speed ramp | *Real wait: NN s (sped up)* | Ticking, compressed |
+| 14 | 0:26-0:32 | GLASS | The answer opens at the part asked about: hot plastic, layers stacking and cooling; step 1 → 2 | Cut on each pinch | *Opens the part you asked about* | Click per step |
+| 15 | 0:32-0:38 | GLASS | Swipe to another lens (The number: grams of plastic, minutes per layer) | Quick slide | *Swipe for a new way to see it* | Whoosh |
 
-## Act 5: the whole world has a backstage (0:36-0:50) — montage, 2.5 s each
-| # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
+## Act 5: everyday life has a backstage (0:38-0:46) — montage
+| # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 15 | 0:36-0:38 | REAL + RENDER | **Sauna**: water on hot stones, steam rising (filmed on a phone; glasses stay outside the hot room) | Lines: steam rising, heat flowing up | *Why steam bites* | Hiss of water on stones |
-| 16 | 0:38-0:41 | REAL + RENDER | **Spin bike** wheel spinning, magnet near it | Lines: invisible magnetic brake slowing the wheel | *Brakes without touching* | Wheel whirr |
-| 17 | 0:41-0:43 | REAL + RENDER | **3D printer** nozzle close-up | Lines: hot plastic, cooling layers | *Melt. Stack. Cool.* | Printer motor |
-| 18 | 0:43-0:46 | REAL + RENDER | **Arena wide**: router, speakers, the crowd | Lines: Wi-Fi waves / sound waves filling the hall | *The invisible, made visible* | Arena echo |
-| 19 | 0:46-0:50 | REAL | Fast cuts: 3 other hackers pinching at objects, smiling | Beat cuts on the music | *Every object becomes a lesson* | Music peak |
+| 16 | 0:38-0:42 | REAL + RENDER | Sauna: water ladled on hot stones, steam rising (filmed on a phone; the glasses stay outside the hot room) | Lines: steam rising, heat flowing up | *Why steam bites* | Hiss of water on stones |
+| 17 | 0:42-0:46 | REAL + RENDER | Gym machine in use (spin bike or cable machine) | Lines: the hidden mechanism (magnetic brake, or pulleys halving the weight) | *Lighter than it feels* (cable) / *Brakes without touching* (spin bike) | Machine whirr, beat |
 
-## Act 6: trust (0:50-1:00)
-| # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
+## Act 6: trust (0:46-0:58)
+| # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 20 | 0:50-0:53 | GLASS | Consent card | | *One photo, only when you pinch. Not saved.* | Music softer |
-| 21 | 0:53-0:56 | GLASS | "Not sure what this is" card | | *Says when it's not sure* | |
-| 22 | 0:56-1:00 | GLASS | Same card in Finnish | Text switches language | *Any language. No sound needed.* | |
+| 18 | 0:46-0:50 | GLASS | Consent card | | *One photo, only when you pinch. Not saved.* | Music softer |
+| 19 | 0:50-0:54 | GLASS | "Not sure what this is" card | | *Says when it's not sure* | |
+| 20 | 0:54-0:58 | GLASS | The same card in Finnish | | *Any language. No sound needed.* | |
 
-## Act 7: never stop (1:00-1:19) — bookend
-| # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
+## Act 7: never stop (0:58-1:22) — bookend
+| # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 23 | 1:00-1:05 | REAL | Wearer looks down at **their own wrist band**, pinches | Close on the band | *Even this?* | Click |
-| 24 | 1:05-1:10 | GLASS + RENDER | The glasses explain themselves: muscle signals from the wrist, light bent into one eye | | *It even explains itself* | Music builds |
-| 25 | 1:10-1:14 | REAL → AI | The wearer smiles; **match cut** back to the child in the grass (shot 1), now looking at the camera's direction, glowing lines on the grass blade | Grade fully gold | *Never stop asking why.* | Kid, happy: "Why?" · last note |
-| 26 | 1:14-1:19 | Title | Black. Logo | Fade in | **See how the world really works.** · Physics Lens · Meta Ray-Ban Display · Junction 2026 | Silence, one click |
+| 21 | 0:58-1:02 | REAL | Another hacker tries the glasses at our table, real reaction | | | Real laugh or "whoa" |
+| 22 | 1:02-1:06 | REAL | IceFrost looks down at the own wrist band, pinches | Close on the band | *Even this?* | Click |
+| 23 | 1:06-1:12 | GLASS + RENDER | The glasses explain themselves: muscle signals read at the wrist; light bent into one eye | | *It even explains itself.* | Music builds |
+| 24 | 1:12-1:16 | REAL → AI | IceFrost smiles; match cut to the child in the grass, now with glowing lines on the blade | Grade fully gold | **Never stop asking why.** | Kid, happy: "Why?" · last note |
+| 25 | 1:16-1:22 | Title | Black, logo | Fade in | **Physics Lens. See how the world really works.** · Meta Ray-Ban Display · Junction 2026 | One click, silence |
 
-## To make this
-| What | Who / how | Needed by |
+## To make
+| What | How | By |
 |---|---|---|
-| AI child shots 1-4, 25 (five stills → 3 s clips, one consistent style) | Image + image-to-video model (needs `/login grok-build` on the laptop) | Sat evening |
-| Kid's voice (6 lines) | A real child recorded over a call, or a teammate pitched up | Sat evening |
-| REAL shots 5-8, 10, 15-19, 23, 25 | IceFrost films; tripod for the plates (dark space right of the object for the square) | Sat, before 17:00 |
-| GLASS recordings 9, 11-14, 20-22, 24 | "Record display" in Meta AI, two takes each | Sat 13:00-14:00 |
-| RENDER clips for printer, robot arm, sauna, spin bike, Wi-Fi/sound, Neural Band | Alex's team builds the new library objects and exports clean clips | Sat 18:00 |
-| Music | Licensed or free-to-use track with a soft start, a lift at 0:14, a peak at 0:52 | Sat |
-
-## Honesty rules
-- Rendered lines go in a fixed square (the real display is a fixed panel in one eye), tagged "Simulated view" where it could be mistaken for glasses footage.
-- The real wait is shown with its number, sped up, never hidden.
-- Shots 15-18 need the new library objects first. If one is not built in time, drop that shot; never show an object the app can't explain.
+| AI child shots 1, 2, 24 (one consistent style) | Image + image-to-video (needs `/login grok-build`) | Sat evening |
+| Kid's voice (3 lines) | A real child over a call, or a teammate pitched up | Sat evening |
+| REAL shots 3-8, 11, 16, 17, 21, 22, 24 | Phone, tripod for 9/16/17 plates (dark space right of the object) | Sat before dark for shot 5 |
+| GLASS shots 10, 12-15, 18-20, 23 | "Record display" in Meta AI, two takes each | Once each object is in the library |
+| New library objects + clean renders: earbuds (noise cancelling), 3D printer, sauna, gym machine, Neural Band / display | Alex's team | Sat ~18:00 |
+| Music | Free-to-use track: soft start, cut at 0:04, lift at 0:11, peak at 0:42 | Sat |
