@@ -67,6 +67,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var displayView: TextView
     private lateinit var batteryView: TextView
     private lateinit var deviceView: TextView
+    private lateinit var glassesView: TextView
+    private lateinit var consentView: TextView
     private lateinit var logView: TextView
     private lateinit var logScroll: ScrollView
 
@@ -92,7 +94,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        bridge = BridgeClient(Prefs.bridge(this), Prefs.bridgeToken(this))
+        bridge = BridgeClient(BridgeConfig.from(Prefs.bridge(this), Prefs.bridgeToken(this)), ::log)
         rig = MockRig(applicationContext)
         controller = GlassesController(
             ctx = applicationContext,
@@ -133,6 +135,18 @@ class MainActivity : ComponentActivity() {
         observe()
         requestRuntimePermissions()
         handleDeepLink(intent)
+    }
+
+    /**
+     * Leaving the app with Back finishes the activity but not the process: without this the old session
+     * stayed, and the next Connect failed with "A session already exists for this device".
+     */
+    override fun onDestroy() {
+        if (isFinishing) {
+            controller.disconnect()
+            if (rig.running) rig.stop()
+        }
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -199,6 +213,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun section(title: String) = label(title, 14f, MUTED, bold = true).apply { setPadding(dp(4), dp(16), 0, dp(4)) }
+
+    private fun watch(f: EditText, onChange: (String) -> Unit) = f.addTextChangedListener(object : android.text.TextWatcher {
+        override fun afterTextChanged(e: android.text.Editable?) = onChange(e?.toString().orEmpty())
+        override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+        override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+    })
+
+    /** URL and token apply to the next request as typed (and are saved): no Disconnect + Connect needed. */
+    private fun applyBridgeFields() {
+        val url = urlField.text.toString()
+        val token = tokenField.text.toString()
+        bridge.config = BridgeConfig.from(url, token)
+        Prefs.setBridge(this, url.trim())
+        Prefs.setBridgeToken(this, token.trim())
+    }
 
     private fun field(value: String, hintText: String, password: Boolean) = EditText(this).apply {
         setText(value)
@@ -285,6 +314,10 @@ class MainActivity : ComponentActivity() {
             topMargin = dp(8)
         })
 
+        // The glasses card as text, near the top in both modes (the smoke script reads it with uiautomator).
+        glassesView = label("Glasses show: -", 14f, MUTED).apply { setPadding(dp(4), dp(8), dp(4), 0) }
+        root.addView(glassesView)
+
         // Mock rig: the glasses display preview plus the inputs and device states the kit can drive.
         mockSection = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val side = minOf(resources.displayMetrics.widthPixels - dp(32), dp(320))
@@ -326,19 +359,20 @@ class MainActivity : ComponentActivity() {
         root.addView(urlField)
         tokenField = field(Prefs.bridgeToken(this), "Bridge token (blank = none)", password = true)
         root.addView(tokenField)
+        watch(urlField) { applyBridgeFields() }
+        watch(tokenField) { applyBridgeFields() }
         // Dev only, not saved: PROTOCOL forceObjectId, so a bridge without a model key answers with a library object.
         root.addView(field("", "Force object id (dev test, not saved)", password = false).apply {
-            addTextChangedListener(object : android.text.TextWatcher {
-                override fun afterTextChanged(e: android.text.Editable?) { controller.forceObjectId = e?.toString()?.trim()?.ifEmpty { null } }
-                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-            })
+            watch(this) { controller.forceObjectId = it.trim().ifEmpty { null } }
         })
+        // Dev: forget the first-run consent so the next photo asks again (shown in Status).
+        root.addView(row(button("Reset consent") { controller.resetConsent(); showConsentStatus() }))
 
         root.addView(section("Status"))
         regView = label(""); sessionView = label(""); displayView = label(""); batteryView = label(""); deviceView = label("")
         speechView = label("")
-        listOf(regView, sessionView, displayView, speechView, batteryView, deviceView).forEach { root.addView(it) }
+        consentView = label("")
+        listOf(regView, sessionView, displayView, speechView, batteryView, deviceView, consentView).forEach { root.addView(it) }
 
         photoLabel = label("Last photo sent: none yet", 14f).apply { setPadding(0, dp(8), 0, 0) }
         root.addView(photoLabel)
@@ -359,6 +393,11 @@ class MainActivity : ComponentActivity() {
         setContentView(scroller)
         updateMockVisibility()
         relabel()
+        showConsentStatus()
+    }
+
+    private fun showConsentStatus() {
+        consentView.text = "Consent: " + if (Prefs.consent(this)) "given" else "not yet (asked before the first photo)"
     }
 
     private fun relabel() {
@@ -376,8 +415,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showState(a: DeviceAlert?) {
+        if (a == null && controller.consentPending.value) {
+            // DESIGN.md: first-run consent is a full card with one action on the phone too.
+            stateTitle.text = Cards.t(Lang.CONSENT_TITLE)
+            stateTitle.setTextColor(TEXT) // a decision, not an error: no "hot" colour
+            stateBody.text = Cards.t(Lang.CONSENT_BODY) + " " + Cards.t(Lang.CONSENT_NOTE)
+            stateAction.tag = CONSENT_ACTION
+            stateAction.text = Cards.t(Lang.AGREE)
+            stateAction.visibility = View.VISIBLE
+            stateCard.visibility = View.VISIBLE
+            return
+        }
         if (a == null) { stateCard.visibility = View.GONE; return }
         val t = DeviceStates.text(a, controller.batteryLevel)
+        stateTitle.setTextColor(HOT)
         stateTitle.text = t.title
         stateBody.text = t.body
         stateAction.tag = t.action
@@ -391,6 +442,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onStateAction() {
+        if (stateAction.tag == CONSENT_ACTION) { controller.agreeConsent(); return }
         when (stateAction.tag as? PhoneAction) {
             PhoneAction.CONNECT -> connect()
             PhoneAction.TRY_AGAIN -> controller.trigger()
@@ -408,6 +460,8 @@ class MainActivity : ComponentActivity() {
                 launch { controller.battery.collect { batteryView.text = "Battery: $it" } }
                 launch { controller.device.collect { deviceView.text = it } }
                 launch { controller.alert.collect { showState(it); relabel() } }
+                launch { controller.consentPending.collect { showState(controller.alert.value); showConsentStatus() } }
+                launch { controller.glassesText.collect { glassesView.text = "Glasses show: $it" } }
             }
         }
     }
@@ -467,12 +521,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun connect() {
-        val url = urlField.text.toString().trim()
-        Prefs.setBridge(this, url)
-        bridge.baseUrl = url
-        val token = tokenField.text.toString().trim()
-        Prefs.setBridgeToken(this, token)
-        bridge.token = token
+        applyBridgeFields()
         val mock = mockSwitch.isChecked
         lifecycleScope.launch {
             if (mock) {
@@ -517,5 +566,6 @@ class MainActivity : ComponentActivity() {
         const val HOT = 0xFFFF8A4D.toInt()
         /** The mock "Say" button's question (one of the demo questions). */
         const val SAY = "why does it curve?"
+        const val CONSENT_ACTION = "consent"
     }
 }

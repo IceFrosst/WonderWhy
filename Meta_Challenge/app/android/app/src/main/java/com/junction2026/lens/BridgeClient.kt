@@ -25,8 +25,23 @@ class BridgeException(
     val code: String = "",
 ) : Exception(userMessage, cause)
 
-class BridgeClient(var baseUrl: String, var token: String = "") {
-    private fun url(path: String) = URL(baseUrl.trim().trimEnd('/') + path)
+/**
+ * HTTP calls to the bridge. [config] is read fresh at the start of every request, so a URL or token typed
+ * on the phone after Connect applies to the very next request (no Disconnect + Connect needed).
+ */
+class BridgeClient(config: BridgeConfig, private val log: (String) -> Unit = {}) {
+    @Volatile var config: BridgeConfig = config
+    @Volatile private var lastUsed: String? = null
+
+    /** The current address and token, once per request; logs when the address changed since the last one. */
+    private fun snapshot(): BridgeConfig {
+        val c = config
+        if (lastUsed != null && lastUsed != c.baseUrl) log("Bridge: now using ${c.baseUrl}")
+        lastUsed = c.baseUrl
+        return c
+    }
+
+    private fun url(c: BridgeConfig, path: String) = URL(c.baseUrl + path)
 
     /**
      * `GET /objects?lang=<tag>` as text (the library in that language), or null on any failure. The caller
@@ -35,7 +50,7 @@ class BridgeClient(var baseUrl: String, var token: String = "") {
     suspend fun objectsText(lang: String): String? = withContext(Dispatchers.IO) {
         var c: HttpURLConnection? = null
         try {
-            c = url(BridgeRequests.objectsPath(lang)).openConnection() as HttpURLConnection
+            c = url(snapshot(), BridgeRequests.objectsPath(lang)).openConnection() as HttpURLConnection
             c.connectTimeout = 4000
             c.readTimeout = 4000
             if (c.responseCode !in 200..299) return@withContext null
@@ -49,8 +64,9 @@ class BridgeClient(var baseUrl: String, var token: String = "") {
 
     /** [focus] is the centre of [jpeg], zoomed: where the wearer is looking. The bridge classifies that. */
     suspend fun detect(jpeg: ByteArray, focus: ByteArray?, tCapture: Long, lang: String, forceObjectId: String? = null): Detection = withContext(Dispatchers.IO) {
+        val reqId = UUID.randomUUID().toString()
         val body = BridgeRequests.detectBody(
-            reqId = UUID.randomUUID().toString(),
+            reqId = reqId,
             imageBase64 = Base64.encodeToString(jpeg, Base64.NO_WRAP),
             focusBase64 = focus?.let { Base64.encodeToString(it, Base64.NO_WRAP) },
             tCapture = tCapture,
@@ -61,27 +77,56 @@ class BridgeClient(var baseUrl: String, var token: String = "") {
         )
         // API providers answer in a few seconds (the dev-only pi provider needs up to 25 s). With waitSketch an
         // unknown object also waits for the sketch (SKETCH_TIMEOUT_MS, default 20 s) in the same response.
-        post("/detect", body, readTimeoutMs = 50_000)
+        post("/detect", body, readTimeoutMs = 50_000).let { if (it.reqId == null) it.copy(reqId = reqId) else it }
     }
 
     /** PROTOCOL `POST /ask`: a follow-up question about [aboutObjectId]. The answer is a normal `show`. */
     suspend fun ask(question: String, aboutObjectId: String, lang: String): Detection = withContext(Dispatchers.IO) {
-        val body = BridgeRequests.askBody(UUID.randomUUID().toString(), question, aboutObjectId, lang)
+        val reqId = UUID.randomUUID().toString()
+        val body = BridgeRequests.askBody(reqId, question, aboutObjectId, lang)
             ?: throw BridgeException("Empty question", code = "bad_request")
-        post("/ask", body, readTimeoutMs = 20_000)
+        post("/ask", body, readTimeoutMs = 20_000).let { if (it.reqId == null) it.copy(reqId = reqId) else it }
+    }
+
+    /**
+     * PROTOCOL "Phone-only latency": `POST /rendered {reqId, renderMs}` once the result card is on the display.
+     * Fire-and-forget for the caller: returns the HTTP status, or -1 when it could not be sent. Never throws.
+     */
+    suspend fun rendered(reqId: String?, renderMs: Long): Int = withContext(Dispatchers.IO) {
+        val body = RenderedAck.body(reqId, renderMs) ?: return@withContext -1
+        var c: HttpURLConnection? = null
+        try {
+            val cfg = snapshot()
+            c = url(cfg, "/rendered").openConnection() as HttpURLConnection
+            c.requestMethod = "POST"
+            c.doOutput = true
+            c.connectTimeout = 3000
+            c.readTimeout = 3000
+            c.setRequestProperty("Content-Type", "application/json")
+            BridgeAuth.headers(cfg.token).forEach { (k, v) -> c.setRequestProperty(k, v) }
+            c.outputStream.use { it.write(body.toByteArray()) }
+            val code = c.responseCode
+            runCatching { (if (code in 200..299) c.inputStream else c.errorStream)?.close() }
+            code
+        } catch (_: Exception) {
+            -1
+        } finally {
+            c?.disconnect()
+        }
     }
 
     /** POSTs JSON and parses the 2xx body as a `show`. Every failure becomes a [BridgeException]. */
     private fun post(path: String, body: String, readTimeoutMs: Int): Detection {
         var c: HttpURLConnection? = null
         try {
-            c = url(path).openConnection() as HttpURLConnection
+            val cfg = snapshot()
+            c = url(cfg, path).openConnection() as HttpURLConnection
             c.requestMethod = "POST"
             c.doOutput = true
             c.connectTimeout = 5000
             c.readTimeout = readTimeoutMs
             c.setRequestProperty("Content-Type", "application/json")
-            BridgeAuth.headers(token).forEach { (k, v) -> c.setRequestProperty(k, v) }
+            BridgeAuth.headers(cfg.token).forEach { (k, v) -> c.setRequestProperty(k, v) }
             // Connect on its own so "cannot reach" (offline card) is told apart from "reached but slow".
             try {
                 c.connect()
@@ -124,10 +169,11 @@ class BridgeClient(var baseUrl: String, var token: String = "") {
     suspend fun fetchBytes(path: String, maxBytes: Int = 2_000_000): ByteArray? = withContext(Dispatchers.IO) {
         var c: HttpURLConnection? = null
         try {
-            c = url(path).openConnection() as HttpURLConnection
+            val cfg = config // media: no "now using" line
+            c = url(cfg, path).openConnection() as HttpURLConnection
             c.connectTimeout = 4000
             c.readTimeout = 6000
-            BridgeAuth.headers(token).forEach { (k, v) -> c.setRequestProperty(k, v) }
+            BridgeAuth.headers(cfg.token).forEach { (k, v) -> c.setRequestProperty(k, v) }
             if (c.responseCode !in 200..299) return@withContext null
             c.inputStream.use { input ->
                 val out = java.io.ByteArrayOutputStream()

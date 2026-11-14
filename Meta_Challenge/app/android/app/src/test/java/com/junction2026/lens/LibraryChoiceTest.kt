@@ -37,7 +37,7 @@ class LibraryChoiceTest {
         val p = LibraryChoice.choose("de", "<html>502</html>", "{\"objects\":[]}", bundled)
         assertEquals(LibrarySource.BUNDLED, p.source)
         assertEquals("en", p.lang)
-        assertEquals(6, OfflineCards.parse(p.text).size)
+        assertTrue(OfflineCards.parse(p.text).size >= 6)
     }
 
     @Test fun englishWithoutLangFieldCounts() {

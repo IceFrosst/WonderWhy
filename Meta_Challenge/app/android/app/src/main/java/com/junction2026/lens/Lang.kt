@@ -49,6 +49,15 @@ object Lang {
     const val STEP = "step"
     const val SKETCH = "sketch"
     const val PHONE_ANSWER = "phone_answer"
+    const val CONSENT_TITLE = "consent_title"
+    const val CONSENT_BODY = "consent_body"
+    const val CONSENT_NOTE = "consent_note"
+    const val AGREE = "agree"
+    const val NOT_NOW = "not_now"
+    const val OFFLINE_TITLE = "offline_title"
+    const val OFFLINE_BODY = "offline_body"
+    const val OFFLINE_HINT = "offline_hint"
+    const val OPEN = "open"
 
     private val EN = mapOf(
         IDLE to "Look at something and pinch",
@@ -64,6 +73,15 @@ object Lang {
         STEP to "Step",
         SKETCH to "Sketch · unverified",
         PHONE_ANSWER to "Answer from saved cards",
+        CONSENT_TITLE to "Before you start",
+        CONSENT_BODY to "Each pinch sends one photo to a model.",
+        CONSENT_NOTE to "Through our bridge. Not saved on the phone.",
+        AGREE to "Agree",
+        NOT_NOW to "Not now",
+        OFFLINE_TITLE to "Offline",
+        OFFLINE_BODY to "Can't reach the bridge. Pick a saved card.",
+        OFFLINE_HINT to "Left/right: object. Pinch: open.",
+        OPEN to "Open",
     )
 
     private val FI = mapOf(
@@ -80,6 +98,15 @@ object Lang {
         STEP to "Vaihe",
         SKETCH to "Luonnos · tarkistamaton",
         PHONE_ANSWER to "Vastaus tallennetuista korteista",
+        CONSENT_TITLE to "Ennen kuin aloitat",
+        CONSENT_BODY to "Jokainen nipistys lähettää yhden kuvan mallille.",
+        CONSENT_NOTE to "Sillan kautta. Kuvaa ei tallenneta puhelimeen.",
+        AGREE to "Hyväksyn",
+        NOT_NOW to "Ei nyt",
+        OFFLINE_TITLE to "Ei yhteyttä",
+        OFFLINE_BODY to "Siltaan ei saada yhteyttä. Valitse tallennettu kortti.",
+        OFFLINE_HINT to "Vasen/oikea: kohde. Nipistys: avaa.",
+        OPEN to "Avaa",
     )
 
     private val TABLES = mapOf("en" to EN, "fi" to FI)
@@ -91,4 +118,13 @@ object Lang {
     }
 
     val KEYS: List<String> get() = EN.keys.toList()
+
+    /** Overview hint (8 words at most): "Pinch: 3 steps. Left/right: 5 lenses." English and Finnish. */
+    fun overviewHint(tag: String, steps: Int, lenses: Int): String {
+        val fi = tag.lowercase(Locale.ROOT).startsWith("fi")
+        val first = if (fi) "Nipistys: $steps ${if (steps == 1) "vaihe" else "vaihetta"}."
+        else "Pinch: $steps step${if (steps == 1) "" else "s"}."
+        if (lenses <= 1) return first
+        return first + if (fi) " Vasen/oikea: $lenses linssiä." else " Left/right: $lenses lenses."
+    }
 }

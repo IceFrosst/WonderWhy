@@ -53,6 +53,8 @@ data class Detection(
     val sketchError: String? = null,
     /** Answer from a dev-only stand-in model. */
     val standIn: Boolean = false,
+    /** `show.reqId`: the request this answers (for the `POST /rendered` ack). */
+    val reqId: String? = null,
 )
 
 /** A track the wearer can step through: a lens, or the plain `steps` list when the bridge sent no lenses. */
@@ -224,6 +226,7 @@ object DetectionParser {
             sketch = sketch(root["sketch"]),
             sketchError = root.str("sketchError")?.trim()?.ifEmpty { null },
             standIn = root["standIn"] == true,
+            reqId = root.str("reqId")?.trim()?.ifEmpty { null },
         )
     }
 

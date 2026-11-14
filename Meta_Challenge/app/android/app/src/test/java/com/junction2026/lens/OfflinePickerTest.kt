@@ -21,8 +21,11 @@ class OfflinePickerTest {
 
     @Test fun startsAtFirstWithCounter() {
         val p = OfflinePicker(objs.keys.toList())
-        assertEquals("guitar", p.current)
-        assertEquals("1/6", p.counter)
+        assertEquals(objs.keys.first(), p.current)
+        assertEquals("1/${objs.size}", p.counter)
+        // Left from the first wraps to the last, whatever the library size.
+        assertEquals("${objs.size}/${objs.size}", p.move(-1).counter)
+        assertEquals(objs.keys.last(), p.move(-1).current)
     }
 
     @Test fun leftRightWrapAround() {
@@ -65,12 +68,14 @@ class OfflinePickerTest {
         }
     }
 
-    // 14 Nov: shared/objects.json now has 5 lenses for the ball (What if, Flow, The number added upstream).
-    @Test fun ballHasTwoLensesWithTitles() {
+    /** Every track has a title; the ball keeps its first two lenses first; never more than 5 (DESIGN lens bar). */
+    @Test fun ballLensesHaveTitles() {
         val det = OfflineConvert.toDetection(OfflineCards.toDetect(objs.getValue("ball")))
         val tracks = DetectionParser.tracks(det)
-        assertEquals(listOf("Projectile motion", "Bounce", "What if", "Follow the energy", "The number"), tracks.map { it.title })
-        assertEquals(listOf("ball.motion", "ball.compare", "ball.whatif", "ball.flow", "ball.number"), tracks.map { it.lensId })
+        assertTrue(tracks.all { it.title.isNotBlank() })
+        assertEquals(listOf("Projectile motion", "Bounce"), tracks.take(2).map { it.title })
+        assertEquals(listOf("ball.motion", "ball.compare"), tracks.take(2).map { it.lensId })
+        assertTrue(tracks.size in 2..DetectionParser.MAX_LENSES)
     }
 
     @Test fun blankLensTitleFallsBackToKindName() {

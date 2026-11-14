@@ -17,4 +17,7 @@ object Prefs {
     /** Language picker on the phone screen: "" = phone language, else one of [Lang.SUPPORTED]. */
     fun lang(c: Context) = sp(c).getString("lang", "") ?: ""
     fun setLang(c: Context, v: String) = sp(c).edit().putString("lang", v).apply()
+    /** First-run consent: the wearer agreed to photos being sent to the bridge and a model. */
+    fun consent(c: Context) = sp(c).getBoolean("consent", false)
+    fun setConsent(c: Context, v: Boolean) = sp(c).edit().putBoolean("consent", v).apply()
 }

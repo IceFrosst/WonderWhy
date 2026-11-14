@@ -60,9 +60,23 @@ object AskFlow {
         answer = cap(answer, ANSWER_WORDS),
     )
 
+    /**
+     * The answer line of the card. The real bridge sends `answer: ""` (no lensHint) when no step matches the
+     * question (14 Nov, mock provider); the parser turns that into null and the object's summary is shown.
+     */
+    fun answerLine(det: Detection): String = det.answer?.takeIf { it.isNotBlank() } ?: det.summary.orEmpty()
+
     /** Primary button of the answer card: the lens and step the hint points at, e.g. "Open: Bounce 2/3". */
     fun openLabel(track: Track, step: Int): String =
         "${cap(track.title, 3)} ${step + 1}/${track.steps.size}"
+
+    /**
+     * When the phone answers by itself instead of showing an error: only when the bridge truly has no
+     * `/ask` (404 with no body or the bridge's own `not_found` route error) or cannot be reached at all.
+     * A 401, a `bad_request`, a timeout or a model failure from a bridge that has `/ask` are real answers.
+     */
+    fun answerOnPhone(status: Int, code: String, offline: Boolean): Boolean =
+        offline || (status == 404 && (code.isEmpty() || code == "not_found"))
 
     // ---- the phone's own answer (no /ask on the bridge, or offline) ----
 

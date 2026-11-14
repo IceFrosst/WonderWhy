@@ -68,4 +68,51 @@ class AskFlowTest {
         assertNull(d.lensHint)
         assertEquals(ball.summary, d.answer)
     }
+
+    private fun resource(name: String): String =
+        requireNotNull(javaClass.classLoader?.getResource(name)) { "test resource $name" }.readText()
+
+    /**
+     * Recorded from the real bridge on 14 Nov (`POST /ask` on :8787, provider mock): a normal show with every
+     * lens, media, the question, the matching caption as answer, lensHint and our reqId echoed.
+     */
+    @Test fun realBridgeAskResponse() {
+        val d = DetectionParser.parse(resource("bridge_ask_ball.json"))
+        assertEquals("rec-ask-ball", d.reqId) // what the /rendered ack sends back
+        assertEquals("ball", d.objectId)
+        assertEquals("why is each bounce lower", d.question)
+        assertEquals(LensHint("ball.compare", 1), d.lensHint)
+        assertTrue(d.answer!!.startsWith("Each bounce is lower"))
+        val tracks = DetectionParser.tracks(d)
+        assertTrue(tracks.size >= 2)
+        val pos = AskFlow.position(tracks, d.lensHint)!!
+        assertEquals("ball.compare", tracks[pos.first].lensId)
+        assertEquals(0, pos.second)
+        assertTrue(d.media != null && DetectionParser.stills(d, "ball.compare").isNotEmpty())
+        assertEquals(d.answer, AskFlow.answerLine(d))
+    }
+
+    /** Real bridge, nothing matches: `answer: ""` and no lensHint. The card shows the summary, button "Show steps". */
+    @Test fun realBridgeNoMatchShowsTheSummary() {
+        val d = DetectionParser.parse(resource("bridge_ask_nomatch_fi.json"))
+        assertEquals("fi", d.lang)
+        assertNull(d.answer)
+        assertNull(d.lensHint)
+        assertTrue(d.summary!!.isNotBlank())
+        assertEquals(d.summary, AskFlow.answerLine(d))
+    }
+
+    /** The phone answers by itself only for a bridge with no /ask (404) or no bridge at all. */
+    @Test fun phoneFallbackOnlyWithoutAsk() {
+        assertTrue(AskFlow.answerOnPhone(404, "", offline = false))
+        assertTrue(AskFlow.answerOnPhone(404, "not_found", offline = false)) // the bridge's own unknown-route body
+        assertTrue(AskFlow.answerOnPhone(0, "", offline = true))
+        assertTrue(AskFlow.answerOnPhone(502, "", offline = true)) // a proxy with no bridge behind it
+        assertTrue(!AskFlow.answerOnPhone(401, "unauthorized", offline = false))
+        assertTrue(!AskFlow.answerOnPhone(400, "bad_request", offline = false))
+        assertTrue(!AskFlow.answerOnPhone(502, "detect_timeout", offline = false))
+        assertTrue(!AskFlow.answerOnPhone(502, "detect_failed", offline = false))
+        assertTrue(!AskFlow.answerOnPhone(404, "unknown_request", offline = false))
+        assertTrue(!AskFlow.answerOnPhone(0, "", offline = false)) // reached but timed out: a real error card
+    }
 }
