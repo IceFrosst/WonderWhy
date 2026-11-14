@@ -5,9 +5,10 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 7, 1:22)
+# Video script: "Never stop asking why" (draft 7b, 1:22)
 
-> **Name:** to be chosen (placeholder **[NAME]**; "Physics Lens" is out).
+> **Name: WonderWhy.** No childhood photo exists: child shots stay AI.
+> **Owner changes 14:50:** "Look at anything." stays, followed by *An object or a concept.* and a quick text-only list of examples (not visualised): *Earbuds · Sauna steam · Wi-Fi · Why the sky is blue*. End with a CTA: *Come to our table. Try it.*
 
 > [!summary]
 > Story in colour: **gold (child) → grey (adult, headphones on, shut off) → gold + glowing lines (glasses)**. Every shot readable muted.
@@ -16,7 +17,7 @@ updated: 2026-11-14
 > **Edit rule:** waits are cut out, not shown. Small corner tag on the glasses shots: *Recorded on the glasses · edited for time*.
 
 ## All on-screen lines, in order
-*Why is the grass green?* · *How does the world work?* · *You used to ask why.* · *Then you stopped.* · **Look at anything.** · **See how it really works.** · **Feed your curiosity. Grow your understanding of the world.** · *Ask anything* · *Opens the part you asked about* · *Keep asking. It goes deeper.* · *Why steam bites* · *Lighter than it feels* · *It sees it. AI names it. Real physics explains it.* · *Try it.* · *Even this?* · *It even explains itself.* · **Never stop asking why.** · End card: **[NAME]. See how the world really works.**
+*Why is the grass green?* · *How does the world work?* · *You used to ask why.* · *Then you stopped.* · **Look at anything.** · **See how it really works.** · **Feed your curiosity. Grow your understanding of the world.** · *Ask anything* · *Opens the part you asked about* · *Keep asking. It goes deeper.* · *Why steam bites* · *Lighter than it feels* · *It sees it. AI names it. Real physics explains it.* · *Try it.* · *Even this?* · *It even explains itself.* · **Never stop asking why.** · End card: **WonderWhy. See how the world really works.**
 
 ## Act 1: the child (0:00-0:04) — gold, dreamy
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -35,11 +36,11 @@ Desaturated and cold. **Headphones on the whole act**: every outside sound is mu
 ## Act 3: the reveal (0:09-0:20) — earbuds
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 6 | 0:09-0:11 | REAL | IceFrost stops and puts on the glasses | **The grade floods back to gold**, the world looks alive again | **Look at anything.** | A soft rising tone |
+| 6 | 0:09-0:11 | REAL | IceFrost stops and puts on the glasses | **The grade floods back to gold**, the world looks alive again | **Look at anything.** → *An object or a concept.* → quick text list: *Earbuds · Sauna steam · Wi-Fi · Why the sky is blue* | A soft rising tone |
 | 7 | 0:11-0:12 | REAL | Pulls the earbuds out | | | **The crowd floods back in, full and loud** |
 | 8 | 0:12-0:14 | REAL | Looks at the earbuds in the hand, puzzled, pinches with the band | Close on the hand and earbuds | | IceFrost: "Wait, how did these block all that?" · click |
 | 9 | 0:14-0:17 | REAL + RENDER | The noise wave, an opposite "anti-noise" wave, the two merging into a **flat line** | Fade in at the fixed square | **See how it really works.** | Music in, bright; the crowd dips under it |
-| 10 | 0:17-0:20 | GLASS | The real recording of the same answer on the glasses, yellow system frame left in | Corner tag | **Feed your curiosity. Grow your understanding of the world.** · *[NAME]* | Music continues |
+| 10 | 0:17-0:20 | GLASS | The real recording of the same answer on the glasses, yellow system frame left in | Corner tag | **Feed your curiosity. Grow your understanding of the world.** · *WonderWhy* | Music continues |
 
 ## Act 4: a real run with a follow-up — 3D printer (0:20-0:38)
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -71,7 +72,7 @@ Filmed by a third person: IceFrost already wears one pair; a friend sits next to
 | 22 | 1:02-1:08 | GLASS + RENDER | The glasses explain themselves: the band reads tiny muscle signals at the wrist; the display bends light into one eye | | *It even explains itself.* | Music builds |
 | 23 | 1:08-1:12 | REAL | The friend puts them on, looks at something, pinches: a real wow reaction | | | Real laugh or "no way" |
 | 24 | 1:12-1:16 | REAL → AI | Both smile; match cut to the child in the grass, now with glowing lines on the blade | Grade fully gold | **Never stop asking why.** | Kid, happy: "Why?" · last note |
-| 25 | 1:16-1:22 | Title | Black, logo | Fade in | **[NAME]. See how the world really works.** · Meta Ray-Ban Display · Junction 2026 | One click, silence |
+| 25 | 1:16-1:22 | Title | Black, logo | Fade in | **WonderWhy. See how the world really works.** · then **Come to our table. Try it.** · Meta Ray-Ban Display · Junction 2026 | One click, silence |
 
 ## To make
 | What | How | By |
