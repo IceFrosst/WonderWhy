@@ -1,128 +1,128 @@
 {
-  "date": "2026-11-14T06:43:30.237Z",
+  "date": "2026-11-14T06:54:57.668Z",
   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
   "bundle": {
-    "jsGzipBytes": 196082,
+    "jsGzipBytes": 196084,
     "cssGzipBytes": 18495,
-    "totalGzipBytes": 214577,
+    "totalGzipBytes": 214579,
     "requests": 5
   },
   "fps": {
     "guitar.motion": {
-      "min": 29.87,
-      "median": 29.92
+      "min": 29.85,
+      "median": 29.94
     },
     "guitar.whatif": {
-      "min": 29.83,
-      "median": 29.96
+      "min": 29.82,
+      "median": 29.9
     },
     "guitar.flow": {
-      "min": 29.81,
-      "median": 29.96
+      "min": 29.9,
+      "median": 29.94
     },
     "guitar.number": {
       "min": 29.9,
-      "median": 29.9
-    },
-    "ball.motion": {
-      "min": 29.89,
-      "median": 29.92
-    },
-    "ball.compare": {
-      "min": 29.84,
-      "median": 29.89
-    },
-    "ball.whatif": {
-      "min": 29.87,
-      "median": 29.9
-    },
-    "ball.flow": {
-      "min": 29.81,
-      "median": 30.06
-    },
-    "ball.number": {
-      "min": 29.9,
-      "median": 29.91
-    },
-    "bicycle.motion": {
-      "min": 29.91,
-      "median": 29.95
-    },
-    "bicycle.whatif": {
-      "min": 29.9,
-      "median": 29.92
-    },
-    "bicycle.flow": {
-      "min": 29.89,
-      "median": 29.98
-    },
-    "bicycle.number": {
-      "min": 29.93,
-      "median": 29.97
-    },
-    "kettle.motion": {
-      "min": 29.84,
-      "median": 30
-    },
-    "kettle.cutaway": {
-      "min": 29.91,
       "median": 29.93
     },
-    "kettle.whatif": {
-      "min": 29.87,
-      "median": 29.91
+    "ball.motion": {
+      "min": 28.92,
+      "median": 29.9
     },
-    "kettle.flow": {
-      "min": 29.91,
-      "median": 30
+    "ball.compare": {
+      "min": 29.83,
+      "median": 29.93
     },
-    "kettle.number": {
+    "ball.whatif": {
       "min": 29.78,
       "median": 29.99
     },
-    "pendulum.motion": {
-      "min": 29.78,
+    "ball.flow": {
+      "min": 29.8,
+      "median": 29.99
+    },
+    "ball.number": {
+      "min": 29.84,
+      "median": 29.98
+    },
+    "bicycle.motion": {
+      "min": 29.88,
       "median": 29.97
+    },
+    "bicycle.whatif": {
+      "min": 29.86,
+      "median": 29.89
+    },
+    "bicycle.flow": {
+      "min": 29.9,
+      "median": 29.93
+    },
+    "bicycle.number": {
+      "min": 29.95,
+      "median": 29.95
+    },
+    "kettle.motion": {
+      "min": 29.93,
+      "median": 29.93
+    },
+    "kettle.cutaway": {
+      "min": 29.87,
+      "median": 29.95
+    },
+    "kettle.whatif": {
+      "min": 29.85,
+      "median": 29.9
+    },
+    "kettle.flow": {
+      "min": 29.89,
+      "median": 29.91
+    },
+    "kettle.number": {
+      "min": 29.87,
+      "median": 29.95
+    },
+    "pendulum.motion": {
+      "min": 29.79,
+      "median": 29.87
     },
     "pendulum.whatif": {
       "min": 29.84,
-      "median": 29.91
+      "median": 29.92
     },
     "pendulum.flow": {
-      "min": 29.84,
-      "median": 29.93
-    },
-    "pendulum.number": {
-      "min": 29.86,
-      "median": 29.98
-    },
-    "phone.inside": {
-      "min": 29.82,
-      "median": 30.06
-    },
-    "phone.whatif": {
-      "min": 29.88,
-      "median": 29.9
-    },
-    "phone.flow": {
-      "min": 29.87,
-      "median": 29.88
-    },
-    "phone.number": {
-      "min": 29.81,
+      "min": 29.83,
       "median": 29.97
     },
+    "pendulum.number": {
+      "min": 29.87,
+      "median": 29.93
+    },
+    "phone.inside": {
+      "min": 29.9,
+      "median": 29.97
+    },
+    "phone.whatif": {
+      "min": 29.82,
+      "median": 29.92
+    },
+    "phone.flow": {
+      "min": 29.79,
+      "median": 30.07
+    },
+    "phone.number": {
+      "min": 29.89,
+      "median": 29.98
+    },
     "spoon.zoom": {
-      "min": 29.91,
-      "median": 29.94
+      "min": 29.85,
+      "median": 29.96
     },
     "spoon.flow": {
-      "min": 29.85,
-      "median": 29.95
+      "min": 29.82,
+      "median": 29.96
     },
     "spoon.number": {
-      "min": 29.85,
-      "median": 29.95
+      "min": 29.88,
+      "median": 29.94
     }
   },
   "states": [

@@ -316,7 +316,8 @@ export class BounceScene implements Scene {
         const height = `${peak.toFixed(2)} m`;
         const textWidth = ctx.measureText(height).width;
         const textX = clamp(peakX, laneLeft + textWidth / 2, laneLeft + laneWidth - textWidth / 2);
-        const textY = clamp(peakY - 20, 22, ground - 24);
+        // Above the ball's top at its peak, so the ball never covers its own height label.
+        const textY = clamp(peakY - radius - 20, 22, ground - 24);
         ctx.fillStyle = C.soft;
         ctx.fillText(height, textX, textY);
       }

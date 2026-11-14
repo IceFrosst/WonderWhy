@@ -1,10 +1,10 @@
 # Glasses state check
 
-Date: 2026-11-14T06:43:30.237Z
+Date: 2026-11-14T06:54:57.668Z
 
-Bundle: 214577 bytes gzip (196082 JS + 18495 CSS); 5 first-paint requests.
+Bundle: 214579 bytes gzip (196084 JS + 18495 CSS); 5 first-paint requests.
 
-Frame rates: guitar.motion: 29.87/29.92 fps min/median; guitar.whatif: 29.83/29.96 fps min/median; guitar.flow: 29.81/29.96 fps min/median; guitar.number: 29.9/29.9 fps min/median; ball.motion: 29.89/29.92 fps min/median; ball.compare: 29.84/29.89 fps min/median; ball.whatif: 29.87/29.9 fps min/median; ball.flow: 29.81/30.06 fps min/median; ball.number: 29.9/29.91 fps min/median; bicycle.motion: 29.91/29.95 fps min/median; bicycle.whatif: 29.9/29.92 fps min/median; bicycle.flow: 29.89/29.98 fps min/median; bicycle.number: 29.93/29.97 fps min/median; kettle.motion: 29.84/30 fps min/median; kettle.cutaway: 29.91/29.93 fps min/median; kettle.whatif: 29.87/29.91 fps min/median; kettle.flow: 29.91/30 fps min/median; kettle.number: 29.78/29.99 fps min/median; pendulum.motion: 29.78/29.97 fps min/median; pendulum.whatif: 29.84/29.91 fps min/median; pendulum.flow: 29.84/29.93 fps min/median; pendulum.number: 29.86/29.98 fps min/median; phone.inside: 29.82/30.06 fps min/median; phone.whatif: 29.88/29.9 fps min/median; phone.flow: 29.87/29.88 fps min/median; phone.number: 29.81/29.97 fps min/median; spoon.zoom: 29.91/29.94 fps min/median; spoon.flow: 29.85/29.95 fps min/median; spoon.number: 29.85/29.95 fps min/median
+Frame rates: guitar.motion: 29.85/29.94 fps min/median; guitar.whatif: 29.82/29.9 fps min/median; guitar.flow: 29.9/29.94 fps min/median; guitar.number: 29.9/29.93 fps min/median; ball.motion: 28.92/29.9 fps min/median; ball.compare: 29.83/29.93 fps min/median; ball.whatif: 29.78/29.99 fps min/median; ball.flow: 29.8/29.99 fps min/median; ball.number: 29.84/29.98 fps min/median; bicycle.motion: 29.88/29.97 fps min/median; bicycle.whatif: 29.86/29.89 fps min/median; bicycle.flow: 29.9/29.93 fps min/median; bicycle.number: 29.95/29.95 fps min/median; kettle.motion: 29.93/29.93 fps min/median; kettle.cutaway: 29.87/29.95 fps min/median; kettle.whatif: 29.85/29.9 fps min/median; kettle.flow: 29.89/29.91 fps min/median; kettle.number: 29.87/29.95 fps min/median; pendulum.motion: 29.79/29.87 fps min/median; pendulum.whatif: 29.84/29.92 fps min/median; pendulum.flow: 29.83/29.97 fps min/median; pendulum.number: 29.87/29.93 fps min/median; phone.inside: 29.9/29.97 fps min/median; phone.whatif: 29.82/29.92 fps min/median; phone.flow: 29.79/30.07 fps min/median; phone.number: 29.89/29.98 fps min/median; spoon.zoom: 29.85/29.96 fps min/median; spoon.flow: 29.82/29.96 fps min/median; spoon.number: 29.88/29.94 fps min/median
 
 | State | Result | Screenshot |
 |---|---|---|
