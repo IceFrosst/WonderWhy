@@ -72,6 +72,11 @@
 | [stills/kettle-motion-s3-1080.png](stills/kettle-motion-s3-1080.png) | - | Captioned card still, step 3 |
 | [clips/kettle-motion-1080.mp4](clips/kettle-motion-1080.mp4) | 12 s | Captioned product card clip |
 | [clips/kettle-motion-1080-clean.mp4](clips/kettle-motion-1080-clean.mp4) | 12 s | Scene-only editor clip |
+| [stills/kettle-cutaway-s1-1080.png](stills/kettle-cutaway-s1-1080.png) | - | Captioned card still, step 1 |
+| [stills/kettle-cutaway-s2-1080.png](stills/kettle-cutaway-s2-1080.png) | - | Captioned card still, step 2 |
+| [stills/kettle-cutaway-s3-1080.png](stills/kettle-cutaway-s3-1080.png) | - | Captioned card still, step 3 |
+| [clips/kettle-cutaway-1080.mp4](clips/kettle-cutaway-1080.mp4) | 12 s | Captioned product card clip |
+| [clips/kettle-cutaway-1080-clean.mp4](clips/kettle-cutaway-1080-clean.mp4) | 12 s | Scene-only editor clip |
 | [stills/kettle-whatif-s1-1080.png](stills/kettle-whatif-s1-1080.png) | - | Captioned card still, step 1 |
 | [stills/kettle-whatif-s2-1080.png](stills/kettle-whatif-s2-1080.png) | - | Captioned card still, step 2 |
 | [clips/kettle-whatif-1080.mp4](clips/kettle-whatif-1080.mp4) | 8 s | Captioned product card clip |
@@ -130,6 +135,21 @@
 | [stills/phone-number-s3-1080.png](stills/phone-number-s3-1080.png) | - | Captioned card still, step 3 |
 | [clips/phone-number-1080.mp4](clips/phone-number-1080.mp4) | 12 s | Captioned product card clip |
 | [clips/phone-number-1080-clean.mp4](clips/phone-number-1080-clean.mp4) | 12 s | Scene-only editor clip |
+| [stills/spoon-zoom-s1-1080.png](stills/spoon-zoom-s1-1080.png) | - | Captioned card still, step 1 |
+| [stills/spoon-zoom-s2-1080.png](stills/spoon-zoom-s2-1080.png) | - | Captioned card still, step 2 |
+| [stills/spoon-zoom-s3-1080.png](stills/spoon-zoom-s3-1080.png) | - | Captioned card still, step 3 |
+| [clips/spoon-zoom-1080.mp4](clips/spoon-zoom-1080.mp4) | 12 s | Captioned product card clip |
+| [clips/spoon-zoom-1080-clean.mp4](clips/spoon-zoom-1080-clean.mp4) | 12 s | Scene-only editor clip |
+| [stills/spoon-flow-s1-1080.png](stills/spoon-flow-s1-1080.png) | - | Captioned card still, step 1 |
+| [stills/spoon-flow-s2-1080.png](stills/spoon-flow-s2-1080.png) | - | Captioned card still, step 2 |
+| [stills/spoon-flow-s3-1080.png](stills/spoon-flow-s3-1080.png) | - | Captioned card still, step 3 |
+| [clips/spoon-flow-1080.mp4](clips/spoon-flow-1080.mp4) | 12 s | Captioned product card clip |
+| [clips/spoon-flow-1080-clean.mp4](clips/spoon-flow-1080-clean.mp4) | 12 s | Scene-only editor clip |
+| [stills/spoon-number-s1-1080.png](stills/spoon-number-s1-1080.png) | - | Captioned card still, step 1 |
+| [stills/spoon-number-s2-1080.png](stills/spoon-number-s2-1080.png) | - | Captioned card still, step 2 |
+| [stills/spoon-number-s3-1080.png](stills/spoon-number-s3-1080.png) | - | Captioned card still, step 3 |
+| [clips/spoon-number-1080.mp4](clips/spoon-number-1080.mp4) | 12 s | Captioned product card clip |
+| [clips/spoon-number-1080-clean.mp4](clips/spoon-number-1080-clean.mp4) | 12 s | Scene-only editor clip |
 | [contact-sheet.png](contact-sheet.png) | - | Overview of every 600x600 card still |
 
 ## Suggested 15-second sequences
