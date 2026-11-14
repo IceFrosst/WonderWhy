@@ -9,11 +9,16 @@
         "zoom/s2.png",
         "zoom/s3.png"
       ],
+      "clean": [
+        "zoom/c1.png",
+        "zoom/c2.png",
+        "zoom/c3.png"
+      ],
       "clip": "zoom/clip.mp4",
       "captions": [
         "A steel spoon looks smooth and solid. Its secrets are far too small to see.",
         "Three hundred times closer, the steel is a patchwork of tiny crystal grains, each a few hundredths of a millimetre wide.",
-        "A million times closer, each grain is a tidy grid of atoms. Loose electrons drift between them and carry heat along fast."
+        "A hundred thousand times closer still, each grain is a tidy grid of atoms. Loose electrons move between them and help carry heat."
       ],
       "size": 600,
       "clipSize": 264,
@@ -28,11 +33,16 @@
         "flow/s2.png",
         "flow/s3.png"
       ],
+      "clean": [
+        "flow/c1.png",
+        "flow/c2.png",
+        "flow/c3.png"
+      ],
       "clip": "flow/clip.mp4",
       "captions": [
         "Hot tea shakes the atoms in the bowl of the spoon. That shaking is heat.",
         "The shaking passes along the metal, helped by loose electrons. In a minute the handle is warm.",
-        "Your fingers take the heat from the handle. A little also leaves into the air along the way."
+        "Your fingers take the heat from the handle. Some also leaves into the air along the way."
       ],
       "size": 600,
       "clipSize": 264,
@@ -47,11 +57,16 @@
         "number/s2.png",
         "number/s3.png"
       ],
+      "clean": [
+        "number/c1.png",
+        "number/c2.png",
+        "number/c3.png"
+      ],
       "clip": "number/clip.mp4",
       "captions": [
-        "Steel passes heat about 100 times more readily than wood. That is why a metal spoon feels cold and a wooden one does not.",
+        "Steel conducts heat about 100 times better than wood and pulls warmth from your skin much faster. That is why it feels cold.",
         "Both spoons are at room temperature. The steel one only drains the warmth from your skin faster.",
-        "Silver conducts 27 times better still. A silver spoon in hot tea gets too hot to hold in seconds."
+        "Silver conducts 27 times better than steel. A silver spoon in hot tea can get too hot to hold within a minute."
       ],
       "size": 600,
       "clipSize": 264,

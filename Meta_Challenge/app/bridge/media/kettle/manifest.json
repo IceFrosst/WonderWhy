@@ -9,11 +9,16 @@
         "motion/s2.png",
         "motion/s3.png"
       ],
+      "clean": [
+        "motion/c1.png",
+        "motion/c2.png",
+        "motion/c3.png"
+      ],
       "clip": "motion/clip.mp4",
       "captions": [
         "Heated water expands and gets lighter, so it rises in the middle and sinks at the sides.",
         "Hot spots at the bottom let vapour bubbles form (nucleation), then they rise and burst.",
-        "At 100 C extra energy goes into turning water to vapour, not heating it. That is latent heat."
+        "At 100 °C extra energy goes into turning water to vapour, not heating it. That is latent heat."
       ],
       "size": 600,
       "clipSize": 264,
@@ -27,6 +32,11 @@
         "cutaway/s1.png",
         "cutaway/s2.png",
         "cutaway/s3.png"
+      ],
+      "clean": [
+        "cutaway/c1.png",
+        "cutaway/c2.png",
+        "cutaway/c3.png"
       ],
       "clip": "cutaway/clip.mp4",
       "captions": [
@@ -46,10 +56,14 @@
         "whatif/s1.png",
         "whatif/s2.png"
       ],
+      "clean": [
+        "whatif/c1.png",
+        "whatif/c2.png"
+      ],
       "clip": "whatif/clip.mp4",
       "captions": [
-        "Boiling time grows in a straight line with the water. Twice the water needs twice the time and twice the energy.",
-        "Water that starts at 60 C needs only half the heating, so it boils in half the time."
+        "Boiling time grows almost in a straight line with the water. Twice the water needs about twice the time and energy.",
+        "Water that starts at 60 °C needs only half the heating, so it boils in half the time."
       ],
       "size": 600,
       "clipSize": 264,
@@ -65,12 +79,18 @@
         "flow/s3.png",
         "flow/s4.png"
       ],
+      "clean": [
+        "flow/c1.png",
+        "flow/c2.png",
+        "flow/c3.png",
+        "flow/c4.png"
+      ],
       "clip": "flow/clip.mp4",
       "captions": [
         "Electricity flows from the socket into a coil of wire in the base: the heating element.",
         "The element resists the current, so all of the electrical energy turns into heat, which passes into the water.",
         "About 88 percent ends up in the water. The rest warms the jug and the air around it.",
-        "At 100 C the water turns to steam. The steam heats a metal strip that bends and clicks the kettle off."
+        "At 100 °C the water turns to steam. The steam heats a metal strip that bends and clicks the kettle off."
       ],
       "size": 600,
       "clipSize": 264,
@@ -84,6 +104,11 @@
         "number/s1.png",
         "number/s2.png",
         "number/s3.png"
+      ],
+      "clean": [
+        "number/c1.png",
+        "number/c2.png",
+        "number/c3.png"
       ],
       "clip": "number/clip.mp4",
       "captions": [

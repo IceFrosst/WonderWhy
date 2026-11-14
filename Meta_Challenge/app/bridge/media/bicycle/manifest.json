@@ -9,10 +9,15 @@
         "motion/s2.png",
         "motion/s3.png"
       ],
+      "clean": [
+        "motion/c1.png",
+        "motion/c2.png",
+        "motion/c3.png"
+      ],
       "clip": "motion/clip.mp4",
       "captions": [
-        "The chain links two gears. Gear ratio = front teeth / rear teeth.",
-        "Each pedal turn pulls the chain by the front teeth count, so the wheel turns by the ratio.",
+        "The chain links a big front gear to a small rear gear, so one pedal turn spins the wheel more than once.",
+        "Gear ratio is front teeth divided by rear teeth. Each pedal turn pulls that many teeth of chain past the rear gear.",
         "Energy is conserved: a higher ratio gives more speed per pedal turn but less push at the wheel."
       ],
       "size": 600,
@@ -27,10 +32,14 @@
         "whatif/s1.png",
         "whatif/s2.png"
       ],
+      "clean": [
+        "whatif/c1.png",
+        "whatif/c2.png"
+      ],
       "clip": "whatif/clip.mp4",
       "captions": [
         "Fewer teeth at the back give more speed for the same pedalling: 44 km/h on the smallest gear, 14 on the largest.",
-        "The small front ring lowers every gear by about a third. You go slower, but each push on the pedal is stronger."
+        "The small front ring lowers every gear by about 30 percent. You go slower, but each push on the pedal is stronger."
       ],
       "size": 600,
       "clipSize": 264,
@@ -45,6 +54,12 @@
         "flow/s2.png",
         "flow/s3.png",
         "flow/s4.png"
+      ],
+      "clean": [
+        "flow/c1.png",
+        "flow/c2.png",
+        "flow/c3.png",
+        "flow/c4.png"
       ],
       "clip": "flow/clip.mp4",
       "captions": [
@@ -66,10 +81,15 @@
         "number/s2.png",
         "number/s3.png"
       ],
+      "clean": [
+        "number/c1.png",
+        "number/c2.png",
+        "number/c3.png"
+      ],
       "clip": "number/clip.mp4",
       "captions": [
-        "48 teeth divided by 16 is a ratio of 3. The wheel turns three times per pedal turn: 3 times 2.1 metres.",
-        "At 80 pedal turns a minute that is 30 km/h. The price: only 17 percent of your push reaches the tyre.",
+        "The front gear has three times the teeth of the rear, so the wheel turns three times per pedal turn: 6.3 metres.",
+        "At 80 pedal turns a minute that is 30 km/h. The price: the tyre pushes with only 17 percent of your pedal force.",
         "A low gear swaps it round. Three times the push for climbing, but only 2.1 metres per turn."
       ],
       "size": 600,

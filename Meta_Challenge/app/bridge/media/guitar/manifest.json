@@ -9,9 +9,14 @@
         "motion/s2.png",
         "motion/s3.png"
       ],
+      "clean": [
+        "motion/c1.png",
+        "motion/c2.png",
+        "motion/c3.png"
+      ],
       "clip": "motion/clip.mp4",
       "captions": [
-        "Pressing a fret shortens the string. Half the length gives double the frequency: f = v / 2L.",
+        "Pressing a fret shortens the string. Half the length gives double the frequency, so the note is one octave higher.",
         "A string also vibrates in whole-number patterns: harmonics n = 1, 2, 3 at f, 2f, 3f.",
         "Wave speed depends on tension T and mass per length: f = (1/2L) sqrt(T/mu). Tighter = higher."
       ],
@@ -27,10 +32,14 @@
         "whatif/s1.png",
         "whatif/s2.png"
       ],
+      "clean": [
+        "whatif/c1.png",
+        "whatif/c2.png"
+      ],
       "clip": "whatif/clip.mp4",
       "captions": [
         "Each fret shortens the string and raises the note by about 6 percent. Twelve frets double the frequency: one octave.",
-        "A string twice as long sounds one octave lower at every fret. That is why bass instruments are big."
+        "A string twice as long sounds one octave lower at every fret. That is partly why bass instruments are big."
       ],
       "size": 600,
       "clipSize": 264,
@@ -45,6 +54,12 @@
         "flow/s2.png",
         "flow/s3.png",
         "flow/s4.png"
+      ],
+      "clean": [
+        "flow/c1.png",
+        "flow/c2.png",
+        "flow/c3.png",
+        "flow/c4.png"
       ],
       "clip": "flow/clip.mp4",
       "captions": [
@@ -66,9 +81,14 @@
         "number/s2.png",
         "number/s3.png"
       ],
+      "clean": [
+        "number/c1.png",
+        "number/c2.png",
+        "number/c3.png"
+      ],
       "clip": "number/clip.mp4",
       "captions": [
-        "Frequency counts swings per second. The open low A string of a guitar makes 110 of them: 110 hertz.",
+        "Frequency counts swings per second. The open A string of a guitar makes 110 of them: 110 hertz.",
         "Fret 12 halves the string, so the note doubles to 220 Hz. The wave runs along the string at 143 m/s.",
         "Each doubling is one octave. Two octaves above this string is the 440 Hz that orchestras tune to."
       ],

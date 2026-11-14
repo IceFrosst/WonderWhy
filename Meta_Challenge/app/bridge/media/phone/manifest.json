@@ -12,6 +12,14 @@
         "inside/s5.png",
         "inside/s6.png"
       ],
+      "clean": [
+        "inside/c1.png",
+        "inside/c2.png",
+        "inside/c3.png",
+        "inside/c4.png",
+        "inside/c5.png",
+        "inside/c6.png"
+      ],
       "clip": "inside/clip.mp4",
       "captions": [
         "A phone is a sandwich of about nine thin layers, all packed into less than a centimetre.",
@@ -33,6 +41,10 @@
         "whatif/s1.png",
         "whatif/s2.png"
       ],
+      "clean": [
+        "whatif/c1.png",
+        "whatif/c2.png"
+      ],
       "clip": "whatif/clip.mp4",
       "captions": [
         "A 5 watt charger needs over three hours. A 20 watt charger needs under one. Real phones slow down near full.",
@@ -51,6 +63,12 @@
         "flow/s2.png",
         "flow/s3.png",
         "flow/s4.png"
+      ],
+      "clean": [
+        "flow/c1.png",
+        "flow/c2.png",
+        "flow/c3.png",
+        "flow/c4.png"
       ],
       "clip": "flow/clip.mp4",
       "captions": [
@@ -72,11 +90,16 @@
         "number/s2.png",
         "number/s3.png"
       ],
+      "clean": [
+        "number/c1.png",
+        "number/c2.png",
+        "number/c3.png"
+      ],
       "clip": "number/clip.mp4",
       "captions": [
         "4000 milliamp-hours at 3.85 volts is about 15 watt-hours: the energy of one full battery.",
         "Charging it costs under half a cent. A whole year of daily charging is a little over one euro.",
-        "A kettle burns through the same energy in 28 seconds. Heating water costs far more than computing."
+        "A 2 kW kettle uses a phone's full charge in 28 seconds. The phone spends that energy over a whole day."
       ],
       "size": 600,
       "clipSize": 264,
