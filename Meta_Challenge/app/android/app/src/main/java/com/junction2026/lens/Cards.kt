@@ -59,8 +59,39 @@ object Cards {
         muted(t(Lang.IDLE))
     }
 
+    /** Right after the photo: the wearer can say what to explain in it. English only for now. */
+    fun askWhat(): CardSpec = CardSpec.of(centered = true) {
+        heading("What should I explain?")
+        muted("Say it now, or pinch to skip")
+    }
+
     /** "Looking…", centred (DESIGN.md states table). */
     fun looking(): CardSpec = CardSpec.of(centered = true) { heading(t(Lang.LOOKING)) }
+
+    /**
+     * Waiting for the model: [stage] ("Thinking…"), a progress bar and the seconds so far. The bar is a
+     * bitmap so it looks the same whatever glyphs the glasses' font has.
+     */
+    fun progress(stage: String, fraction: Float, seconds: Int): CardSpec = CardSpec.of(centered = true) {
+        heading(stage)
+        picture(progressBar(fraction))
+        metaMuted("$seconds s")
+    }
+
+    /** 480x28 bar: bright cyan fill on a dim track, black around it (black is see-through on the glasses). */
+    fun progressBar(fraction: Float): android.graphics.Bitmap {
+        val w = 480; val h = 28
+        val b = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(b)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        val r = h / 2f
+        p.color = 0xFF1E3A44.toInt()
+        c.drawRoundRect(0f, 4f, w.toFloat(), h - 4f, r, r, p)
+        p.color = 0xFF00E5FF.toInt()
+        val fill = (w * fraction.coerceIn(0.04f, 1f))
+        c.drawRoundRect(0f, 4f, fill, h - 4f, r, r, p)
+        return b
+    }
 
     /**
      * First-run consent (DESIGN.md states table, PROTOCOL `first_run`): before the first photo ever. What

@@ -554,7 +554,8 @@ export function start({
     const reqId = requestId(body.reqId);
     knownRequestIds.set(req, reqId);
     const lang = normalizeLang(body.lang);
-    if (body.question !== undefined && typeof body.question !== 'string') { finishSequence(context); return requestError(req, res, 400, 'bad_request', reqId); }
+    // null means "no question": the Android app sends `"question": null` with every photo (found on real glasses, 14 Nov).
+    if (body.question != null && typeof body.question !== 'string') { finishSequence(context); return requestError(req, res, 400, 'bad_request', reqId); }
     const question = typeof body.question === 'string' ? body.question.trim().slice(0, QUESTION_LIMIT) : '';
     const forceObjectId = typeof body.forceObjectId === 'string' ? body.forceObjectId : null;
     if (body.forceObjectId !== undefined && (!forceObjectId || (forceObjectId !== 'unknown' && !byId.has(forceObjectId)))) {

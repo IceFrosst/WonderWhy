@@ -31,6 +31,7 @@ import com.meta.wearable.dat.display.types.DisplayState
 import com.meta.wearable.dat.inputs.addInputs
 import com.meta.wearable.dat.inputs.removeInputs
 import com.meta.wearable.dat.inputs.types.InputEvent
+import com.meta.wearable.dat.inputs.types.DragAction
 import com.meta.wearable.dat.inputs.types.InputsConfiguration
 import com.meta.wearable.dat.inputs.types.InputsState
 import com.meta.wearable.dat.inputs.types.NavDirection
@@ -41,6 +42,7 @@ import com.meta.wearable.dat.speech.removeSpeech
 import com.meta.wearable.dat.speech.types.SpeechState
 import com.meta.wearable.dat.speech.types.TranscriptionResult
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,6 +58,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -164,6 +168,12 @@ class GlassesController(
     private var connectJob: Job? = null
     /** Microphone wanted (a result on screen); re-applied when speech settles (STOPPING ignores a start). */
     private var wantListening = false
+
+    /** Set while the "What should I explain?" card is up: the next final transcription (or a pinch = skip) ends it. */
+    private var questionWait: CompletableDeferred<String?>? = null
+    private var heardPartial = false
+    /** Ask "what should I explain?" after every photo. Off = send the photo at once (the earlier behaviour). */
+    var askWithPhoto = true
     /** Follows the glasses' state outside any session (a folded pair ends the session but keeps reporting). */
     private var deviceWatchJob: Job? = null
     /** The device watch saw the Bluetooth link go down and not come back yet. */
@@ -511,13 +521,18 @@ class GlassesController(
                 // pinch never reaches it (README "Known issues": a kit defect; Disconnect + Connect fixes it).
                 inputsJobs += scope.launch {
                     inputs.events.collect { ev ->
-                        log("Input #$no: ${ev.javaClass.simpleName}")
+                        if (ev is InputEvent.Drag) {
+                            log("Input #$no: Drag ${ev.action} x=${"%.2f".format(ev.x)} y=${"%.2f".format(ev.y)} dx=${"%.2f".format(ev.dx)} dy=${"%.2f".format(ev.dy)} ${ev.source}")
+                        } else log("Input #$no: ${ev.javaClass.simpleName} ${(ev as? InputEvent.Nav)?.direction ?: ""}")
                         when (ev) {
                             is InputEvent.Select -> { lastPinchAt = SystemClock.elapsedRealtime(); onSelect() }
                             is InputEvent.Capture -> { lastPinchAt = SystemClock.elapsedRealtime(); trigger() }
                             is InputEvent.Nav -> onNav(ev.direction)
                             is InputEvent.Back -> onBack()
-                            is InputEvent.Button, is InputEvent.Drag -> Unit
+                            is InputEvent.Button -> Unit
+                            // On real glasses (14 Nov) a Neural Band pinch arrives as a Drag DOWN..UP with no Select.
+                            // A short drag that barely moves counts as a pinch; a longer one is a swipe left/right.
+                            is InputEvent.Drag -> onDrag(ev)
                         }
                     }
                 }
@@ -566,6 +581,16 @@ class GlassesController(
     }
 
     private fun onHeard(r: TranscriptionResult) {
+        // A question spoken right after the photo goes with that photo, not to /ask.
+        questionWait?.takeIf { it.isActive }?.let { w ->
+            if (r.text.isNotBlank()) heardPartial = true
+            if (r.isFinal && r.text.isNotBlank()) {
+                log("Heard with the photo: \"${r.text}\" (${"%.2f".format(r.confidence)})")
+                lastHeard = r.text
+                w.complete(r.text)
+            }
+            return
+        }
         if (!r.isFinal || r.text.isBlank()) return
         log("Heard: \"${r.text}\" (${"%.2f".format(r.confidence)})")
         lastHeard = r.text
@@ -759,6 +784,8 @@ class GlassesController(
 
     /** True when the photo runs now or once the display is ready; false when refused (logged). */
     private fun tryTrigger(): Boolean {
+        // A pinch while the question card is up means "no question, just explain it".
+        questionWait?.takeIf { it.isActive }?.let { it.complete(null); log("Question skipped"); return true }
         val blocking = TriggerGate.blocking(active)
         val d = TriggerGate.decide(
             // While Connect is still creating the session, a trigger waits for the display like any other.
@@ -870,6 +897,7 @@ class GlassesController(
         val startedAt = SystemClock.elapsedRealtime()
         val demo = useFixture
         _receipt.value = null
+        var question: String? = null
         try {
             show(Cards.looking())
             var receivedAt = 0L
@@ -878,13 +906,15 @@ class GlassesController(
                 nextFixture()
             } else {
                 val tCapture = System.currentTimeMillis()
-                val (jpeg, focus) = withTimeout(30_000) { takePhotoJpeg() }
+                val (jpeg, focus) = withProgress("Taking the photo", PHOTO_EXPECTED_MS) { withTimeout(30_000) { takePhotoJpeg() } }
                 log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
                 onPhoto(jpeg)
                 lastPhotoKb = jpeg.size / 1024
+                question = listenForQuestion()
                 val sentAt = SystemClock.elapsedRealtime()
-                bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null })
-                    .also { receivedAt = SystemClock.elapsedRealtime(); lastDetectMs = receivedAt - sentAt }
+                withProgress(if (question != null) "Thinking about your question" else "Thinking", DETECT_EXPECTED_MS) {
+                    bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null }, question)
+                }.also { receivedAt = SystemClock.elapsedRealtime(); lastDetectMs = receivedAt - sentAt }
             }
             log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}" +
                 (if (det.lowConfidence) " lowConfidence" else "") +
@@ -892,7 +922,29 @@ class GlassesController(
                 (det.lang?.let { " lang=$it" } ?: "") + (if (det.media != null) " media" else "") +
                 (det.sketch?.let { " sketch='${it.label}' chapters=${it.chapters.size}" } ?: "") +
                 (det.sketchError?.let { " sketchError=$it" } ?: ""))
-            if (present(det, if (demo) ResultSource.DEMO else ResultSource.BRIDGE, startedAt) && receivedAt > 0) ackRendered(det.reqId, receivedAt)
+            val q = question
+            val tracks = DetectionParser.tracks(det)
+            val source = if (demo) ResultSource.DEMO else ResultSource.BRIDGE
+            val shown = when {
+                // A question about a library object: open its pictures at the lens the question points at.
+                q != null && tracks.isNotEmpty() -> {
+                    val at = AskFlow.visualFor(tracks, q)
+                    log("Question -> " + (at?.let { (l, s) -> "${tracks[l].lensId ?: tracks[l].title} step ${s + 1}" } ?: "overview") +
+                        (det.answer?.takeIf { it.isNotBlank() }?.let { " | model said: $it" } ?: ""))
+                    present(det, source, startedAt, openAt = at)
+                }
+                // Not in the library: there are no pictures, so the model's answer is shown as text.
+                q != null && !det.answer.isNullOrBlank() -> {
+                    media.clear()
+                    currentSaved = false
+                    currentReplay = false
+                    explainer = null
+                    val shownDet = det.copy(label = "Answer")
+                    showAnswer(shownDet, shownDet, q, local = false, startedAt = startedAt)
+                }
+                else -> present(det, source, startedAt)
+            }
+            if (shown && receivedAt > 0) ackRendered(det.reqId, receivedAt)
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
             log("Camera timed out: the glasses did not deliver a photo")
             showError(Cards.t(Lang.TOOK_TOO_LONG))
@@ -918,6 +970,48 @@ class GlassesController(
         } catch (e: Exception) {
             log("Unexpected: $e")
             showError(Cards.t(Lang.ERR_GENERIC))
+        }
+    }
+
+    /**
+     * Runs [block] while a progress card counts up on the glasses: [stage], a bar that moves towards
+     * [expectedMs] and slows down after it (it never reaches the end before the answer), and the seconds.
+     */
+    private suspend fun <T> withProgress(stage: String, expectedMs: Long, block: suspend () -> T): T = coroutineScope {
+        val t0 = SystemClock.elapsedRealtime()
+        val ticker = launch {
+            while (isActive) {
+                val ms = SystemClock.elapsedRealtime() - t0
+                // 1 - e^(-t/T): about 63% at the expected time, 86% at twice it, never 100%.
+                val f = (1.0 - kotlin.math.exp(-ms.toDouble() / expectedMs)).toFloat() * 0.95f
+                show(Cards.progress(stage, f, (ms / 1000).toInt()), record = false)
+                delay(PROGRESS_TICK_MS)
+            }
+        }
+        try { block() } finally { ticker.cancel() }
+    }
+
+    /**
+     * After the photo: "What should I explain?" with the microphone on. Returns the spoken question, or null
+     * when the wearer pinches (skip), stays silent for [QUESTION_WAIT_MS], or speech is not available.
+     */
+    private suspend fun listenForQuestion(): String? {
+        if (!askWithPhoto || speech == null) return null
+        val w = CompletableDeferred<String?>()
+        heardPartial = false
+        questionWait = w
+        try {
+            show(Cards.askWhat())
+            setListening(true)
+            var q = withTimeoutOrNull(QUESTION_WAIT_MS) { w.await() }
+            // Still talking at the deadline: wait for the end of the sentence.
+            if (q == null && !w.isCompleted && heardPartial) q = withTimeoutOrNull(QUESTION_FINISH_MS) { w.await() }
+            val clean = BridgeRequests.cleanQuestion(q)
+            log(if (clean != null) "Question with the photo: \"$clean\"" else "No question with the photo")
+            return clean
+        } finally {
+            questionWait = null
+            setListening(false)
         }
     }
 
@@ -1074,7 +1168,7 @@ class GlassesController(
      * Picks the result screen. An old bridge (no v1 fields) lands on exactly the cards it always did.
      * True when the result card is on the display now (for the `/rendered` ack).
      */
-    private suspend fun present(det: Detection, source: ResultSource, startedAt: Long? = null): Boolean {
+    private suspend fun present(det: Detection, source: ResultSource, startedAt: Long? = null, openAt: Pair<Int, Int>? = null): Boolean {
         media.clear()
         current = det
         currentSaved = source == ResultSource.SAVED || source == ResultSource.REPLAY
@@ -1093,8 +1187,9 @@ class GlassesController(
             is Verdict.NotSure -> { log("Not sure: maybe '${v.guess}'"); setListening(false); show(Cards.notSure(::trigger)) }
             is Verdict.Unrecognised -> { log("Not sure: ${v.answer.orEmpty()}"); setListening(false); show(Cards.notSure(::trigger)) }
             is Verdict.Plain -> { setListening(true); show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, det.standIn)) }
-            is Verdict.Explainer -> showExplainer(ExplainerState(v.tracks))
-            is Verdict.Sketched -> showExplainer(ExplainerState(v.tracks))
+            // [openAt]: the lens and step a spoken question pointed at; else the overview.
+            is Verdict.Explainer -> showExplainer(openAt?.let { ExplainerState(v.tracks, it.first, it.second) } ?: ExplainerState(v.tracks))
+            is Verdict.Sketched -> showExplainer(openAt?.let { ExplainerState(v.tracks, it.first, it.second) } ?: ExplainerState(v.tracks))
         }
         val toCard = if (shown && startedAt != null) SystemClock.elapsedRealtime() - startedAt else null
         if (toCard != null && verdict !is Verdict.NotSure && verdict !is Verdict.Unrecognised) lastToCardMs = toCard
@@ -1229,7 +1324,7 @@ class GlassesController(
                 // Demo data and saved cards have no bridge behind them: the phone answers from the same text.
                 if (useFixture || currentSaved) { showAnswer(det, AskFlow.localAnswer(det, q), q, local = true); return }
                 try {
-                    val ans = bridge.ask(q, target.id, lang)
+                    val ans = withProgress("Thinking about your question", DETECT_EXPECTED_MS) { bridge.ask(q, target.id, lang) }
                     val receivedAt = SystemClock.elapsedRealtime()
                     if (showAnswer(det, ans, q, local = false, startedAt = startedAt)) ackRendered(ans.reqId, receivedAt)
                 } catch (e: CancellationException) {
@@ -1333,6 +1428,37 @@ class GlassesController(
         when (val m = s.pinch()) {
             is ExplainerState.Move.Show -> showExplainer(m.state)
             ExplainerState.Move.Again -> { explainer = null; trigger() }
+        }
+    }
+
+    private var dragDownAt = 0L
+    private var dragDownX = 0f
+    private var dragDownY = 0f
+    private var dragMoved = 0f
+
+    /** Neural Band drag: DOWN..UP. Small and short = pinch (select); a clear horizontal move = left/right. */
+    private fun onDrag(ev: InputEvent.Drag) {
+        when (ev.action) {
+            DragAction.DOWN -> { dragDownAt = SystemClock.elapsedRealtime(); dragDownX = ev.x; dragDownY = ev.y; dragMoved = 0f }
+            DragAction.MOVE -> dragMoved = maxOf(dragMoved, kotlin.math.abs(ev.x - dragDownX), kotlin.math.abs(ev.y - dragDownY))
+            DragAction.UP -> {
+                if (dragDownAt == 0L) return
+                val ms = SystemClock.elapsedRealtime() - dragDownAt
+                val dx = ev.x - dragDownX
+                val moved = maxOf(dragMoved, kotlin.math.abs(dx), kotlin.math.abs(ev.y - dragDownY))
+                dragDownAt = 0L
+                when {
+                    ms <= DRAG_TAP_MS && moved <= DRAG_TAP_MOVE -> {
+                        log("Drag read as a pinch (${ms} ms, moved ${"%.2f".format(moved)})")
+                        lastPinchAt = SystemClock.elapsedRealtime(); onSelect()
+                    }
+                    kotlin.math.abs(dx) >= DRAG_SWIPE_MOVE -> {
+                        log("Drag read as a swipe ${if (dx > 0) "right" else "left"} (${ms} ms, dx ${"%.2f".format(dx)})")
+                        onNav(if (dx > 0) NavDirection.RIGHT else NavDirection.LEFT)
+                    }
+                    else -> log("Drag ignored (${ms} ms, moved ${"%.2f".format(moved)})")
+                }
+            }
         }
     }
 
@@ -1481,6 +1607,18 @@ class GlassesController(
     }
 
     companion object {
+        /** Neural Band drag read as a pinch: up within this time and this much movement (SDK units, guessed: 0..1). */
+        const val DRAG_TAP_MS = 700L
+        const val DRAG_TAP_MOVE = 0.08f
+        const val DRAG_SWIPE_MOVE = 0.25f
+        /** Progress card refresh. One card per second is light enough for the Bluetooth link. */
+        const val PROGRESS_TICK_MS = 1_000L
+        /** Typical times seen on real glasses (14 Nov): photo over Bluetooth 6 to 15 s, gemini-4-carbon 7 to 15 s. */
+        const val PHOTO_EXPECTED_MS = 8_000L
+        const val DETECT_EXPECTED_MS = 10_000L
+        /** How long the "What should I explain?" card waits for speech to start, then for the sentence to end. */
+        const val QUESTION_WAIT_MS = 6_000L
+        const val QUESTION_FINISH_MS = 6_000L
         /** Share of the photo's width and height that counts as "what the wearer is looking at". */
         const val AIM_FRACTION = 0.5f
         private const val NAV_DEBOUNCE_MS = 350L

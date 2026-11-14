@@ -89,7 +89,7 @@ class BridgeClient(config: BridgeConfig, private val log: (String) -> Unit = {})
     }
 
     /** [focus] is the centre of [jpeg], zoomed: where the wearer is looking. The bridge classifies that. */
-    suspend fun detect(jpeg: ByteArray, focus: ByteArray?, tCapture: Long, lang: String, forceObjectId: String? = null): Detection = withContext(Dispatchers.IO) {
+    suspend fun detect(jpeg: ByteArray, focus: ByteArray?, tCapture: Long, lang: String, forceObjectId: String? = null, question: String? = null): Detection = withContext(Dispatchers.IO) {
         val reqId = UUID.randomUUID().toString()
         val body = BridgeRequests.detectBody(
             reqId = reqId,
@@ -100,10 +100,11 @@ class BridgeClient(config: BridgeConfig, private val log: (String) -> Unit = {})
             lang = lang,
             waitSketch = true,
             forceObjectId = forceObjectId,
+            question = question,
         )
         // API providers answer in a few seconds (the dev-only pi provider needs up to 25 s). With waitSketch an
         // unknown object also waits for the sketch (SKETCH_TIMEOUT_MS, default 20 s) in the same response.
-        post("/detect", body, readTimeoutMs = 50_000).let { if (it.reqId == null) it.copy(reqId = reqId) else it }
+        post("/detect", body, readTimeoutMs = 60_000).let { if (it.reqId == null) it.copy(reqId = reqId) else it }
     }
 
     /** PROTOCOL `POST /ask`: a follow-up question about [aboutObjectId]. The answer is a normal `show`. */
@@ -111,7 +112,7 @@ class BridgeClient(config: BridgeConfig, private val log: (String) -> Unit = {})
         val reqId = UUID.randomUUID().toString()
         val body = BridgeRequests.askBody(reqId, question, aboutObjectId, lang)
             ?: throw BridgeException("Empty question", code = "bad_request")
-        post("/ask", body, readTimeoutMs = 20_000).let { if (it.reqId == null) it.copy(reqId = reqId) else it }
+        post("/ask", body, readTimeoutMs = 50_000).let { if (it.reqId == null) it.copy(reqId = reqId) else it }
     }
 
     /**

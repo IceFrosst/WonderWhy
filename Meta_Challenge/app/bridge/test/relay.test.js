@@ -64,6 +64,14 @@ test('nav relays phone to glasses, state relays glasses to phone', async () => {
   g.ws.close(); p.ws.close();
 });
 
+test('question: null means no question (the Android app sends it with every photo)', async () => {
+  const r = await post({ reqId: 'r-null-q', imageBase64: 'AAAA', question: null });
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).objectId, 'unknown');
+  const bad = await post({ reqId: 'r-bad-q', imageBase64: 'AAAA', question: 7 });
+  assert.equal(bad.status, 400);
+});
+
 test('mock provider returns unknown without forceObjectId', async () => {
   const r = await post({ reqId: 'r2', imageBase64: 'AAAA' });
   const b = await r.json();
