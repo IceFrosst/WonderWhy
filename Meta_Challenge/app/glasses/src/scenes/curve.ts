@@ -417,11 +417,11 @@ export class CurveScene implements Scene {
       });
     }
 
-    this.spreadBaselines(labels, top + font, bottom - 8);
+    this.spreadBaselines(labels, top + font, bottom - font - 10);
     ctx.font = `600 ${font}px ${this.fontFamily}`;
     ctx.textBaseline = 'alphabetic';
     const widest = labels.reduce((width, label) => Math.max(width, ctx.measureText(label.text).width), 0);
-    const drawLeft = x + widest + 10 > right;
+    const drawLeft = x >= (left + right) / 2 || x + widest + 10 > right;
     const markerAtRight = x > right - font * 1.5;
     const nameWidth = markerAtRight
       ? series.reduce((width, item) => Math.max(

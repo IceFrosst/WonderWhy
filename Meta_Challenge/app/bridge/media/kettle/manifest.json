@@ -20,6 +20,25 @@
       "fps": 15,
       "secondsPerStep": 3
     },
+    "kettle.cutaway": {
+      "kind": "cutaway",
+      "title": "Cut open",
+      "stills": [
+        "cutaway/s1.png",
+        "cutaway/s2.png",
+        "cutaway/s3.png"
+      ],
+      "clip": "cutaway/clip.mp4",
+      "captions": [
+        "Under the floor of the jug sits the heating element: a coil of wire that gets hot when current flows.",
+        "Water touching the hot floor warms, rises up the middle, cools at the top and sinks at the sides.",
+        "When it boils, steam runs down a tube to a metal strip in the base. The strip bends and clicks the power off."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
     "kettle.whatif": {
       "kind": "whatif",
       "title": "What if",

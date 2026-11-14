@@ -199,6 +199,45 @@ body {
   padding: var(--uit-spacing-large);
 }
 
+.home-page {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.home-intro {
+  gap: 0;
+  padding-block: var(--uit-spacing-medium);
+}
+
+.home-intro > p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.home-dock {
+  gap: var(--uit-spacing-2xs);
+  padding-block-end: var(--uit-spacing-small);
+}
+
+.home-rail > :nth-child(2) {
+  inline-size: 100%;
+  gap: var(--uit-spacing-xsmall);
+}
+
+.home-object-button {
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+
+.home-page--two .home-object-button {
+  flex: 0 1 calc((100% - var(--uit-spacing-xsmall)) / 2);
+  inline-size: calc((100% - var(--uit-spacing-xsmall)) / 2);
+}
+
+.home-page--three .home-object-button {
+  flex: 0 1 calc((100% - 2 * var(--uit-spacing-xsmall)) / 3);
+  inline-size: calc((100% - 2 * var(--uit-spacing-xsmall)) / 3);
+}
+
 .fill {
   width: 100%;
   height: 100%;

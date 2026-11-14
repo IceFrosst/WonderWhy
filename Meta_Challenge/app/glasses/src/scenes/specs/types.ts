@@ -393,3 +393,62 @@ export function parseCurveSpec(x: unknown): CurveSpec | null {
     steps,
   };
 }
+
+export interface ZoomSpec {
+  levels: Array<{
+    label: string;
+    scale: string;
+    draw: 'outline' | 'grains' | 'lattice';
+    shape?: 'spoon' | 'generic';
+    times?: string;
+  }>;
+  heat?: {from: 'left' | 'right'; label: string};
+  steps: Array<{level: number; heat: boolean}>;
+}
+
+const ZOOM_DRAWS: readonly string[] = ['outline', 'grains', 'lattice'];
+const ZOOM_SHAPES: readonly string[] = ['spoon', 'generic'];
+const zoomText = (x: unknown): string | null => {
+  if (!text(x)) return null;
+  return x.trim().slice(0, 32);
+};
+
+/** Validate a serialised object-to-microscopic zoom sequence. */
+export function parseZoomSpec(x: unknown): ZoomSpec | null {
+  if (!record(x) || !Array.isArray(x.levels) || !Array.isArray(x.steps) || !x.steps.length) return null;
+
+  const levels: ZoomSpec['levels'] = [];
+  for (const item of x.levels.slice(0, 4)) {
+    if (!record(item) || typeof item.draw !== 'string' || !ZOOM_DRAWS.includes(item.draw)) return null;
+    const label = zoomText(item.label);
+    const scale = zoomText(item.scale);
+    const shape = item.shape === undefined ? null : zoomText(item.shape);
+    const times = item.times === undefined ? null : zoomText(item.times);
+    if (!label || !scale || (item.shape !== undefined && (!shape || !ZOOM_SHAPES.includes(shape)))
+        || (item.times !== undefined && !times)) return null;
+    levels.push({
+      label,
+      scale,
+      draw: item.draw as ZoomSpec['levels'][number]['draw'],
+      ...(shape === null ? {} : {shape: shape as ZoomSpec['levels'][number]['shape']}),
+      ...(times === null ? {} : {times}),
+    });
+  }
+  if (levels.length < 2) return null;
+
+  let heat: ZoomSpec['heat'];
+  if (x.heat !== undefined) {
+    if (!record(x.heat) || (x.heat.from !== 'left' && x.heat.from !== 'right')) return null;
+    const label = zoomText(x.heat.label);
+    if (!label) return null;
+    heat = {from: x.heat.from, label};
+  }
+
+  const steps: ZoomSpec['steps'] = [];
+  for (const item of x.steps) {
+    if (!record(item) || !number(item.level) || !Number.isInteger(item.level)
+        || item.level < 0 || item.level >= levels.length || typeof item.heat !== 'boolean') return null;
+    steps.push({level: item.level, heat: item.heat});
+  }
+  return {levels, steps, ...(heat ? {heat} : {})};
+}

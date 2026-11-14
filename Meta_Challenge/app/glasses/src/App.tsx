@@ -10,6 +10,7 @@ import {
   TextView,
   useBackNavigation,
 } from '@wearables-ui-toolkit/mrbd';
+import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
 import {BridgeClient, bridgeUrl} from './bridge';
 import type {BridgeMsg, ShowMsg} from './bridge';
 import {emitNav, onNav} from './bus';
@@ -39,8 +40,6 @@ type View =
       lang?: string;
       standIn?: boolean;
     };
-
-const HOME_ROWS = [OBJECTS.slice(0, 2), OBJECTS.slice(2, 4), OBJECTS.slice(4)];
 
 const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/;
 
@@ -82,6 +81,121 @@ const DEVICE_CARDS: Record<string, Card> = {
   offline: {title: 'Offline', body: 'No connection. Built-in demos still work.'},
   camera_denied: {title: 'Camera blocked', body: 'Allow camera access on the phone.'},
 };
+
+interface HomeScreenProps {
+  connected: boolean;
+  openObject: (objectId: string) => void;
+}
+
+function clampHomeIndex(index: number, count: number): number {
+  return Math.max(0, Math.min(count - 1, index));
+}
+
+function HomeScreen({connected, openObject}: HomeScreenProps) {
+  const columns = OBJECTS.length > 6 ? 3 : 2;
+  const rows: ObjectInfo[][] = [];
+  for (let index = 0; index < OBJECTS.length; index += columns) rows.push(OBJECTS.slice(index, index + columns));
+  const buttonRefs = useRef<Array<ButtonHandle | null>>([]);
+  const [shortLabels, setShortLabels] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => buttonRefs.current[0]?.getElement()?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const shortened = new Set<string>();
+      OBJECTS.forEach((object, index) => {
+        const root = buttonRefs.current[index]?.getElement();
+        const title = root?.querySelector<HTMLElement>('[class*="titleLabel"]');
+        if (title && title.scrollWidth > title.clientWidth + 1) shortened.add(object.id);
+      });
+      setShortLabels(previous => {
+        if (previous.size === shortened.size && [...shortened].every(id => previous.has(id))) return previous;
+        return shortened;
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [columns]);
+
+  useEffect(() => {
+    const moveFocus = (action: 'left' | 'right' | 'up' | 'down'): void => {
+      const current = buttonRefs.current.findIndex(handle => {
+        const element = handle?.getElement();
+        return Boolean(element && element.contains(document.activeElement));
+      });
+      const start = current < 0 ? 0 : current;
+      const delta = action === 'left' ? -1 : action === 'right' ? 1 : action === 'up' ? -columns : columns;
+      const next = clampHomeIndex(start + delta, OBJECTS.length);
+      buttonRefs.current[next]?.getElement()?.focus({preventScroll: true});
+    };
+    const off = onNav(action => {
+      if (action === 'left' || action === 'right' || action === 'up' || action === 'down') moveFocus(action);
+    });
+    const onKey = (event: KeyboardEvent): void => {
+      const actions: Record<string, 'left' | 'right' | 'up' | 'down'> = {
+        ArrowLeft: 'left',
+        ArrowRight: 'right',
+        ArrowUp: 'up',
+        ArrowDown: 'down',
+      };
+      const action = actions[event.key];
+      if (!action) return;
+      event.preventDefault();
+      event.stopPropagation();
+      moveFocus(action);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      off();
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [columns]);
+
+  let flatIndex = 0;
+  return (
+    <Page
+      headerText="Physics Lens"
+      headerMetadata={connected ? 'Bridge connected' : 'Bridge offline (demo)'}
+      enableSystemBarInset={false}
+    >
+      <div className={`action-page-shell home-page home-page--${columns === 3 ? 'three' : 'two'}`}>
+        <ScrollView insetForHeader ariaLabel="Physics Lens">
+          <Panel width="100%">
+            <div className="content-inset home-intro">
+              <TextView as="p" textStyle={TextStyle.BODY2}>
+                Look at something, or pick one.
+              </TextView>
+            </div>
+          </Panel>
+        </ScrollView>
+        <div className="action-dock home-dock">
+          {rows.map((row, rowIndex) => (
+            <ButtonRail className="home-rail" key={rowIndex} centerContentWhenSmallerThanWidth={false}>
+              {row.map(object => {
+                const index = flatIndex++;
+                const shorten = shortLabels.has(object.id) || (columns === 3 && object.label.length > 14);
+                const title = shorten ? object.label.trim().split(/\s+/)[0] : object.label;
+                return (
+                  <Button
+                    className="home-object-button"
+                    enforceMaxWidth
+                    key={object.id}
+                    ref={handle => { buttonRefs.current[index] = handle; }}
+                    title={title}
+                    aria-label={object.label}
+                    onClick={() => openObject(object.id)}
+                  />
+                );
+              })}
+            </ButtonRail>
+          ))}
+        </div>
+      </div>
+    </Page>
+  );
+}
 
 export default function App() {
   const [view, setView] = useState<View>({k: 'home'});
@@ -291,7 +405,7 @@ export default function App() {
     body = (
       <div className="center" role="status" aria-live="polite">
         <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED}>
-          Looking…
+          {'Looking\u2026'}
         </TextView>
       </div>
     );
@@ -313,34 +427,7 @@ export default function App() {
       </Page>
     );
   } else {
-    body = (
-      <Page
-        headerText="Physics Lens"
-        headerMetadata={connected ? 'Bridge connected' : 'Bridge offline (demo)'}
-        enableSystemBarInset={false}
-      >
-        <div className="action-page-shell">
-          <ScrollView insetForHeader ariaLabel="Physics Lens" tabIndex={0}>
-            <Panel width="100%">
-              <div className="content-inset">
-                <TextView as="p" textStyle={TextStyle.BODY2}>
-                  Choose an object to see the physics inside it. Or look at one with the phone app.
-                </TextView>
-              </div>
-            </Panel>
-          </ScrollView>
-          <div className="action-dock">
-            {HOME_ROWS.map((row, i) => (
-              <ButtonRail key={i}>
-                {row.map(o => (
-                  <Button key={o.id} title={o.label} onClick={() => openObject(o.id)} />
-                ))}
-              </ButtonRail>
-            ))}
-          </div>
-        </div>
-      </Page>
-    );
+    body = <HomeScreen connected={connected} openObject={openObject} />;
   }
 
   return (
