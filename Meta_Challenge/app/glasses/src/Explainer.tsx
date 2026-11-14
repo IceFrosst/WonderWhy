@@ -3,14 +3,17 @@ import {Button, ButtonRail, TextColor, TextStyle, TextView} from '@wearables-ui-
 import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
 import {emitNav, onNav} from './bus';
 import type {NavAction} from './bus';
-import {findObject} from './content';
 import type {Chapter, ObjectInfo} from './content';
 import {createScene} from './scenes';
 import type {Readout, Scene} from './scenes';
 
 interface Props {
-  objectId: string;
+  info: ObjectInfo;
   label?: string;
+  /** Unknown view only: a sketch is being drawn, or none came. */
+  sketchState?: 'pending' | 'failed';
+  lang?: string;
+  standIn?: boolean;
   answer?: string;
   question?: string;
   onRendered: () => void;
@@ -61,8 +64,18 @@ declare global {
   }
 }
 
-export default function Explainer({objectId, label, answer, question, onRendered, onState}: Props) {
-  const info = findObject(objectId);
+export default function Explainer({
+  info,
+  label,
+  sketchState,
+  lang,
+  standIn,
+  answer,
+  question,
+  onRendered,
+  onState,
+}: Props) {
+  const objectId = info.id;
   const known = info.id !== 'unknown' && info.chapters.length > 0;
   const [lens, setLens] = useState(0);
   const [step, setStep] = useState(0);
@@ -288,7 +301,12 @@ export default function Explainer({objectId, label, answer, question, onRendered
 
   const multi = info.chapters.length > 1;
   const currentLensName = lensName(chapter);
-  const title = known ? (multi && chapter ? `${info.label} · ${chapter.title}` : info.label) : 'Not in the library yet';
+  const isSketch = known && info.provenance === 'sketch';
+  const title = known
+    ? multi && chapter && !isSketch
+      ? `${info.label} \u00b7 ${chapter.title}`
+      : info.label
+    : 'Not in the library yet';
   const oneLine = known ? (chapter?.lead ?? info.answer) : label ? `Looks like: ${label}` : '';
   const hasBridgeAnswer = Boolean(answer);
   const knob = chapter?.knobs?.[step];
@@ -305,11 +323,22 @@ export default function Explainer({objectId, label, answer, question, onRendered
       : `Next step (${step + 1}/${stepsInLens})`;
 
   return (
-    <div className="ex">
+    <div className="ex" lang={lang}>
       <div className="ex-head">
-        <TextView as="h1" textStyle={TextStyle.BODY2_EMPHASIZED}>
-          {title}
-        </TextView>
+        <div className="ex-title-row">
+          <TextView as="h1" textStyle={TextStyle.BODY2_EMPHASIZED} className="ex-title">
+            {title}
+          </TextView>
+          {isSketch ? (
+            <span
+              className="ex-tag ex-tag--hot"
+              title="Generated explanation, not checked"
+              aria-label="Generated explanation, not checked"
+            >
+              {'Sketch \u00b7 unverified'}
+            </span>
+          ) : null}
+        </div>
         {oneLine ? (
           <TextView as="p" textStyle={TextStyle.META1} textColor={TextColor.SECONDARY}>
             {oneLine}
@@ -326,6 +355,12 @@ export default function Explainer({objectId, label, answer, question, onRendered
           <TextView as="p" textStyle={TextStyle.BODY2}>
             {answer || 'Try pointing at a ball, a guitar, a bike, a kettle or something that swings.'}
           </TextView>
+          {sketchState ? (
+            <div role="status" className="ex-sketch-line">
+              {sketchState === 'pending' ? 'Drawing a sketch\u2026' : 'No sketch for this one.'}
+            </div>
+          ) : null}
+          {standIn ? <span className="ex-tag ex-tag--soft ex-unknown-tag">Stand-in model</span> : null}
         </div>
       )}
 
@@ -373,6 +408,7 @@ export default function Explainer({objectId, label, answer, question, onRendered
                 {hint}
               </TextView>
             ) : null}
+            {standIn ? <span className="ex-tag ex-tag--soft ex-foot-tag">Stand-in model</span> : null}
           </div>
         </>
       ) : null}

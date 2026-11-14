@@ -163,6 +163,7 @@ body {
 }
 
 .ex-hint {
+  flex: 1 1 0;
   margin-inline-start: auto;
   overflow: hidden;
   text-align: end;
@@ -201,4 +202,53 @@ body {
 .fill {
   width: 100%;
   height: 100%;
+}
+
+.ex-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--uit-spacing-small);
+  min-inline-size: 0;
+}
+
+.ex-title {
+  margin: 0;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ex-tag {
+  flex: 0 0 auto;
+  padding: 0 var(--uit-spacing-xsmall);
+  border: 1px solid currentColor;
+  border-radius: var(--uit-corner-radius-full);
+  font-size: 16px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.ex-tag--hot {
+  color: #ff8a4d;
+}
+
+.ex-tag--soft {
+  color: var(--uit-color-text-secondary);
+}
+
+.ex-foot-tag {
+  margin-inline-start: auto;
+}
+
+.ex-unknown-tag {
+  justify-self: end;
+  margin-block-start: var(--uit-spacing-small);
+}
+
+.ex-sketch-line {
+  margin-block-start: var(--uit-spacing-small);
+  color: var(--uit-color-text-secondary);
+  font-size: 16px;
+  line-height: 20px;
 }

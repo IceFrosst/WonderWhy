@@ -23,11 +23,20 @@ export interface ShowMsg {
   };
   replay?: boolean;
   ageMs?: number;
+  /** A sketch for an unknown object is being made; the `sketch` frame follows. */
+  sketchPending?: boolean;
+  /** Generated explanation (untrusted; validate with sketchToObject). */
+  sketch?: unknown;
+  /** Language of the library text in this message (`en`, `fi`, ...). */
+  lang?: string;
+  /** The answer came from a dev-only stand-in model. */
+  standIn?: boolean;
 }
 
 export type BridgeMsg =
   | {type: 'detecting'; reqId: string; t_sent?: number; timeoutMs?: number}
   | ShowMsg
+  | {type: 'sketch'; reqId: string; sketch?: unknown; error?: string}
   | {type: 'ping'; t_sent?: number}
   | {type: 'nav'; action: 'next' | 'prev' | 'deeper' | 'done' | 'left' | 'right' | 'up' | 'down'}
   | {type: 'clear'}

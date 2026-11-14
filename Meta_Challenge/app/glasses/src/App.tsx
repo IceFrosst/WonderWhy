@@ -11,9 +11,10 @@ import {
   useBackNavigation,
 } from '@wearables-ui-toolkit/mrbd';
 import {BridgeClient, bridgeUrl} from './bridge';
-import type {BridgeMsg} from './bridge';
+import type {BridgeMsg, ShowMsg} from './bridge';
 import {emitNav, onNav} from './bus';
-import {OBJECTS, findObject} from './content';
+import {OBJECTS, findObject, sketchToObject} from './content';
+import type {ObjectInfo} from './content';
 import Explainer from './Explainer';
 
 type View =
@@ -24,13 +25,48 @@ type View =
       k: 'explain';
       key: number;
       objectId: string;
+      info: ObjectInfo;
       label?: string;
+      /** Ack target for `rendered`; undefined for replays. */
       reqId?: string;
+      /** True when `rendered` was already sent for this request (sketch opened from the unknown view). */
+      acked?: boolean;
+      /** Request that a later `sketch` frame is matched against (unknown view only). */
+      sketchReq?: string;
+      sketchState?: 'pending' | 'failed';
       answer?: string;
       question?: string;
+      lang?: string;
+      standIn?: boolean;
     };
 
 const HOME_ROWS = [OBJECTS.slice(0, 2), OBJECTS.slice(2, 4), OBJECTS.slice(4)];
+
+const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/;
+
+/** Translated copy of a library object from a `show` (never mutates the library). */
+function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
+  const lenses = m.lenses;
+  if (base.id === 'unknown' || !Array.isArray(lenses)) return base;
+  return {
+    ...base,
+    label: typeof m.label === 'string' && m.label ? m.label : base.label,
+    answer: typeof m.summary === 'string' && m.summary ? m.summary : base.answer,
+    chapters: base.chapters.map(c => {
+      const t = c.lens ? lenses.find(l => l && l.id === `${base.id}.${c.lens}`) : undefined;
+      if (!t) return c;
+      return {
+        ...c,
+        title: typeof t.title === 'string' && t.title ? t.title : c.title,
+        lead: typeof t.lead === 'string' && t.lead ? t.lead : c.lead,
+        captions:
+          Array.isArray(t.steps) && t.steps.length === c.captions.length && t.steps.every(x => typeof x === 'string' && x)
+            ? t.steps
+            : c.captions,
+      };
+    }),
+  };
+}
 
 const CARD_MS = 6000;
 const ERROR_MS = 4000; // error cards auto-dismiss after 4 s (PROTOCOL.md)
@@ -68,7 +104,7 @@ export default function App() {
 
   const openObject = useCallback((objectId: string, extra?: Partial<View & {k: 'explain'}>) => {
     keyRef.current += 1;
-    setView({k: 'explain', key: keyRef.current, objectId, ...extra} as View);
+    setView({k: 'explain', key: keyRef.current, objectId, info: findObject(objectId), ...extra} as View);
   }, []);
 
   const clearDetectTimer = useCallback(() => {
@@ -109,13 +145,50 @@ export default function App() {
             }
             break;
           }
-          openObject(m.objectId, {
-            label: m.label,
-            reqId: m.replay ? undefined : m.reqId,
-            answer: m.answer,
-            question: m.question,
-          });
+          {
+            const lang = typeof m.lang === 'string' && LANG_RE.test(m.lang) ? m.lang : undefined;
+            const common = {reqId: m.replay ? undefined : m.reqId, standIn: m.standIn === true};
+            if (m.objectId === 'unknown') {
+              const sk = m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
+              if (sk) {
+                openObject('sketch', {...common, info: sk, label: sk.label, lang});
+              } else {
+                openObject('unknown', {
+                  ...common,
+                  label: m.label,
+                  answer: m.answer,
+                  question: m.question,
+                  sketchReq: m.reqId,
+                  sketchState: m.sketchPending === true ? 'pending' : undefined,
+                  lang,
+                });
+              }
+              break;
+            }
+            const base = findObject(m.objectId);
+            const translated = lang !== undefined && lang !== 'en' && Array.isArray(m.lenses);
+            openObject(m.objectId, {
+              ...common,
+              info: translated ? localise(base, m) : base,
+              label: m.label,
+              answer: m.answer,
+              question: m.question,
+              lang: translated ? lang : undefined,
+            });
+          }
           break;
+        case 'sketch': {
+          const v = viewRef.current;
+          if (v.k !== 'explain' || v.info.id !== 'unknown' || v.sketchReq === undefined || v.sketchReq !== m.reqId) break;
+          const sk =
+            m.error === undefined && m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
+          if (sk) {
+            openObject('sketch', {info: sk, label: sk.label, reqId: v.reqId, acked: true, lang: v.lang, standIn: v.standIn});
+          } else {
+            setView({...v, sketchState: 'failed'});
+          }
+          break;
+        }
         case 'ping':
           break;
         case 'nav':
@@ -199,7 +272,7 @@ export default function App() {
     return false;
   });
 
-  const reqId = view.k === 'explain' ? view.reqId : undefined;
+  const reqId = view.k === 'explain' && !view.acked ? view.reqId : undefined;
   const onRendered = useCallback(() => {
     if (reqId) bridgeRef.current?.send({type: 'rendered', reqId, t_rendered: Date.now()});
   }, [reqId]);
@@ -227,10 +300,13 @@ export default function App() {
       <Page showHeader={false} enableSystemBarInset={false}>
         <Explainer
           key={view.key}
-          objectId={view.objectId}
-          label={view.label ?? findObject(view.objectId).label}
+          info={view.info}
+          label={view.label ?? view.info.label}
           answer={view.answer}
           question={view.question}
+          sketchState={view.sketchState}
+          lang={view.lang}
+          standIn={view.standIn}
           onRendered={onRendered}
           onState={onState}
         />
