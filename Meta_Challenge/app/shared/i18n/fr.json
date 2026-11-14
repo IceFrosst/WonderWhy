@@ -157,6 +157,15 @@
             "À 100 C, l'énergie en plus sert à transformer l'eau en vapeur, pas à la chauffer. C'est la chaleur latente."
           ]
         },
+        "cutaway": {
+          "title": "Coupe ouverte",
+          "lead": "Une résistance, de l'eau en mouvement et un interrupteur qui sent la vapeur.",
+          "captions": [
+            "Sous le fond de la bouilloire se trouve la résistance : un fil enroulé qui chauffe quand le courant passe.",
+            "L'eau au contact du fond chaud se réchauffe, monte au centre, refroidit en haut et redescend sur les côtés.",
+            "À l'ébullition, la vapeur descend par un tube vers une lame métallique dans le socle. La lame se courbe et coupe le courant."
+          ]
+        },
         "whatif": {
           "title": "Et si",
           "lead": "Deux fois plus d'eau prend deux fois plus de temps.",
@@ -267,6 +276,39 @@
             "4000 milliampères-heures à 3.85 volts font environ 15 wattheures : l'énergie d'une batterie pleine.",
             "La recharger coûte moins d'un demi-centime. Une année entière de charges quotidiennes coûte un peu plus d'un euro.",
             "Une bouilloire consomme la même énergie en 28 secondes. Chauffer de l'eau coûte bien plus que calculer."
+          ]
+        }
+      }
+    },
+    "spoon": {
+      "label": "Cuillère en métal",
+      "answer": "Le métal éloigne vite la chaleur de ta peau.",
+      "chapters": {
+        "zoom": {
+          "title": "Zoom avant",
+          "lead": "Le métal est un réseau d'atomes dans une mer d'électrons libres.",
+          "captions": [
+            "Une cuillère en acier paraît lisse et pleine. Ses secrets sont bien trop petits pour être vus.",
+            "Trois cents fois plus près, l'acier est une mosaïque de minuscules grains cristallins, chacun large de quelques centièmes de millimètre.",
+            "Un million de fois plus près, chaque grain est un réseau ordonné d'atomes. Des électrons libres circulent entre eux et transportent vite la chaleur."
+          ]
+        },
+        "flow": {
+          "title": "Suis la chaleur",
+          "lead": "La chaleur parcourt le métal du bout chaud jusqu'à ta main.",
+          "captions": [
+            "Le thé chaud fait vibrer les atomes de la cuillère. Cette vibration est de la chaleur.",
+            "La vibration se transmet dans le métal, aidée par les électrons libres. En une minute le manche est tiède.",
+            "Tes doigts prennent la chaleur du manche. Un peu s'échappe aussi dans l'air en chemin."
+          ]
+        },
+        "number": {
+          "title": "Le chiffre",
+          "lead": "L'acier conduit la chaleur environ cent fois mieux que le bois.",
+          "captions": [
+            "L'acier conduit la chaleur environ 100 fois mieux que le bois. C'est pourquoi une cuillère en métal paraît froide et une en bois non.",
+            "Les deux cuillères sont à température ambiante. Celle en acier retire seulement plus vite la chaleur de ta peau.",
+            "L'argent conduit encore 27 fois mieux. Une cuillère en argent dans du thé chaud devient trop chaude en quelques secondes."
           ]
         }
       }

@@ -157,6 +157,15 @@
             "Vid 100 C går extra energi åt till att göra vatten till ånga, inte till att värma. Det är latent värme."
           ]
         },
+        "cutaway": {
+          "title": "Uppskuren",
+          "lead": "Ett värmeelement, rörligt vatten och en brytare som känner ångan.",
+          "captions": [
+            "Under kannans botten sitter värmeelementet: en trådspiral som blir het när ström flyter.",
+            "Vatten som rör den heta botten värms, stiger i mitten, svalnar överst och sjunker vid sidorna.",
+            "Vid kokning leds ångan i ett rör till en metallremsa i foten. Remsan böjs och klickar av strömmen."
+          ]
+        },
         "whatif": {
           "title": "Tänk om",
           "lead": "Dubbelt så mycket vatten tar dubbelt så lång tid.",
@@ -267,6 +276,39 @@
             "4000 milliamperetimmar vid 3.85 volt är ungefär 15 wattimmar: energin i ett fullt batteri.",
             "Att ladda det kostar under en halv cent. Ett helt år av daglig laddning är drygt en euro.",
             "En vattenkokare förbrukar samma energi på 28 sekunder. Att värma vatten kostar mycket mer än att räkna."
+          ]
+        }
+      }
+    },
+    "spoon": {
+      "label": "Metallsked",
+      "answer": "Metall leder bort värmen från din hud snabbt.",
+      "chapters": {
+        "zoom": {
+          "title": "Zooma in",
+          "lead": "Metall är ett nät av atomer i ett hav av fria elektroner.",
+          "captions": [
+            "En stålsked ser slät och massiv ut. Dess hemligheter är alldeles för små för att synas.",
+            "Trehundra gånger närmare är stålet ett lapptäcke av små kristallkorn, vart och ett några hundradels millimeter brett.",
+            "En miljon gånger närmare är varje korn ett prydligt gitter av atomer. Fria elektroner rör sig mellan dem och för värmen vidare snabbt."
+          ]
+        },
+        "flow": {
+          "title": "Följ värmen",
+          "lead": "Värmen vandrar längs metallen från den heta änden till din hand.",
+          "captions": [
+            "Hett te får atomerna i skedens skål att vibrera. Den vibrationen är värme.",
+            "Vibrationen förs vidare i metallen, med hjälp av fria elektroner. Efter en minut är skaftet varmt.",
+            "Dina fingrar tar värmen från skaftet. Lite värme går också ut i luften på vägen."
+          ]
+        },
+        "number": {
+          "title": "Talet",
+          "lead": "Stål leder värme ungefär hundra gånger bättre än trä.",
+          "captions": [
+            "Stål leder värme ungefär 100 gånger bättre än trä. Därför känns en metallsked kall och en träsked inte.",
+            "Båda skedarna har rumstemperatur. Stålskeden tar bara värmen från din hud snabbare.",
+            "Silver leder 27 gånger bättre än så. En silversked i hett te blir för het att hålla i på några sekunder."
           ]
         }
       }

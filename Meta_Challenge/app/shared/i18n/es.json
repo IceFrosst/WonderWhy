@@ -157,6 +157,15 @@
             "A 100 C la energía extra convierte el agua en vapor, no la calienta. Es el calor latente."
           ]
         },
+        "cutaway": {
+          "title": "Corte abierto",
+          "lead": "Una resistencia, agua en movimiento y un interruptor que siente el vapor.",
+          "captions": [
+            "Bajo el fondo de la jarra está la resistencia: una espiral de alambre que se calienta al pasar corriente.",
+            "El agua en contacto con el fondo caliente se calienta, sube por el centro, se enfría arriba y baja por los lados.",
+            "Al hervir, el vapor baja por un tubo hasta una tira metálica en la base. La tira se dobla y corta la corriente."
+          ]
+        },
         "whatif": {
           "title": "¿Y si...?",
           "lead": "El doble de agua tarda el doble.",
@@ -267,6 +276,39 @@
             "4000 miliamperios hora a 3.85 voltios son unos 15 vatios hora: la energía de una batería llena.",
             "Cargarla cuesta menos de medio céntimo. Un año entero de cargas diarias cuesta algo más de un euro.",
             "Un hervidor gasta la misma energía en 28 segundos. Calentar agua cuesta mucho más que calcular."
+          ]
+        }
+      }
+    },
+    "spoon": {
+      "label": "Cuchara de metal",
+      "answer": "El metal aleja el calor de tu piel con rapidez.",
+      "chapters": {
+        "zoom": {
+          "title": "Acércate",
+          "lead": "El metal es una red de átomos en un mar de electrones libres.",
+          "captions": [
+            "Una cuchara de acero parece lisa y maciza. Sus secretos son demasiado pequeños para verlos.",
+            "Trescientas veces más cerca, el acero es un mosaico de diminutos granos cristalinos, cada uno de unas centésimas de milímetro.",
+            "Un millón de veces más cerca, cada grano es una red ordenada de átomos. Electrones libres se mueven entre ellos y transportan el calor deprisa."
+          ]
+        },
+        "flow": {
+          "title": "Sigue el calor",
+          "lead": "El calor recorre el metal desde el extremo caliente hasta tu mano.",
+          "captions": [
+            "El té caliente hace vibrar los átomos de la cuchara. Esa vibración es calor.",
+            "La vibración avanza por el metal, ayudada por los electrones libres. En un minuto el mango está tibio.",
+            "Tus dedos toman el calor del mango. Un poco también se pierde en el aire por el camino."
+          ]
+        },
+        "number": {
+          "title": "El número",
+          "lead": "El acero conduce el calor unas cien veces mejor que la madera.",
+          "captions": [
+            "El acero conduce el calor unas 100 veces mejor que la madera. Por eso una cuchara de metal se siente fría y una de madera no.",
+            "Ambas cucharas están a temperatura ambiente. La de acero solo quita el calor de tu piel más rápido.",
+            "La plata conduce 27 veces mejor aún. Una cuchara de plata en té caliente quema demasiado en segundos."
           ]
         }
       }

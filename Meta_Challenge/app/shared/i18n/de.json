@@ -157,6 +157,15 @@
             "Bei 100 C geht zusätzliche Energie in die Verdampfung, nicht in die Erwärmung. Das ist die latente Wärme."
           ]
         },
+        "cutaway": {
+          "title": "Aufgeschnitten",
+          "lead": "Ein Heizelement, strömendes Wasser und ein Schalter, der den Dampf spürt.",
+          "captions": [
+            "Unter dem Boden des Kessels sitzt das Heizelement: eine Drahtspirale, die heiß wird, wenn Strom fließt.",
+            "Wasser am heißen Boden erwärmt sich, steigt in der Mitte auf, kühlt oben ab und sinkt an den Seiten.",
+            "Beim Kochen strömt Dampf durch ein Rohr zu einem Metallstreifen im Sockel. Der Streifen biegt sich und schaltet den Strom ab."
+          ]
+        },
         "whatif": {
           "title": "Was wäre wenn",
           "lead": "Doppelt so viel Wasser braucht doppelt so lange.",
@@ -267,6 +276,39 @@
             "4000 Milliamperestunden bei 3.85 Volt sind etwa 15 Wattstunden: die Energie eines vollen Akkus.",
             "Das Laden kostet unter einen halben Cent. Ein ganzes Jahr tägliches Laden kostet etwas über einen Euro.",
             "Ein Wasserkocher verbraucht dieselbe Energie in 28 Sekunden. Wasser zu erhitzen kostet weit mehr als Rechnen."
+          ]
+        }
+      }
+    },
+    "spoon": {
+      "label": "Metalllöffel",
+      "answer": "Metall leitet die Wärme schnell von deiner Haut weg.",
+      "chapters": {
+        "zoom": {
+          "title": "Hineinzoomen",
+          "lead": "Metall ist ein Gitter aus Atomen in einem Meer freier Elektronen.",
+          "captions": [
+            "Ein Stahllöffel sieht glatt und massiv aus. Seine Geheimnisse sind zu klein, um sie zu sehen.",
+            "Dreihundertmal näher ist der Stahl ein Flickenteppich aus winzigen Kristallkörnern, jedes wenige hundertstel Millimeter breit.",
+            "Eine Million Mal näher ist jedes Korn ein ordentliches Gitter aus Atomen. Freie Elektronen wandern dazwischen und tragen Wärme schnell fort."
+          ]
+        },
+        "flow": {
+          "title": "Der Wärme folgen",
+          "lead": "Die Wärme läuft durch das Metall vom heißen Ende in deine Hand.",
+          "captions": [
+            "Heißer Tee bringt die Atome in der Laffe zum Schwingen. Dieses Schwingen ist Wärme.",
+            "Das Schwingen wandert durch das Metall, unterstützt von freien Elektronen. Nach einer Minute ist der Stiel warm.",
+            "Deine Finger nehmen die Wärme vom Stiel auf. Ein wenig geht unterwegs auch an die Luft verloren."
+          ]
+        },
+        "number": {
+          "title": "Die Zahl",
+          "lead": "Stahl leitet Wärme etwa hundertmal besser als Holz.",
+          "captions": [
+            "Stahl leitet Wärme etwa 100-mal besser als Holz. Darum fühlt sich ein Metalllöffel kalt an und ein Holzlöffel nicht.",
+            "Beide Löffel haben Raumtemperatur. Der Stahllöffel entzieht deiner Haut die Wärme nur schneller.",
+            "Silber leitet noch 27-mal besser. Ein Silberlöffel im heißen Tee wird in Sekunden zu heiß zum Halten."
           ]
         }
       }

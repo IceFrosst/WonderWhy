@@ -157,6 +157,15 @@
             "100 C:ssa lisäenergia menee veden höyrystämiseen, ei lämmittämiseen. Se on piilevä lämpö."
           ]
         },
+        "cutaway": {
+          "title": "Leikattu auki",
+          "lead": "Vastus, liikkuva vesi ja kytkin, joka aistii höyryn.",
+          "captions": [
+            "Kannun pohjan alla on lämpövastus: lankakela, joka kuumenee virran kulkiessa.",
+            "Kuumaa pohjaa koskettava vesi lämpenee, nousee keskeltä, jäähtyy ylhäällä ja laskee reunoilla.",
+            "Kiehuessa höyry kulkee putkea pitkin pohjan metallinauhalle. Nauha taipuu ja napsauttaa virran pois."
+          ]
+        },
         "whatif": {
           "title": "Entä jos",
           "lead": "Kaksinkertainen vesimäärä vie kaksinkertaisen ajan.",
@@ -267,6 +276,39 @@
             "4000 milliampeerituntia 3.85 voltilla on noin 15 wattituntia: yhden täyden akun energia.",
             "Lataaminen maksaa alle puoli senttiä. Kokonainen vuosi päivittäistä latausta on vähän yli euron.",
             "Vedenkeitin kuluttaa saman energian 28 sekunnissa. Veden lämmitys maksaa paljon enemmän kuin laskenta."
+          ]
+        }
+      }
+    },
+    "spoon": {
+      "label": "Metallilusikka",
+      "answer": "Metalli siirtää lämmön nopeasti pois ihostasi.",
+      "chapters": {
+        "zoom": {
+          "title": "Zoomaa sisään",
+          "lead": "Metalli on atomihila, jossa liikkuu vapaita elektroneja.",
+          "captions": [
+            "Teräslusikka näyttää sileältä ja umpinaiselta. Sen salaisuudet ovat liian pieniä nähtäviksi.",
+            "Kolme sataa kertaa lähempää teräs on laikkutäkki pieniä kiteitä, kukin muutaman sadasosamillimetrin levyinen.",
+            "Miljoona kertaa lähempää jokainen kide on siisti atomihila. Vapaat elektronit kulkevat atomien välissä ja kuljettavat lämpöä nopeasti."
+          ]
+        },
+        "flow": {
+          "title": "Seuraa lämpöä",
+          "lead": "Lämpö kulkee metallia pitkin kuumasta päästä käteesi.",
+          "captions": [
+            "Kuuma tee saa lusikan kupin atomit värähtelemään. Tämä värinä on lämpöä.",
+            "Värinä etenee metallissa, ja vapaat elektronit auttavat. Minuutissa varsi on lämmin.",
+            "Sormesi ottavat lämmön varresta. Hieman lämpöä karkaa matkalla myös ilmaan."
+          ]
+        },
+        "number": {
+          "title": "Luku",
+          "lead": "Teräs johtaa lämpöä noin sata kertaa paremmin kuin puu.",
+          "captions": [
+            "Teräs johtaa lämpöä noin 100 kertaa paremmin kuin puu. Siksi metallilusikka tuntuu kylmältä ja puinen ei.",
+            "Molemmat lusikat ovat huoneenlämpöisiä. Teräslusikka vain vie lämmön ihostasi nopeammin.",
+            "Hopea johtaa vielä 27 kertaa paremmin. Hopealusikka kuumassa teessä kuumenee liian kuumaksi sekunneissa."
           ]
         }
       }
