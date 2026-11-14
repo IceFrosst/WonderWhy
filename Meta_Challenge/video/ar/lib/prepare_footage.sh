@@ -15,9 +15,12 @@ HLG="zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=hable:desat
 grab() { [ -s "$TMP/$2" ] || git -C "$REPO" show "$1" > "$TMP/$2"; }
 enc() { # enc <src in TMP> <out name>
   [ -s "$OUT/$2" ] && { echo "have $2"; return; }
-  local tr; tr="$(ffprobe -v error -select_streams v:0 -show_entries stream=color_transfer -of csv=p=0 "$TMP/$1")"
+  local tr; tr="$(ffprobe -v error -select_streams v:0 -show_entries stream=color_transfer -of csv=p=0 "$TMP/$1" | tr -d '\r')"
+  tr="${tr%%,*}" # some ffprobe builds (Windows) print "bt709," plus CR: keep the bare name or HDR is missed
   local vf="$SDR"; [ "$tr" = "arib-std-b67" ] || [ "$tr" = "smpte2084" ] && vf="$HLG"
-  ffmpeg -v error -y -i "$TMP/$1" -an -vf "$vf" -c:v libx264 -preset medium -crf 16 -movflags +faststart "$OUT/$2"
+  # write to a temp name first, so an interrupted run never leaves a half file that the next run skips as done
+  ffmpeg -v error -y -i "$TMP/$1" -an -vf "$vf" -c:v libx264 -preset medium -crf 16 -movflags +faststart -f mp4 "$OUT/.part-$2"
+  mv -f "$OUT/.part-$2" "$OUT/$2"
   echo "made $2 ($tr)"
 }
 for f in printer_1_core_one.mp4 printer_2_side_by_side.mp4 share_scene_glasses_friend.mp4 sauna.mp4 gym_air_bike.mp4; do
