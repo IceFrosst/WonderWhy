@@ -8,6 +8,8 @@ COPY bridge/package.json bridge/package-lock.json ./bridge/
 RUN cd bridge && npm ci --omit=dev
 COPY bridge/server.js bridge/detect.js bridge/bench.js ./bridge/
 COPY bridge/public ./bridge/public
+# Exported stills and clips (glasses: npm run export:media). The folder always exists (.gitkeep).
+COPY bridge/media ./bridge/media
 WORKDIR /app/bridge
 ENV PORT=8787 LATENCY_LOG=/data/latency.jsonl
 EXPOSE 8787

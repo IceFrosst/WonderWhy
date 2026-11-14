@@ -80,5 +80,12 @@ Source of truth for `summary`, `steps` and `lenses` is `shared/objects.json` (`t
 | `detecting` | Now carries `timeoutMs` (the bridge's detect timeout plus 2 000). The bridge always follows `detecting` with a `show` or an `error` for the same `reqId`. If neither arrives in `timeoutMs` (12 000 when absent), the Web App leaves "Looking…" by itself with a "Took too long" card |
 | `error` | Now carries `reqId` when it belongs to a detect request. Codes: `detect_timeout`, `detect_failed`, `bad_image`, `unauthorized` |
 
+### Lenses on the glasses (nav and state)
+| What | Rule |
+|---|---|
+| `nav` actions | `left` / `right` now change **lens** (previous / next, wrapping). New actions `up` / `down` change the knob of the current step (the one thing that step lets you vary). `next` goes one step deeper and rolls into the next lens after the last step; `deeper`, `prev`, `done` as before |
+| `state` (glasses to bridge to phone) | New fields: `lens` (kind, e.g. `flow`), `lensIndex` (0-based), `steps` (steps in this lens). `step` is now 1-based **inside the lens** |
+| `objects.json` chapters | One chapter = one lens. Optional `knobs` (one per step: `{axis, label}` or `null`) and `spec` (drawing data for the data-driven scenes `flow` and `number`). The bridge never sends `spec` |
+
 ## Latency log
 The bridge appends every completed request as one JSON line to `bridge/latency.jsonl` (git-ignored) and serves a summary at `GET /latency` (count, p50, p90 per stage).
