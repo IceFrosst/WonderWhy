@@ -1,0 +1,80 @@
+{
+  "objectId": "earbuds",
+  "lenses": {
+    "earbuds.motion": {
+      "kind": "motion",
+      "title": "How silence is made",
+      "stills": [
+        "motion/s1.png",
+        "motion/s2.png",
+        "motion/s3.png"
+      ],
+      "clean": [
+        "motion/c1.png",
+        "motion/c2.png",
+        "motion/c3.png"
+      ],
+      "clip": "motion/clip.mp4",
+      "captions": [
+        "Noise is a wave of air pressure: high, low, high, low, hitting your ear.",
+        "A tiny microphone on the outside hears that wave. The earbud plays the same wave flipped upside down.",
+        "Where the wave is high, the flipped one is low. Added together they make an almost flat line: silence."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "earbuds.flow": {
+      "kind": "flow",
+      "title": "Follow the sound",
+      "stills": [
+        "flow/s1.png",
+        "flow/s2.png",
+        "flow/s3.png",
+        "flow/s4.png"
+      ],
+      "clean": [
+        "flow/c1.png",
+        "flow/c2.png",
+        "flow/c3.png",
+        "flow/c4.png"
+      ],
+      "clip": "flow/clip.mp4",
+      "captions": [
+        "The crowd's noise reaches the outside microphone first.",
+        "A chip flips the wave, faster than the sound can travel into your ear.",
+        "The speaker plays the flipped wave and it meets the noise inside your ear: they cancel.",
+        "Your music is left untouched, so you hear it clearly over the quiet."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "earbuds.number": {
+      "kind": "number",
+      "title": "The number",
+      "stills": [
+        "number/s1.png",
+        "number/s2.png",
+        "number/s3.png"
+      ],
+      "clean": [
+        "number/c1.png",
+        "number/c2.png",
+        "number/c3.png"
+      ],
+      "clip": "number/clip.mp4",
+      "captions": [
+        "Good earbuds can make a low hum, like an engine, sound 10 to 30 times quieter.",
+        "Low sounds are long, slow waves, easy to match. Voices and clicks are short and fast, so some get through.",
+        "That is why a plane's drone disappears but a person talking next to you does not."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    }
+  }
+}

@@ -41,6 +41,7 @@ function parseArgs(args) {
 async function launchBrowser() {
   const attempts = [
     ['bundled Chromium', {}],
+    ['system Chromium (CHROMIUM_PATH)', {executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium'}],
     ['Google Chrome', {channel: 'chrome'}],
     ['Microsoft Edge', {channel: 'msedge'}],
   ];

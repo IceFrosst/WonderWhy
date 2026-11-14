@@ -15828,6 +15828,190 @@
           }
         }
       ]
+    },
+    {
+      "id": "earbuds",
+      "label": "Noise-cancelling earbuds",
+      "short": "Earbuds",
+      "detect_hint": "wireless earbuds or headphones, or their charging case, held in a hand or in an ear",
+      "concept": "Noise cancelling: a microphone hears the noise and the earbud plays the same wave flipped, so the two cancel",
+      "tagline": "How silence is made",
+      "answer": "They play the noise back flipped, so the two waves cancel into silence.",
+      "chapters": [
+        {
+          "scene": "earbuds",
+          "lens": "motion",
+          "title": "How silence is made",
+          "lead": "Noise plus flipped noise equals silence.",
+          "hint": "Pinch: next step. Left/right: how well it matches.",
+          "captions": [
+            "Noise is a wave of air pressure: high, low, high, low, hitting your ear.",
+            "A tiny microphone on the outside hears that wave. The earbud plays the same wave flipped upside down.",
+            "Where the wave is high, the flipped one is low. Added together they make an almost flat line: silence."
+          ],
+          "knobs": [
+            null,
+            {
+              "axis": "x",
+              "label": "match"
+            },
+            {
+              "axis": "x",
+              "label": "match"
+            }
+          ]
+        },
+        {
+          "scene": "flow",
+          "lens": "flow",
+          "title": "Follow the sound",
+          "lead": "It all happens in about a ten-thousandth of a second.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "The crowd's noise reaches the outside microphone first.",
+            "A chip flips the wave, faster than the sound can travel into your ear.",
+            "The speaker plays the flipped wave and it meets the noise inside your ear: they cancel.",
+            "Your music is left untouched, so you hear it clearly over the quiet."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "kind": "signal",
+            "nodes": [
+              {
+                "id": "noise",
+                "label": "Noise",
+                "sub": "the crowd"
+              },
+              {
+                "id": "mic",
+                "label": "Microphone",
+                "sub": "hears it"
+              },
+              {
+                "id": "chip",
+                "label": "Chip",
+                "sub": "flips it"
+              },
+              {
+                "id": "speaker",
+                "label": "Speaker",
+                "sub": "plays it flipped"
+              },
+              {
+                "id": "ear",
+                "label": "Your ear",
+                "sub": "near silence"
+              }
+            ],
+            "losses": [
+              {
+                "at": "ear",
+                "label": "Fast sounds like voices slip through",
+                "share": 0.3
+              }
+            ],
+            "steps": [
+              {
+                "upTo": 2,
+                "focus": [
+                  "noise",
+                  "mic"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "chip"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 5,
+                "focus": [
+                  "speaker",
+                  "ear"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 5,
+                "focus": [
+                  "ear"
+                ],
+                "losses": true
+              }
+            ]
+          }
+        },
+        {
+          "scene": "number",
+          "lens": "number",
+          "title": "The number",
+          "lead": "Noise cancelling is fastest at the deep hum.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Good earbuds can make a low hum, like an engine, sound 10 to 30 times quieter.",
+            "Low sounds are long, slow waves, easy to match. Voices and clicks are short and fast, so some get through.",
+            "That is why a plane's drone disappears but a person talking next to you does not."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "value": 30,
+              "unit": "dB",
+              "label": "less engine hum, at best",
+              "decimals": 0
+            },
+            "rows": [
+              {
+                "label": "A low hum, one wave",
+                "value": 3.4,
+                "unit": "m",
+                "decimals": 1
+              },
+              {
+                "label": "A voice, one wave",
+                "value": 0.34,
+                "unit": "m",
+                "decimals": 2
+              },
+              {
+                "label": "Time to flip the wave",
+                "value": 0.1,
+                "unit": "ms",
+                "decimals": 1
+              }
+            ],
+            "compare": {
+              "label": "Same hum, 30 dB lower: about",
+              "value": 1000,
+              "unit": "x less power",
+              "decimals": 0
+            },
+            "steps": [
+              {
+                "show": "headline"
+              },
+              {
+                "show": "rows"
+              },
+              {
+                "show": "compare"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

@@ -3,6 +3,7 @@ import {BicycleScene} from './bicycle';
 import {BounceScene} from './bounce';
 import {CurveScene} from './curve';
 import {KettleCutawayScene} from './cutaway';
+import {EarbudsScene} from './earbuds';
 import {ExplodedScene} from './exploded';
 import {FlowScene} from './flow';
 import {PHONE_SPEC} from './specs/phone';
@@ -24,6 +25,7 @@ const FACTORIES: Record<string, (spec?: unknown) => Scene | null> = {
   'kettle-cutaway': () => new KettleCutawayScene(),
   pendulum: () => new PendulumScene(),
   bounce: () => new BounceScene(),
+  earbuds: () => new EarbudsScene(),
   'phone-exploded': () => new ExplodedScene(PHONE_SPEC),
   curve: spec => {
     const s = parseCurveSpec(spec);
