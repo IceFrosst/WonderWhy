@@ -91,7 +91,7 @@ Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pas
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
 | 15 | 0:38-0:42 | REAL + RENDER | Sauna: water on hot stones, steam rising (phone; glasses stay outside) | Lines: steam rising, heat flowing up | *Why steam bites* | Hiss |
-| 16 | 0:42-0:46 | REAL + RENDER | Gym bike: flywheel spinning, magnet beside it | Lines: magnet brakes the wheel without touching (eddy currents) | *Brakes without touching* | Whirr, beat |
+| 16 | 0:42-0:47 | REAL + RENDER | Gym air bike with the B1 Airflow explanation (`act5_bike/final/B1_airflow.mp4`, 5 s) | Air streams off the fan blades; push harder, more air, more resistance | *Push harder, air pushes back harder.* | Whirr, beat |
 
 ## Act 6: how it works (0:46-0:54)
 | # | Time | Source | Shot | Effect | Text | Audio |
