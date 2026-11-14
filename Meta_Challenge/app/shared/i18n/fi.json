@@ -16,13 +16,20 @@
     "guitar": {
       "label": "Kitaran kieli",
       "answer": "Lyhyempi kieli värähtelee nopeammin, joten ääni on korkeampi.",
+      "tagline": "Seisovat aallot",
+      "short": "Kitara",
       "chapters": {
         "motion": {
           "title": "Seisovat aallot",
           "captions": [
-            "Nauhaa painamalla kieli lyhenee. Puolet pituudesta antaa kaksinkertaisen taajuuden: f = v / 2L.",
+            "Nauhaa painamalla kieli lyhenee. Puolet pituudesta kaksinkertaistaa taajuuden, joten sävel nousee oktaavin.",
             "Kieli värähtelee myös kokonaislukukuvioina: ylä-äänet n = 1, 2, 3 taajuuksilla f, 2f, 3f.",
             "Aallon nopeus riippuu jännityksestä T ja pituusmassasta mu: f = (1/2L) sqrt(T/mu). Kireämpi = korkeampi."
+          ],
+          "knobs": [
+            "nauha",
+            "nauha",
+            "jännitys"
           ]
         },
         "whatif": {
@@ -31,7 +38,32 @@
           "captions": [
             "Jokainen nauha lyhentää kieltä ja nostaa ääntä noin 6 prosenttia. Kaksitoista nauhaa kaksinkertaistaa taajuuden: yksi oktaavi.",
             "Kaksi kertaa pidempi kieli soi oktaavin matalammalta jokaisella nauhalla. Se on osittain syy siihen, miksi bassosoittimet ovat isoja."
-          ]
+          ],
+          "knobs": [
+            "nauha",
+            "nauha"
+          ],
+          "spec": {
+            "x": {
+              "label": "nauha"
+            },
+            "y": {
+              "label": "taajuus"
+            },
+            "series": [
+              {
+                "name": "Tämä kieli"
+              },
+              {
+                "name": "Kaksinkertainen"
+              }
+            ],
+            "marks": [
+              {
+                "label": "nauha 12: kaksinkertainen"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Seuraa ääntä",
@@ -41,7 +73,42 @@
             "Kieli on liian ohut liikuttamaan paljon ilmaa yksin. Se saa sen sijaan sillan, johon se on kiinnitetty, tärisemään.",
             "Silta saa ohuen kansilevyn tärisemään. Sen suuri ala liikuttaa paljon ilmaa, ja siksi ääni on kova.",
             "Paineaallot kulkevat ilmassa 343 metriä sekunnissa korvaasi."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Sormi",
+                "sub": "näppää"
+              },
+              {
+                "label": "Kieli",
+                "sub": "värähtelee"
+              },
+              {
+                "label": "Talla",
+                "sub": "välittää"
+              },
+              {
+                "label": "Kansi",
+                "sub": "työntää ilmaa"
+              },
+              {
+                "label": "Korvasi",
+                "sub": "kuulee sävelen"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Suurin osa lämmöksi, vähän ääneksi"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Luku",
@@ -50,29 +117,70 @@
             "Taajuus kertoo heilahdukset sekunnissa. Kitaran avoin A-kieli tekee niitä 110: 110 hertsiä.",
             "Nauha 12 puolittaa kielen, joten ääni kaksinkertaistuu 220 Hz:iin. Aalto etenee kielessä nopeudella 143 m/s.",
             "Jokainen kaksinkertaistuminen on yksi oktaavi. Kaksi oktaavia tämän kielen yläpuolella on 440 Hz, johon orkesterit virittävät."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "avoin A-kieli, värähdyksiä sekunnissa",
+              "unit": "Hz"
+            },
+            "rows": [
+              {
+                "label": "Sama kieli nauhalla 12",
+                "unit": "Hz"
+              },
+              {
+                "label": "Aallon nopeus kielessä",
+                "unit": "m/s"
+              },
+              {
+                "label": "Ääniaallon pituus ilmassa",
+                "unit": "m"
+              }
+            ],
+            "compare": {
+              "label": "Viritys-A kaksi oktaavia ylempänä",
+              "unit": "Hz"
+            }
+          }
         }
       }
     },
     "ball": {
       "label": "Heitetty pallo",
       "answer": "Painovoima taivuttaa radan kaarevaksi.",
+      "tagline": "Heittoliike",
+      "short": "Pallo",
       "chapters": {
         "motion": {
           "title": "Heittoliike",
           "captions": [
             "Painovoima vetää palloa koko ajan alas, joten sen rata kaartuu paraabeliksi.",
             "Ilman ilmaa sivuttaisnopeus ei muutu koskaan. Vain pystynopeus muuttuu, koska painovoima vaikuttaa alaspäin.",
-            "Ilmanvastus hidastaa palloa, joten paras kulma jää alle 45 asteen. Harmaa = ei ilmaa."
+            "Ilmanvastus hidastaa palloa, joten paras kulma jää alle 45 asteen. Haalea rata näyttää saman heiton ilman ilmaa."
+          ],
+          "knobs": [
+            "kulma",
+            "nopeus",
+            "kulma"
           ]
         },
         "compare": {
           "title": "Pomppu",
           "lead": "Jokainen pomppu säilyttää vain osan energiasta.",
           "captions": [
-            "Jokainen pomppu on matalampi, koska pallo säilyttää vain osan energiastaan: korkeuksien suhde on e:n neliö.",
+            "Jokainen pomppu jää edellistä matalammaksi, koska pallo säilyttää vain osan energiastaan aina osuessaan lattiaan.",
             "Putoaminen muuttaa potentiaalienergian liike-energiaksi; puristuma varastoi sen kuin jousi; osa menee joka pompulla lämmöksi ja ääneksi.",
             "Kimmoisuus riippuu materiaalista: superpallo palaa lähes täysin, savi imee energian lämmöksi eikä juuri pompi."
+          ],
+          "knobs": [
+            "pudotuskorkeus",
+            "pudotuskorkeus",
+            "pallotyyppi"
           ]
         },
         "whatif": {
@@ -81,7 +189,32 @@
           "captions": [
             "Muuta kulmaa. Matala ja jyrkkä heitto jäävät molemmat lyhyiksi. Ilman ilmaa 45 astetta menee pisimmälle.",
             "Kuussa painovoima on kuusi kertaa heikompi, joten jokainen heitto lentää kuusi kertaa pidemmälle. Paras kulma on yhä 45."
-          ]
+          ],
+          "knobs": [
+            "kulma",
+            "kulma"
+          ],
+          "spec": {
+            "x": {
+              "label": "kulma"
+            },
+            "y": {
+              "label": "matka"
+            },
+            "series": [
+              {
+                "name": "Maa"
+              },
+              {
+                "name": "Kuu"
+              }
+            ],
+            "marks": [
+              {
+                "label": "45: pisin"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Seuraa energiaa",
@@ -91,29 +224,100 @@
             "Noustessa liike-energia muuttuu potentiaalienergiaksi. 45 asteen heiton huipulla se on puoliksi kumpaakin.",
             "Laskeutuessa potentiaalienergia muuttuu takaisin liikkeeksi. Ilmanvastus vie osan, tennispallolla noin kymmenesosan.",
             "Maahan osuessa liike-energia muuttuu lämmöksi, ääneksi ja seuraavaksi pompuksi. Mitään siitä ei tuhoudu."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Käsivartesi",
+                "sub": "antaa 2.9 J"
+              },
+              {
+                "label": "Liike-energia",
+                "sub": "irrotessa"
+              },
+              {
+                "label": "Potentiaalienergia",
+                "sub": "puolet huipulla"
+              },
+              {
+                "label": "Liike-energia",
+                "sub": "laskeutuessa"
+              },
+              {
+                "label": "Lämpö, ääni, isku",
+                "sub": "osuessa"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Ilmanvastus"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Luku",
           "lead": "10 m/s:n heitto 45 asteen kulmassa osuu noin 10 metrin päähän.",
           "captions": [
-            "Heittomatka on nopeuden neliö jaettuna g:llä 45 asteen kulmassa: 100 jaettuna 9.81:llä on noin 10 metriä. Ilmaa ei huomioida.",
-            "Pallo pysyy ilmassa 1.4 sekuntia ja nousee 2.5 metriin. Kymmenen metriä sekunnissa on 36 km/h.",
+            "Kun pallo heitetään nopeudella 10 metriä sekunnissa 45 asteen kulmassa, se lentää noin 10 metriä ilman ilmanvastusta.",
+            "Se pysyy ilmassa 1.4 sekuntia ja nousee 2.5 metriin. Kantama on nopeuden neliö jaettuna g:llä: 100 / 9.81.",
             "Kuu vetää kuusi kertaa heikommin, joten sama heitto lentää kuusi kertaa pidemmälle: noin 62 metriä."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "10 m/s heiton matka 45 asteessa",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Aika ilmassa",
+                "unit": "s"
+              },
+              {
+                "label": "Korkein kohta",
+                "unit": "m"
+              },
+              {
+                "label": "Heittonopeus",
+                "unit": "km/h"
+              }
+            ],
+            "compare": {
+              "label": "Sama heitto Kuussa lentää",
+              "unit": "m"
+            }
+          }
         }
       }
     },
     "bicycle": {
       "label": "Polkupyörän vaihteet",
       "answer": "Iso etuhammaspyörä ja pieni takahammaspyörä vaihtavat voiman nopeuteen.",
+      "tagline": "Välityssuhde",
+      "short": "Pyörä",
       "chapters": {
         "motion": {
           "title": "Välityssuhde",
           "captions": [
-            "Ketju yhdistää kaksi hammaspyörää. Välityssuhde = etuhampaat / takahampaat.",
-            "Jokainen poljinkierros vetää ketjua etuhampaiden verran, joten pyörä kääntyy välityssuhteen verran.",
+            "Ketju yhdistää suuren eturattaan pieneen takarattaaseen, joten yksi poljinkierros pyöräyttää pyörää useammin kuin kerran.",
+            "Välityssuhde on etuhampaiden määrä jaettuna takahampailla. Jokainen poljinkierros vetää näin monta ketjun hammasta takarattaan ohi.",
             "Energia säilyy: suurempi välityssuhde antaa enemmän nopeutta poljinkierrosta kohti mutta vähemmän työntöä pyörälle."
+          ],
+          "knobs": [
+            "takaratas",
+            "takaratas",
+            "takaratas"
           ]
         },
         "whatif": {
@@ -122,7 +326,32 @@
           "captions": [
             "Vähemmän hampaita takana antaa enemmän nopeutta samalla polkemisella: 44 km/h pienimmällä vaihteella, 14 suurimmalla.",
             "Pieni etuhammaspyörä laskee jokaista vaihdetta noin 30 prosenttia. Menet hitaammin, mutta jokainen poljinpotku on vahvempi."
-          ]
+          ],
+          "knobs": [
+            "takahampaat",
+            "takahampaat"
+          ],
+          "spec": {
+            "x": {
+              "label": "takahampaat"
+            },
+            "y": {
+              "label": "nopeus 80 kierroksella/min"
+            },
+            "series": [
+              {
+                "name": "48 edessä"
+              },
+              {
+                "name": "34 edessä"
+              }
+            ],
+            "marks": [
+              {
+                "label": "16: 30 km/h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Seuraa voimaa",
@@ -132,22 +361,88 @@
             "Etuhammaspyörä vetää ketjun yläosan kireälle. Puhdas ketju menettää kitkaan vain noin 3 prosenttia.",
             "Ketju pyörittää takahammaspyörää. Pieni takahammaspyörä pyörittää pyörää useita kertoja jokaista poljinkierrosta kohti.",
             "Rengas työntää tietä taaksepäin ja tie työntää pyörää eteenpäin. Tuo työntö liikuttaa sinua."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Jalkasi",
+                "sub": "painaa alas"
+              },
+              {
+                "label": "Poljin ja kampi",
+                "sub": "vipu"
+              },
+              {
+                "label": "Ketju",
+                "sub": "vedetään kireälle"
+              },
+              {
+                "label": "Takaratas",
+                "sub": "pyörittää pyörää"
+              },
+              {
+                "label": "Rengas tiellä",
+                "sub": "työntää eteenpäin"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Ketjun kitka"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Luku",
           "lead": "Yksi poljinkierros isolla vaihteella vie yli 6 metriä.",
           "captions": [
-            "48 hammasta jaettuna 16:lla on välityssuhde 3. Pyörä kääntyy kolme kertaa poljinkierroksella: 3 kertaa 2.1 metriä.",
+            "Eturattaassa on kolme kertaa enemmän hampaita kuin takarattaassa, joten pyörä pyörähtää poljinkierroksella kolmesti: 6.3 metriä.",
             "80 poljinkierroksella minuutissa se on 30 km/h. Hinta: rengas työntää vain 17 prosentilla poljinvoimastasi.",
             "Pieni vaihde kääntää asian toisin päin. Kolminkertainen työntö ylämäkeen, mutta vain 2.1 metriä kierrosta kohti."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "etenemä/kierros, 48 hammasta edessä, 16 takana",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Välityssuhde",
+                "unit": "suhde 1"
+              },
+              {
+                "label": "Nopeus 80 kierroksella minuutissa",
+                "unit": "km/h"
+              },
+              {
+                "label": "Renkaan työntö poljinvoimasta",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "Pieni vaihde 34/34: työntö 3-kertainen, matka vain",
+              "unit": "m/kierros"
+            }
+          }
         }
       }
     },
     "kettle": {
       "label": "Kiehuva vedenkeitin",
       "answer": "Kuuma vesi nousee, kylmä vesi laskee, kuplat ovat höyryä.",
+      "tagline": "Konvektio ja kiehuminen",
+      "short": "Vedenkeitin",
       "chapters": {
         "motion": {
           "title": "Konvektio ja kiehuminen",
@@ -155,6 +450,11 @@
             "Lämmitetty vesi laajenee ja kevenee, joten se nousee keskeltä ja laskeutuu reunoilla.",
             "Pohjan kuumat kohdat antavat höyrykuplien muodostua (ydintyminen), sitten ne nousevat ja puhkeavat.",
             "100 °C:ssa lisäenergia menee veden höyrystämiseen, ei lämmittämiseen. Se on piilevä lämpö."
+          ],
+          "knobs": [
+            "lämpö",
+            "lämpö",
+            "lämpö"
           ]
         },
         "cutaway": {
@@ -164,6 +464,11 @@
             "Kannun pohjan alla on lämpövastus: lankakela, joka kuumenee virran kulkiessa.",
             "Kuumaa pohjaa koskettava vesi lämpenee, nousee keskeltä, jäähtyy ylhäällä ja laskee reunoilla.",
             "Kiehuessa höyry kulkee putkea pitkin pohjan metallinauhalle. Nauha taipuu ja napsauttaa virran pois."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
           ]
         },
         "whatif": {
@@ -172,7 +477,32 @@
           "captions": [
             "Kiehumisaika kasvaa lähes suoraan veden määrän mukana. Kaksinkertainen vesi tarvitsee noin kaksinkertaisen ajan ja energian.",
             "60 °C:sta alkava vesi tarvitsee vain puolet lämmityksestä, joten se kiehuu puolessa ajassa."
-          ]
+          ],
+          "knobs": [
+            "litrat",
+            "litrat"
+          ],
+          "spec": {
+            "x": {
+              "label": "litrat"
+            },
+            "y": {
+              "label": "kiehumisaika"
+            },
+            "series": [
+              {
+                "name": "Alkaen 20 °C"
+              },
+              {
+                "name": "Alkaen 60 °C"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 L: 3.2 min"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Seuraa energiaa",
@@ -182,7 +512,38 @@
             "Vastus vastustaa virtaa, joten kaikki sähköenergia muuttuu lämmöksi, joka siirtyy veteen.",
             "Noin 88 prosenttia päätyy veteen. Loput lämmittävät kannua ja ympäröivää ilmaa.",
             "100 °C:ssa vesi muuttuu höyryksi. Höyry lämmittää metallinauhaa, joka taipuu ja napsauttaa keittimen pois päältä."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Pistorasia",
+                "sub": "230 V"
+              },
+              {
+                "label": "Lämpövastus",
+                "sub": "2000 W"
+              },
+              {
+                "label": "Vesi",
+                "sub": "20–100 °C"
+              },
+              {
+                "label": "Höyry",
+                "sub": "laukaisee kytkimen"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Lämpöä kannuun ja ilmaan"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Luku",
@@ -191,20 +552,60 @@
             "Litran veden lämmittäminen 80 asteella vie 335 kilojoulea. Pistorasiasta se on noin 0.11 kWh.",
             "2 kW:n keitin tarvitsee siihen noin kolme minuuttia, ja se maksaa noin kaksi senttiä.",
             "Sama energia sytyttäisi 10 watin LED-lampun yli kymmeneksi tunniksi. Keitä vain tarvitsemasi."
-          ]
+          ],
+          "knobs": [
+            "litrat",
+            "litrat",
+            "litrat"
+          ],
+          "spec": {
+            "headline": {
+              "label": "tämän vesimäärän kiehutus 20 °C:sta",
+              "unit": "kWh"
+            },
+            "rows": [
+              {
+                "label": "Aika 2 kW:n keittimessä",
+                "unit": "min"
+              },
+              {
+                "label": "Hinta, 20 senttiä/kWh",
+                "unit": "senttiä"
+              },
+              {
+                "label": "Veteen päätyvä osuus",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "Sama energia käyttää 10 W:n LED-lamppua",
+              "unit": "tuntia"
+            },
+            "knob": {
+              "label": "litrat",
+              "unit": "L"
+            }
+          }
         }
       }
     },
     "pendulum": {
       "label": "Heiluvat avaimet",
       "answer": "Heilahdusaika riippuu pituudesta, ei painosta.",
+      "tagline": "Heilahdusaika",
+      "short": "Avaimet",
       "chapters": {
         "motion": {
           "title": "Heilahdusaika",
           "captions": [
-            "Pienillä heilahduksilla yksi heilahdus kestää T = 2 pi sqrt(L/g). Pidempi naru heiluu hitaammin.",
-            "Kulma seuraa pehmeää sinikäyrää. Nelinkertainen pituus kaksinkertaistaa jaksonajan.",
+            "Pienillä heilahduksilla yhden heilahduksen aika riippuu vain pituudesta. Pidempi naru heilahtaa hitaammin.",
+            "Kulma seuraa tasaista siniaaltoa, jossa T = 2 pi sqrt(L/g). Nelinkertainen pituus kaksinkertaistaa jaksonajan.",
             "Massa supistuu pois: kaksi eri painoista kappaletta yhtä pitkissä naruissa heiluvat yhdessä."
+          ],
+          "knobs": [
+            "pituus",
+            "pituus",
+            "pituus"
           ]
         },
         "whatif": {
@@ -213,7 +614,32 @@
           "captions": [
             "Pidennä narua ja heilahdus hidastuu, mutta käyrä loivenee. Nelinkertainen pituus vain kaksinkertaistaa ajan.",
             "Kuussa sama naru heiluu noin kaksi ja puoli kertaa hitaammin, koska painovoima vetää takaisin lempeämmin."
-          ]
+          ],
+          "knobs": [
+            "pituus",
+            "pituus"
+          ],
+          "spec": {
+            "x": {
+              "label": "pituus"
+            },
+            "y": {
+              "label": "meno-paluuaika"
+            },
+            "series": [
+              {
+                "name": "Maa"
+              },
+              {
+                "name": "Kuu"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 m: 2 s"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Seuraa energiaa",
@@ -223,22 +649,84 @@
             "Päästä irti: potentiaalienergia muuttuu liikkeeksi. Alimmassa kohdassa kaikki on liikettä: puoli metriä sekunnissa 20 asteen heilahduksella.",
             "Toisella puolella avaimet nousevat taas ja liike muuttuu takaisin korkeudeksi. Sitten kaikki toistuu käänteisesti.",
             "Joka heilahduksella ilma ottaa hieman energiaa lämmöksi, joten heilahdukset pienenevät. Heilahdusaika pysyy samana."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Nostat sitä",
+                "sub": "potentiaalienergia"
+              },
+              {
+                "label": "Heilahduksen pohja",
+                "sub": "kaikki liikkeenä"
+              },
+              {
+                "label": "Toinen puoli",
+                "sub": "taas korkeutta"
+              },
+              {
+                "label": "Ilma",
+                "sub": "vie sitä hitaasti"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Ilmanvastus, vähän joka heilahduksella"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Luku",
           "lead": "25 cm:n avainnauhassa avaimet heilahtavat edestakaisin sekunnin välein.",
           "captions": [
-            "Heilahdusaika on 2 pi kertaa pituuden ja g:n suhteen neliöjuuri. 25 sentillä se on yksi sekunti.",
-            "Nelinkertainen pituus kaksinkertaistaa ajan: kaksi sekuntia metrillä. Avainten paino ei muuta mitään.",
+            "25 senttimetrin avainnauhassa avaimet heilahtavat edestakaisin noin sekunnissa.",
+            "Heilahdusaika on 2 pi kertaa pituuden ja g:n suhteen neliöjuuri. Nelinkertainen pituus kaksinkertaistaa sen. Paino ei vaikuta.",
             "Heikompi painovoima vetää takaisin lempeämmin. Kuussa sama avainnauha tarvitsee kaksi ja puoli sekuntia."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "täysi meno-paluu 25 cm:n narussa",
+              "unit": "s"
+            },
+            "rows": [
+              {
+                "label": "1 m:n narussa",
+                "unit": "s"
+              },
+              {
+                "label": "Kaksi kertaa painavammat avaimet",
+                "unit": "s"
+              },
+              {
+                "label": "Nopeus pohjalla, heilahdus 20°",
+                "unit": "m/s"
+              }
+            ],
+            "compare": {
+              "label": "Samat avaimet Kuussa heilahtavat ajassa",
+              "unit": "s"
+            }
+          }
         }
       }
     },
     "phone": {
       "label": "Älypuhelin",
       "answer": "Noin yhdeksän ohutta kerrosta: lasi, kosketus, pikselit, piirit ja akku.",
+      "tagline": "Mitä sisällä on",
+      "short": "Puhelin",
       "chapters": {
         "inside": {
           "title": "Kerrokset",
@@ -249,6 +737,14 @@
             "Logiikkakortilla on suoritin-, muisti- ja radiopiirit. Suoritin tekee miljardeja yksinkertaisia askelia sekunnissa.",
             "Litiumionit liikkuvat kahden elektrodikerroksen välillä, kun lataat ja käytät puhelinta. Akku on sisuksista suurin osa.",
             "Kela lataa ilman kaapelia magneettisen induktion avulla. Kamera pinoaa useita linssejä pienelle anturille."
+          ],
+          "knobs": [
+            "kierrä",
+            "kierrä",
+            "kierrä",
+            "kierrä",
+            "kierrä",
+            "kierrä"
           ]
         },
         "whatif": {
@@ -257,7 +753,32 @@
           "captions": [
             "5 watin laturi tarvitsee yli kolme tuntia. 20 watin laturi alle yhden. Oikeat puhelimet hidastavat lähellä täyttä.",
             "Tabletin akussa on kaksi kertaa enemmän energiaa, joten lataus kestää kaksi kertaa kauemmin."
-          ]
+          ],
+          "knobs": [
+            "laturi",
+            "laturi"
+          ],
+          "spec": {
+            "x": {
+              "label": "laturi"
+            },
+            "y": {
+              "label": "lyhin latausaika"
+            },
+            "series": [
+              {
+                "name": "Puhelin, 15 Wh"
+              },
+              {
+                "name": "Tabletti, 31 Wh"
+              }
+            ],
+            "marks": [
+              {
+                "label": "20 W: 0.9 h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Seuraa energiaa",
@@ -267,7 +788,42 @@
             "Akussa litiumionit työnnetään elektrodikerroksesta toiseen. Se varastoi energian.",
             "Kun käytät puhelinta, ionit virtaavat takaisin. Virta pyörittää suoritinta, radiota ja näyttöä.",
             "Lopulta kaikki poistuu valona, radioaaltoina ja lämpönä. Siksi kiireinen puhelin tuntuu lämpimältä."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Pistorasia",
+                "sub": "230 V AC"
+              },
+              {
+                "label": "Laturi",
+                "sub": "tekee 5–20 V DC"
+              },
+              {
+                "label": "Akku",
+                "sub": "varastoi 15 Wh"
+              },
+              {
+                "label": "Piirit ja näyttö",
+                "sub": "käyttävät sen"
+              },
+              {
+                "label": "Valo, radio, lämpö",
+                "sub": "poistuvat puhelimesta"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Laturin lämpö"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Luku",
@@ -276,13 +832,44 @@
             "4000 milliampeerituntia 3.85 voltilla on noin 15 wattituntia: yhden täyden akun energia.",
             "Lataaminen maksaa alle puoli senttiä. Kokonainen vuosi päivittäistä latausta on vähän yli euron.",
             "2 kW:n vedenkeitin kuluttaa puhelimen koko akullisen 28 sekunnissa. Puhelin kuluttaa saman energian koko päivän aikana."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "täyden puhelinakullisen energia",
+              "unit": "Wh"
+            },
+            "rows": [
+              {
+                "label": "Täysi lataus, 20 senttiä/kWh",
+                "unit": "senttiä"
+              },
+              {
+                "label": "Vuosi päivittäistä latausta",
+                "unit": "euroa"
+              },
+              {
+                "label": "Näytön pikselit",
+                "unit": "miljoonaa"
+              }
+            ],
+            "compare": {
+              "label": "Vedenkeitin käyttää saman energian ajassa",
+              "unit": "sekuntia"
+            }
+          }
         }
       }
     },
     "spoon": {
       "label": "Metallilusikka",
       "answer": "Metalli siirtää lämmön nopeasti pois ihostasi.",
+      "tagline": "Miksi metalli tuntuu kylmältä",
+      "short": "Lusikka",
       "chapters": {
         "zoom": {
           "title": "Zoomaa sisään",
@@ -291,7 +878,30 @@
             "Teräslusikka näyttää sileältä ja umpinaiselta. Sen salaisuudet ovat liian pieniä nähtäviksi.",
             "Kolme sataa kertaa lähempää teräs on laikkutäkki pieniä kiteitä, kukin muutaman sadasosamillimetrin levyinen.",
             "Vielä satatuhatta kertaa lähempänä jokainen kide on siisti atomihila. Vapaat elektronit liikkuvat atomien välissä ja auttavat kuljettamaan lämpöä."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "levels": [
+              {
+                "label": "Lusikka"
+              },
+              {
+                "label": "Kiderakeet",
+                "times": "x 300"
+              },
+              {
+                "label": "Atomit ja elektronit",
+                "times": "x 50 000 000"
+              }
+            ],
+            "heat": {
+              "label": "lämpö"
+            }
+          }
         },
         "flow": {
           "title": "Seuraa lämpöä",
@@ -300,7 +910,37 @@
             "Kuuma tee saa lusikan kupin atomit värähtelemään. Tämä värinä on lämpöä.",
             "Värinä etenee metallissa, ja vapaat elektronit auttavat. Minuutissa varsi on lämmin.",
             "Sormesi ottavat lämmön varresta. Osa karkaa matkalla myös ilmaan."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Kuuma tee",
+                "sub": "80 °C"
+              },
+              {
+                "label": "Lusikan pesä",
+                "sub": "atomit värähtelevät"
+              },
+              {
+                "label": "Varsi",
+                "sub": "lämpö kulkee"
+              },
+              {
+                "label": "Sormesi",
+                "sub": "tuntuvat lämpimiltä"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Lämpöä ilmaan"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Luku",
@@ -309,7 +949,40 @@
             "Teräs johtaa lämpöä noin 100 kertaa paremmin kuin puu ja vie lämmön ihostasi paljon nopeammin. Siksi se tuntuu kylmältä.",
             "Molemmat lusikat ovat huoneenlämpöisiä. Teräslusikka vain vie lämmön ihostasi nopeammin.",
             "Hopea johtaa 27 kertaa paremmin kuin teräs. Hopealusikka kuumassa teessä voi kuumentua liian kuumaksi pitää minuutissa."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "kuinka paljon paremmin teräs johtaa kuin puu",
+              "unit": "kertaa"
+            },
+            "rows": [
+              {
+                "label": "Ruostumaton teräs",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Puu",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Ihosi",
+                "unit": "°C"
+              },
+              {
+                "label": "Lusikka ja huone",
+                "unit": "°C"
+              }
+            ],
+            "compare": {
+              "label": "Hopea johtaa paremmin kuin teräs",
+              "unit": "kertaa"
+            }
+          }
         }
       }
     }

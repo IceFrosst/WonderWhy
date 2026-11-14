@@ -16,13 +16,20 @@
     "guitar": {
       "label": "Gitarrsträng",
       "answer": "En kortare sträng svänger snabbare, så tonen blir högre.",
+      "tagline": "Stående vågor",
+      "short": "Gitarr",
       "chapters": {
         "motion": {
           "title": "Stående vågor",
           "captions": [
-            "Att trycka på ett band kortar strängen. Halva längden ger dubbel frekvens: f = v / 2L.",
+            "När ett band trycks ned blir strängen kortare. Halva längden ger dubbel frekvens, så tonen blir en oktav högre.",
             "En sträng svänger också i heltalsmönster: övertoner n = 1, 2, 3 med f, 2f, 3f.",
             "Vågens hastighet beror på spänningen T och massan per längd: f = (1/2L) sqrt(T/mu). Strammare = högre."
+          ],
+          "knobs": [
+            "band",
+            "band",
+            "spänning"
           ]
         },
         "whatif": {
@@ -31,7 +38,32 @@
           "captions": [
             "Varje band kortar strängen och höjer tonen med cirka 6 procent. Tolv band dubblar frekvensen: en oktav.",
             "En sträng som är dubbelt så lång låter en oktav lägre vid varje band. Det är delvis därför basinstrument är stora."
-          ]
+          ],
+          "knobs": [
+            "band",
+            "band"
+          ],
+          "spec": {
+            "x": {
+              "label": "band"
+            },
+            "y": {
+              "label": "frekvens"
+            },
+            "series": [
+              {
+                "name": "Denna sträng"
+              },
+              {
+                "name": "Dubbelt så lång"
+              }
+            ],
+            "marks": [
+              {
+                "label": "band 12: dubbelt"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Följ ljudet",
@@ -41,7 +73,42 @@
             "Strängen är för tunn för att flytta mycket luft själv. Den skakar i stället stallet som den sitter fast i.",
             "Stallet skakar den tunna resonanslådan. Dess stora yta flyttar mycket luft, och det gör tonen stark.",
             "Tryckvågor färdas genom luften med 343 meter per sekund till ditt öra."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Finger",
+                "sub": "knäpper"
+              },
+              {
+                "label": "Sträng",
+                "sub": "vibrerar"
+              },
+              {
+                "label": "Stall",
+                "sub": "för vidare"
+              },
+              {
+                "label": "Lock",
+                "sub": "trycker luften"
+              },
+              {
+                "label": "Ditt öra",
+                "sub": "hör en ton"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Mest blir värme, lite blir ljud"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Talet",
@@ -50,29 +117,70 @@
             "Frekvens räknar svängningar per sekund. Gitarrens öppna A-sträng gör 110 av dem: 110 hertz.",
             "Band 12 halverar strängen, så tonen dubblas till 220 Hz. Vågen går längs strängen med 143 m/s.",
             "Varje fördubbling är en oktav. Två oktaver över denna sträng är 440 Hz, som orkestrar stämmer efter."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "öppen A-sträng, svängningar per sekund",
+              "unit": "Hz"
+            },
+            "rows": [
+              {
+                "label": "Samma sträng vid band 12",
+                "unit": "Hz"
+              },
+              {
+                "label": "Våghastighet längs strängen",
+                "unit": "m/s"
+              },
+              {
+                "label": "Ljudvågens längd i luft",
+                "unit": "m"
+              }
+            ],
+            "compare": {
+              "label": "Stämton A, två oktaver upp",
+              "unit": "Hz"
+            }
+          }
         }
       }
     },
     "ball": {
       "label": "Kastad boll",
       "answer": "Tyngdkraften böjer banan till en kurva.",
+      "tagline": "Projektilrörelse",
+      "short": "Boll",
       "chapters": {
         "motion": {
           "title": "Kaströrelse",
           "captions": [
             "Tyngdkraften drar bollen nedåt hela tiden, så banan böjs till en parabel.",
             "Utan luft ändras hastigheten i sidled aldrig. Bara hastigheten uppåt och nedåt ändras, eftersom tyngdkraften verkar nedåt.",
-            "Luftmotståndet bromsar bollen, så den bästa vinkeln hamnar under 45 grader. Grå = ingen luft."
+            "Luftmotståndet bromsar bollen, så den bästa vinkeln blir mindre än 45 grader. Den svaga banan visar samma kast utan luft."
+          ],
+          "knobs": [
+            "vinkel",
+            "hastighet",
+            "vinkel"
           ]
         },
         "compare": {
           "title": "Studs",
           "lead": "Varje studs behåller bara en del av energin.",
           "captions": [
-            "Varje studs blir lägre eftersom bollen bara behåller en del av sin energi: höjdkvoten är e i kvadrat.",
+            "Varje studs blir lägre än den förra, eftersom bollen bara behåller en del av sin energi varje gång den träffar golvet.",
             "Fallet gör lägesenergi till rörelseenergi; hoptryckningen lagrar den som en fjäder; en del går förlorad som värme och ljud vid varje studs.",
             "Studsen beror på materialet: en studsboll fjädrar tillbaka nästan helt, lera tar upp energin som värme och studsar knappt."
+          ],
+          "knobs": [
+            "fallhöjd",
+            "fallhöjd",
+            "bolltyp"
           ]
         },
         "whatif": {
@@ -81,7 +189,32 @@
           "captions": [
             "Ändra vinkeln. Ett flackt och ett brant kast når båda för kort. Utan luft går 45 grader längst.",
             "På månen är tyngdkraften sex gånger svagare, så varje kast flyger sex gånger längre. Bästa vinkeln är fortfarande 45."
-          ]
+          ],
+          "knobs": [
+            "vinkel",
+            "vinkel"
+          ],
+          "spec": {
+            "x": {
+              "label": "vinkel"
+            },
+            "y": {
+              "label": "sträcka"
+            },
+            "series": [
+              {
+                "name": "Jorden"
+              },
+              {
+                "name": "Månen"
+              }
+            ],
+            "marks": [
+              {
+                "label": "45: längst"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Följ energin",
@@ -91,29 +224,100 @@
             "På väg upp blir rörelseenergi till lägesenergi. På toppen av ett kast i 45 grader är den hälften var.",
             "På väg ner blir lägesenergin till rörelse igen. Luftmotståndet tar en del, ungefär en tiondel för en tennisboll.",
             "Vid landningen blir rörelseenergin värme, ljud och nästa studs. Ingenting av den förstörs."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Din arm",
+                "sub": "ger 2.9 J"
+              },
+              {
+                "label": "Rörelseenergi",
+                "sub": "vid släppet"
+              },
+              {
+                "label": "Lägesenergi",
+                "sub": "hälften på toppen"
+              },
+              {
+                "label": "Rörelseenergi",
+                "sub": "på väg ned"
+              },
+              {
+                "label": "Värme, ljud, studs",
+                "sub": "vid landning"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Luftmotstånd"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Talet",
           "lead": "Ett kast på 10 m/s i 45 grader landar cirka 10 meter bort.",
           "captions": [
-            "Räckvidden är hastigheten i kvadrat delad med g vid 45 grader: 100 delat med 9.81 är cirka 10 meter. Luften räknas bort.",
-            "Bollen är uppe i 1.4 sekunder och når 2.5 meter. Tio meter per sekund är 36 km/h.",
+            "En boll som kastas med 10 meter per sekund i 45 graders vinkel landar ungefär 10 meter bort om luften ignoreras.",
+            "Den är i luften i 1.4 sekunder och når 2.5 meter. Räckvidden är hastigheten i kvadrat delad med g: 100 / 9.81.",
             "Månen drar sex gånger svagare, så samma kast flyger sex gånger längre: cirka 62 meter."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "kastlängd vid 10 m/s och 45 grader",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Tid i luften",
+                "unit": "s"
+              },
+              {
+                "label": "Högsta punkt",
+                "unit": "m"
+              },
+              {
+                "label": "Kasthastighet",
+                "unit": "km/h"
+              }
+            ],
+            "compare": {
+              "label": "Samma kast på Månen flyger",
+              "unit": "m"
+            }
+          }
         }
       }
     },
     "bicycle": {
       "label": "Cykelväxlar",
       "answer": "Ett stort framkugghjul och ett litet bakkugghjul byter kraft mot fart.",
+      "tagline": "Utväxling",
+      "short": "Cykel",
       "chapters": {
         "motion": {
           "title": "Utväxling",
           "captions": [
-            "Kedjan förbinder två kugghjul. Utväxling = tänder fram / tänder bak.",
-            "Varje pedalvarv drar kedjan lika många tänder som det finns fram, så hjulet vrids lika många varv som utväxlingen.",
+            "Kedjan kopplar ett stort framdrev till ett litet bakdrev, så ett pedalvarv snurrar hjulet mer än ett varv.",
+            "Utväxlingen är antalet kuggar fram delat med antalet bak. Varje pedalvarv drar så många kedjekuggar förbi bakdrevet.",
             "Energin bevaras: högre utväxling ger mer fart per pedalvarv men mindre kraft vid hjulet."
+          ],
+          "knobs": [
+            "bakdrev",
+            "bakdrev",
+            "bakdrev"
           ]
         },
         "whatif": {
@@ -122,7 +326,32 @@
           "captions": [
             "Färre tänder bak ger mer fart för samma trampande: 44 km/h på minsta växeln, 14 på största.",
             "Det lilla främre kugghjulet sänker varje växel med ungefär 30 procent. Du kör långsammare, men varje tramp är starkare."
-          ]
+          ],
+          "knobs": [
+            "kuggar bak",
+            "kuggar bak"
+          ],
+          "spec": {
+            "x": {
+              "label": "kuggar bak"
+            },
+            "y": {
+              "label": "fart vid 80 varv per minut"
+            },
+            "series": [
+              {
+                "name": "48 fram"
+              },
+              {
+                "name": "34 fram"
+              }
+            ],
+            "marks": [
+              {
+                "label": "16: 30 km/h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Följ kraften",
@@ -132,22 +361,88 @@
             "Det främre kugghjulet drar kedjans övre del spänd. En ren kedja förlorar bara cirka 3 procent till friktion.",
             "Kedjan vrider det bakre kugghjulet. Ett litet bakkugghjul snurrar hjulet flera varv för varje pedalvarv.",
             "Däcket trycker bakåt på vägen och vägen trycker cykeln framåt. Det trycket är det som för dig fram."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Ditt ben",
+                "sub": "trycker ned"
+              },
+              {
+                "label": "Pedal och vev",
+                "sub": "en hävstång"
+              },
+              {
+                "label": "Kedja",
+                "sub": "dras spänd"
+              },
+              {
+                "label": "Bakdrev",
+                "sub": "vrider hjulet"
+              },
+              {
+                "label": "Däck mot väg",
+                "sub": "skjuter dig framåt"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Kedjefriktion"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Talet",
           "lead": "Ett pedalvarv i hög växel tar dig över 6 meter.",
           "captions": [
-            "48 tänder delat med 16 är utväxlingen 3. Hjulet vrids tre varv per pedalvarv: 3 gånger 2.1 meter.",
+            "Framdrevets har tre gånger så många kuggar som bakdrevet, så hjulet snurrar tre varv per pedalvarv: 6.3 meter.",
             "Vid 80 pedalvarv per minut blir det 30 km/h. Priset: däcket trycker med bara 17 procent av din pedalkraft.",
             "En låg växel vänder på det. Tre gånger kraften för uppförsbackar, men bara 2.1 meter per varv."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "framåt per pedalvarv, 48 kuggar fram, 16 bak",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Utväxling",
+                "unit": "till 1"
+              },
+              {
+                "label": "Fart vid 80 varv per minut",
+                "unit": "km/h"
+              },
+              {
+                "label": "Däckkraft per pedalkraft",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "Låg växel, 34 och 34: tre gånger kraften, men bara",
+              "unit": "m/varv"
+            }
+          }
         }
       }
     },
     "kettle": {
       "label": "Kokande vattenkokare",
       "answer": "Varmt vatten stiger, kallt vatten sjunker, bubblor är ånga.",
+      "tagline": "Konvektion och kokning",
+      "short": "Vattenkokare",
       "chapters": {
         "motion": {
           "title": "Konvektion och kokning",
@@ -155,6 +450,11 @@
             "Uppvärmt vatten utvidgas och blir lättare, så det stiger i mitten och sjunker vid sidorna.",
             "Heta punkter på botten låter ångbubblor bildas (kärnbildning), sedan stiger de och spricker.",
             "Vid 100 °C går extra energi åt till att göra vatten till ånga, inte till att värma. Det är latent värme."
+          ],
+          "knobs": [
+            "värme",
+            "värme",
+            "värme"
           ]
         },
         "cutaway": {
@@ -164,6 +464,11 @@
             "Under kannans botten sitter värmeelementet: en trådspiral som blir het när ström flyter.",
             "Vatten som rör den heta botten värms, stiger i mitten, svalnar överst och sjunker vid sidorna.",
             "Vid kokning leds ångan i ett rör till en metallremsa i foten. Remsan böjs och klickar av strömmen."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
           ]
         },
         "whatif": {
@@ -172,7 +477,32 @@
           "captions": [
             "Koktiden växer nästan rakt proportionellt med vattnet. Dubbelt så mycket vatten kräver ungefär dubbelt så lång tid och energi.",
             "Vatten som börjar på 60 °C behöver bara hälften av uppvärmningen, så det kokar på halva tiden."
-          ]
+          ],
+          "knobs": [
+            "liter",
+            "liter"
+          ],
+          "spec": {
+            "x": {
+              "label": "liter"
+            },
+            "y": {
+              "label": "koktid"
+            },
+            "series": [
+              {
+                "name": "Från 20 °C"
+              },
+              {
+                "name": "Från 60 °C"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 L: 3.2 min"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Följ energin",
@@ -182,7 +512,38 @@
             "Elementet motstår strömmen, så all elektrisk energi blir värme, som går över till vattnet.",
             "Cirka 88 procent hamnar i vattnet. Resten värmer kannan och luften runt omkring.",
             "Vid 100 °C blir vattnet till ånga. Ångan värmer en metallremsa som böjs och klickar av kokaren."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Vägguttag",
+                "sub": "230 V"
+              },
+              {
+                "label": "Värmeelement",
+                "sub": "2000 W"
+              },
+              {
+                "label": "Vatten",
+                "sub": "20 till 100 °C"
+              },
+              {
+                "label": "Ånga",
+                "sub": "löser ut brytaren"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Värme till kanna och luft"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Talet",
@@ -191,20 +552,60 @@
             "Att värma en liter vatten 80 grader kräver 335 kilojoule. Från vägguttaget är det cirka 0.11 kWh.",
             "En kokare på 2 kW behöver cirka tre minuter för det, och det kostar cirka två cent.",
             "Samma energi skulle lysa en LED-lampa på 10 watt i mer än tio timmar. Koka bara det du behöver."
-          ]
+          ],
+          "knobs": [
+            "liter",
+            "liter",
+            "liter"
+          ],
+          "spec": {
+            "headline": {
+              "label": "för att koka mängden från 20 °C",
+              "unit": "kWh"
+            },
+            "rows": [
+              {
+                "label": "Tid i en 2 kW-vattenkokare",
+                "unit": "min"
+              },
+              {
+                "label": "Kostnad vid 20 cent/kWh",
+                "unit": "cent"
+              },
+              {
+                "label": "Andel som når vattnet",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "Samma energi driver en 10 W LED-lampa i",
+              "unit": "timmar"
+            },
+            "knob": {
+              "label": "liter",
+              "unit": "L"
+            }
+          }
         }
       }
     },
     "pendulum": {
       "label": "Svängande nycklar",
       "answer": "Svängtiden beror på längden, inte på vikten.",
+      "tagline": "Svängningstid",
+      "short": "Nycklar",
       "chapters": {
         "motion": {
           "title": "Svängtid",
           "captions": [
-            "Vid små svängningar tar en svängning T = 2 pi sqrt(L/g). En längre snodd svänger långsammare.",
-            "Vinkeln följer en mjuk sinusvåg. Fyra gånger längden ger dubbel periodtid.",
+            "Vid små svängningar beror tiden för en svängning bara på längden. Ett längre snöre svänger långsammare.",
+            "Vinkeln följer en jämn sinusvåg med T = 2 pi sqrt(L/g). Fyra gånger längden ger dubbla perioden.",
             "Massan förkortas bort: två vikter med olika massa på lika långa snören svänger i takt."
+          ],
+          "knobs": [
+            "längd",
+            "längd",
+            "längd"
           ]
         },
         "whatif": {
@@ -213,7 +614,32 @@
           "captions": [
             "Gör snodden längre så blir svängningen långsammare, men kurvan planar ut. Fyra gånger längden fördubblar bara tiden.",
             "På månen svänger samma snodd cirka två och en halv gång långsammare, eftersom tyngdkraften drar tillbaka mjukare."
-          ]
+          ],
+          "knobs": [
+            "längd",
+            "längd"
+          ],
+          "spec": {
+            "x": {
+              "label": "längd"
+            },
+            "y": {
+              "label": "tid fram och tillbaka"
+            },
+            "series": [
+              {
+                "name": "Jorden"
+              },
+              {
+                "name": "Månen"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 m: 2 s"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Följ energin",
@@ -223,22 +649,84 @@
             "Släpp: lägesenergin blir rörelse. Längst ner är allt rörelse: en halv meter per sekund vid en svängning på 20 grader.",
             "På andra sidan stiger nycklarna igen och rörelsen blir höjd igen. Sedan går allt baklänges.",
             "Vid varje svängning tar luften lite energi som värme, så svängarna blir mindre. Svängtiden förblir densamma."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Du lyfter den",
+                "sub": "lägesenergi"
+              },
+              {
+                "label": "Lägsta punkten",
+                "sub": "bara rörelse"
+              },
+              {
+                "label": "Andra sidan",
+                "sub": "höjd igen"
+              },
+              {
+                "label": "Luften",
+                "sub": "tar den långsamt"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Luftmotstånd, lite varje svängning"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Talet",
           "lead": "Nycklar i ett 25 cm nyckelband svänger fram och tillbaka varje sekund.",
           "captions": [
-            "Svängtiden är 2 pi gånger roten ur längd genom g. För 25 centimeter blir det en sekund.",
-            "Fyra gånger längden fördubblar tiden: två sekunder för en meter. Nycklarnas vikt ändrar ingenting.",
+            "Nycklar på ett 25 centimeter långt nyckelband svänger fram och tillbaka på ungefär en sekund.",
+            "Svängningstiden är 2 pi gånger kvadratroten ur längden delad med g. Fyra gånger längden fördubblar den. Vikten spelar ingen roll.",
             "Svagare tyngdkraft drar tillbaka mjukare. På månen behöver samma band två och en halv sekund."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "en hel svängning på ett 25 cm snöre",
+              "unit": "s"
+            },
+            "rows": [
+              {
+                "label": "På ett 1 m snöre",
+                "unit": "s"
+              },
+              {
+                "label": "Med dubbelt så tunga nycklar",
+                "unit": "s"
+              },
+              {
+                "label": "Fart längst ned, svängning 20°",
+                "unit": "m/s"
+              }
+            ],
+            "compare": {
+              "label": "Samma nycklar på Månen svänger på",
+              "unit": "s"
+            }
+          }
         }
       }
     },
     "phone": {
       "label": "Smartphone",
       "answer": "Ungefär nio tunna lager: glas, touch, pixlar, chip och ett batteri.",
+      "tagline": "Vad finns inuti",
+      "short": "Telefon",
       "chapters": {
         "inside": {
           "title": "Lager",
@@ -249,6 +737,14 @@
             "Moderkortet har processor-, minnes- och radiochip. Processorn gör miljarder enkla steg per sekund.",
             "Litiumjoner rör sig mellan två elektrodlager när du laddar och använder telefonen. Batteriet är den största delen inuti.",
             "Spolen laddar utan sladd med magnetisk induktion. Kameran staplar flera linser på en liten sensor."
+          ],
+          "knobs": [
+            "rotera",
+            "rotera",
+            "rotera",
+            "rotera",
+            "rotera",
+            "rotera"
           ]
         },
         "whatif": {
@@ -257,7 +753,32 @@
           "captions": [
             "En laddare på 5 watt behöver över tre timmar. En på 20 watt under en. Riktiga telefoner saktar ner nära fullt.",
             "Ett surfplattebatteri rymmer dubbelt så mycket energi, så varje laddare tar dubbelt så lång tid."
-          ]
+          ],
+          "knobs": [
+            "laddare",
+            "laddare"
+          ],
+          "spec": {
+            "x": {
+              "label": "laddare"
+            },
+            "y": {
+              "label": "kortaste tid till fullt"
+            },
+            "series": [
+              {
+                "name": "Telefon, 15 Wh"
+              },
+              {
+                "name": "Platta, 31 Wh"
+              }
+            ],
+            "marks": [
+              {
+                "label": "20 W: 0.9 h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Följ energin",
@@ -267,7 +788,42 @@
             "I batteriet pressas litiumjoner från ett elektrodlager till det andra. Det lagrar energin.",
             "När du använder telefonen flödar jonerna tillbaka. Strömmen driver processorn, radion och skärmen.",
             "Till slut lämnar allt som ljus, radiovågor och värme. Därför känns en upptagen telefon varm."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Vägguttag",
+                "sub": "230 V AC"
+              },
+              {
+                "label": "Laddare",
+                "sub": "ger 5 till 20 V DC"
+              },
+              {
+                "label": "Batteri",
+                "sub": "lagrar 15 Wh"
+              },
+              {
+                "label": "Kretsar och skärm",
+                "sub": "använder den"
+              },
+              {
+                "label": "Ljus, radio, värme",
+                "sub": "lämnar telefonen"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Värme från laddaren"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Talet",
@@ -276,13 +832,44 @@
             "4000 milliamperetimmar vid 3.85 volt är ungefär 15 wattimmar: energin i ett fullt batteri.",
             "Att ladda det kostar under en halv cent. Ett helt år av daglig laddning är drygt en euro.",
             "En 2 kW vattenkokare förbrukar en hel telefonladdning på 28 sekunder. Telefonen använder samma energi under ett helt dygn."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "energi i ett fullt telefonbatteri",
+              "unit": "Wh"
+            },
+            "rows": [
+              {
+                "label": "En laddning vid 20 cent/kWh",
+                "unit": "cent"
+              },
+              {
+                "label": "Ett års daglig laddning",
+                "unit": "euro"
+              },
+              {
+                "label": "Bildpunkter på skärmen",
+                "unit": "miljoner"
+              }
+            ],
+            "compare": {
+              "label": "En vattenkokare använder samma energi på",
+              "unit": "sekunder"
+            }
+          }
         }
       }
     },
     "spoon": {
       "label": "Metallsked",
       "answer": "Metall leder bort värmen från din hud snabbt.",
+      "tagline": "Varför metall känns kall",
+      "short": "Sked",
       "chapters": {
         "zoom": {
           "title": "Zooma in",
@@ -291,7 +878,30 @@
             "En stålsked ser slät och massiv ut. Dess hemligheter är alldeles för små för att synas.",
             "Trehundra gånger närmare är stålet ett lapptäcke av små kristallkorn, vart och ett några hundradels millimeter brett.",
             "Ytterligare hundra tusen gånger närmare är varje korn ett prydligt gitter av atomer. Fria elektroner rör sig mellan dem och hjälper till att föra värmen vidare."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "levels": [
+              {
+                "label": "Sked"
+              },
+              {
+                "label": "Kristallkorn",
+                "times": "x 300"
+              },
+              {
+                "label": "Atomer och elektroner",
+                "times": "x 50 000 000"
+              }
+            ],
+            "heat": {
+              "label": "värme"
+            }
+          }
         },
         "flow": {
           "title": "Följ värmen",
@@ -300,7 +910,37 @@
             "Hett te får atomerna i skedens skål att vibrera. Den vibrationen är värme.",
             "Vibrationen förs vidare i metallen, med hjälp av fria elektroner. Efter en minut är skaftet varmt.",
             "Dina fingrar tar värmen från skaftet. En del går också ut i luften på vägen."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Varmt te",
+                "sub": "80 °C"
+              },
+              {
+                "label": "Skedblad",
+                "sub": "atomer vibrerar"
+              },
+              {
+                "label": "Skaft",
+                "sub": "värmen leds"
+              },
+              {
+                "label": "Dina fingrar",
+                "sub": "känns varma"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Värme till luften"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Talet",
@@ -309,7 +949,40 @@
             "Stål leder värme ungefär 100 gånger bättre än trä och drar värme från din hud mycket snabbare. Därför känns det kallt.",
             "Båda skedarna har rumstemperatur. Stålskeden tar bara värmen från din hud snabbare.",
             "Silver leder 27 gånger bättre än stål. En silversked i hett te kan bli för het att hålla i inom en minut."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "hur mycket bättre stål leder värme än trä",
+              "unit": "gånger"
+            },
+            "rows": [
+              {
+                "label": "Rostfritt stål",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Trä",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Din hud",
+                "unit": "°C"
+              },
+              {
+                "label": "Skeden och rummet",
+                "unit": "°C"
+              }
+            ],
+            "compare": {
+              "label": "Silver leder värme bättre än stål med",
+              "unit": "gånger"
+            }
+          }
         }
       }
     }

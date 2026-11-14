@@ -16,13 +16,20 @@
     "guitar": {
       "label": "Corde de guitare",
       "answer": "Une corde plus courte vibre plus vite, donc la note est plus aiguë.",
+      "tagline": "Ondes stationnaires",
+      "short": "Guitare",
       "chapters": {
         "motion": {
           "title": "Ondes stationnaires",
           "captions": [
-            "Appuyer sur une case raccourcit la corde. La moitié de la longueur donne le double de fréquence : f = v / 2L.",
+            "Appuyer sur une frette raccourcit la corde. Une longueur divisée par deux double la fréquence, donc la note monte d’une octave.",
             "Une corde vibre aussi en motifs entiers : harmoniques n = 1, 2, 3 à f, 2f, 3f.",
             "La vitesse d'onde dépend de la tension T et de la masse linéique : f = (1/2L) sqrt(T/mu). Plus tendue = plus aiguë."
+          ],
+          "knobs": [
+            "frette",
+            "frette",
+            "tension"
           ]
         },
         "whatif": {
@@ -31,7 +38,32 @@
           "captions": [
             "Chaque case raccourcit la corde et monte la note d'environ 6 pour cent. Douze cases doublent la fréquence : une octave.",
             "Une corde deux fois plus longue sonne une octave plus grave à chaque case. C'est en partie pourquoi les instruments graves sont grands."
-          ]
+          ],
+          "knobs": [
+            "frette",
+            "frette"
+          ],
+          "spec": {
+            "x": {
+              "label": "frette"
+            },
+            "y": {
+              "label": "fréquence"
+            },
+            "series": [
+              {
+                "name": "Cette corde"
+              },
+              {
+                "name": "Longueur double"
+              }
+            ],
+            "marks": [
+              {
+                "label": "frette 12 : double"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Suivre le son",
@@ -41,7 +73,42 @@
             "La corde est trop fine pour remuer beaucoup d'air seule. Elle fait vibrer le chevalet auquel elle est attachée.",
             "Le chevalet fait vibrer la fine table d'harmonie. Sa grande surface remue beaucoup d'air, et la note devient forte.",
             "Les ondes de pression traversent l'air à 343 mètres par seconde jusqu'à ton oreille."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Doigt",
+                "sub": "pince"
+              },
+              {
+                "label": "Corde",
+                "sub": "vibre"
+              },
+              {
+                "label": "Chevalet",
+                "sub": "transmet"
+              },
+              {
+                "label": "Table",
+                "sub": "pousse l’air"
+              },
+              {
+                "label": "Ton oreille",
+                "sub": "entend une note"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Surtout chaleur, un peu de son"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Le chiffre",
@@ -50,29 +117,70 @@
             "La fréquence compte les oscillations par seconde. La corde de La à vide de la guitare en fait 110 : 110 hertz.",
             "La case 12 divise la corde par deux, donc la note double à 220 Hz. L'onde parcourt la corde à 143 m/s.",
             "Chaque doublement est une octave. Deux octaves plus haut : les 440 Hz de l'accord des orchestres."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "corde de la à vide, oscillations par seconde",
+              "unit": "Hz"
+            },
+            "rows": [
+              {
+                "label": "Même corde à la frette 12",
+                "unit": "Hz"
+              },
+              {
+                "label": "Vitesse d’onde dans la corde",
+                "unit": "m/s"
+              },
+              {
+                "label": "Longueur d’onde sonore dans l’air",
+                "unit": "m"
+              }
+            ],
+            "compare": {
+              "label": "La de référence, deux octaves plus haut",
+              "unit": "Hz"
+            }
+          }
         }
       }
     },
     "ball": {
       "label": "Balle lancée",
       "answer": "La gravité courbe la trajectoire.",
+      "tagline": "Mouvement parabolique",
+      "short": "Balle",
       "chapters": {
         "motion": {
           "title": "Mouvement de projectile",
           "captions": [
             "La gravité tire la balle vers le bas en permanence, donc sa trajectoire se courbe en parabole.",
             "Sans air, la vitesse horizontale ne change jamais. Seule la vitesse verticale change, car la gravité agit vers le bas.",
-            "La résistance de l'air freine la balle, donc le meilleur angle passe sous 45 degrés. Gris = sans air."
+            "L’air freine la balle, donc le meilleur angle est inférieur à 45 degrés. La trajectoire pâle montre le même lancer sans air."
+          ],
+          "knobs": [
+            "angle",
+            "vitesse",
+            "angle"
           ]
         },
         "compare": {
           "title": "Rebond",
           "lead": "Chaque rebond ne garde qu'une partie de l'énergie.",
           "captions": [
-            "Chaque rebond est plus bas car la balle ne garde qu'une partie de son énergie : le rapport des hauteurs est e au carré.",
+            "Chaque rebond est plus bas que le précédent, car la balle ne conserve qu’une partie de son énergie à chaque contact avec le sol.",
             "En tombant, l'énergie potentielle devient énergie cinétique ; l'écrasement la stocke comme un ressort ; une part se perd en chaleur et en son à chaque rebond.",
             "Le rebond dépend de la matière : une balle rebondissante revient presque entièrement, l'argile absorbe l'énergie en chaleur et rebondit à peine."
+          ],
+          "knobs": [
+            "hauteur de chute",
+            "hauteur de chute",
+            "type de balle"
           ]
         },
         "whatif": {
@@ -81,7 +189,32 @@
           "captions": [
             "Change l'angle. Un lancer plat et un lancer très haut tombent tous deux trop court. Sans air, 45 degrés va le plus loin.",
             "Sur la Lune la gravité est six fois plus faible, donc chaque lancer va six fois plus loin. Le meilleur angle reste 45."
-          ]
+          ],
+          "knobs": [
+            "angle",
+            "angle"
+          ],
+          "spec": {
+            "x": {
+              "label": "angle"
+            },
+            "y": {
+              "label": "distance"
+            },
+            "series": [
+              {
+                "name": "Terre"
+              },
+              {
+                "name": "Lune"
+              }
+            ],
+            "marks": [
+              {
+                "label": "45 : maximum"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Suivre l'énergie",
@@ -91,29 +224,100 @@
             "En montant, l'énergie cinétique devient énergie potentielle. Au sommet d'un lancer à 45 degrés, c'est moitié-moitié.",
             "En descendant, l'énergie potentielle redevient mouvement. L'air en prend environ un dixième pour une balle de tennis.",
             "À l'arrivée, l'énergie cinétique devient chaleur, son et prochain rebond. Rien n'en est détruit."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Ton bras",
+                "sub": "donne 2.9 J"
+              },
+              {
+                "label": "Énergie cinétique",
+                "sub": "au lâcher"
+              },
+              {
+                "label": "Énergie potent.",
+                "sub": "moitié au sommet"
+              },
+              {
+                "label": "Énergie cinétique",
+                "sub": "à la descente"
+              },
+              {
+                "label": "Chaleur, son, choc",
+                "sub": "à l’arrivée"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Résistance de l’air"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Le chiffre",
           "lead": "Un lancer à 10 m/s sous 45 degrés atterrit à environ 10 mètres.",
           "captions": [
-            "La portée est la vitesse au carré divisée par g à 45 degrés : 100 divisé par 9.81 fait environ 10 mètres. L'air est ignoré.",
-            "La balle reste 1.4 seconde en l'air et culmine à 2.5 mètres. Dix mètres par seconde font 36 km/h.",
+            "Lancée à 10 mètres par seconde et à 45 degrés, une balle retombe environ 10 mètres plus loin si l’on néglige l’air.",
+            "Elle reste en l’air 1.4 seconde et monte à 2.5 mètres. La portée est la vitesse au carré divisée par g : 100 / 9.81.",
             "La Lune attire six fois moins, donc le même lancer va six fois plus loin : environ 62 mètres."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "portée à 10 m/s et 45 degrés",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Temps en l’air",
+                "unit": "s"
+              },
+              {
+                "label": "Point culminant",
+                "unit": "m"
+              },
+              {
+                "label": "Vitesse du lancer",
+                "unit": "km/h"
+              }
+            ],
+            "compare": {
+              "label": "Le même lancer sur la Lune va à",
+              "unit": "m"
+            }
+          }
         }
       }
     },
     "bicycle": {
       "label": "Vitesses de vélo",
       "answer": "Un grand plateau et un petit pignon échangent force contre vitesse.",
+      "tagline": "Rapport de transmission",
+      "short": "Vélo",
       "chapters": {
         "motion": {
           "title": "Rapport de vitesse",
           "captions": [
-            "La chaîne relie deux roues dentées. Rapport = dents devant / dents derrière.",
-            "Chaque tour de pédale tire la chaîne du nombre de dents du plateau, donc la roue tourne selon le rapport.",
+            "La chaîne relie un grand plateau à un petit pignon, donc un tour de pédale fait tourner la roue plus d’une fois.",
+            "Le rapport est le nombre de dents avant divisé par celui des dents arrière. Chaque tour de pédale fait passer autant de maillons sur le pignon.",
             "L'énergie se conserve : un rapport plus grand donne plus de vitesse par tour de pédale mais moins de poussée à la roue."
+          ],
+          "knobs": [
+            "pignon arrière",
+            "pignon arrière",
+            "pignon arrière"
           ]
         },
         "whatif": {
@@ -122,7 +326,32 @@
           "captions": [
             "Moins de dents derrière donnent plus de vitesse pour le même pédalage : 44 km/h sur le plus petit pignon, 14 sur le plus grand.",
             "Le petit plateau baisse chaque vitesse d'environ 30 pour cent. Tu vas moins vite, mais chaque coup de pédale pousse plus fort."
-          ]
+          ],
+          "knobs": [
+            "dents arrière",
+            "dents arrière"
+          ],
+          "spec": {
+            "x": {
+              "label": "dents arrière"
+            },
+            "y": {
+              "label": "vitesse à 80 tours/min"
+            },
+            "series": [
+              {
+                "name": "48 à l’avant"
+              },
+              {
+                "name": "34 à l’avant"
+              }
+            ],
+            "marks": [
+              {
+                "label": "16 : 30 km/h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Suivre la force",
@@ -132,22 +361,88 @@
             "Le plateau tend le brin supérieur de la chaîne. Une chaîne propre ne perd qu'environ 3 pour cent par frottement.",
             "La chaîne fait tourner le pignon. Un petit pignon fait tourner la roue plusieurs fois par tour de pédale.",
             "Le pneu pousse la route vers l'arrière et la route pousse le vélo vers l'avant. Cette poussée te fait avancer."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Ta jambe",
+                "sub": "appuie"
+              },
+              {
+                "label": "Pédale, manivelle",
+                "sub": "un levier"
+              },
+              {
+                "label": "Chaîne",
+                "sub": "se tend"
+              },
+              {
+                "label": "Pignon arrière",
+                "sub": "tourne la roue"
+              },
+              {
+                "label": "Pneu sur route",
+                "sub": "te pousse"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Frottement de la chaîne"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Le chiffre",
           "lead": "Un tour de pédale en grand braquet te fait avancer de plus de 6 mètres.",
           "captions": [
-            "48 dents divisées par 16 donnent un rapport de 3. La roue tourne trois fois par tour de pédale : 3 fois 2.1 mètres.",
+            "Le plateau a trois fois plus de dents que le pignon, donc la roue tourne trois fois par tour de pédale : 6.3 mètres.",
             "À 80 tours de pédale par minute, cela fait 30 km/h. Le prix : le pneu pousse avec seulement 17 pour cent de ta force sur la pédale.",
             "Un petit braquet inverse cela. Trois fois la poussée pour grimper, mais seulement 2.1 mètres par tour."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "avance par tour, 48 dents avant, 16 arrière",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Rapport",
+                "unit": "pour 1"
+              },
+              {
+                "label": "Vitesse à 80 tours par minute",
+                "unit": "km/h"
+              },
+              {
+                "label": "Poussée pneu par effort pédale",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "Petit braquet, 34 et 34 : poussée triple, mais",
+              "unit": "m/tour"
+            }
+          }
         }
       }
     },
     "kettle": {
       "label": "Bouilloire en ébullition",
       "answer": "L'eau chaude monte, l'eau froide descend, les bulles sont de la vapeur.",
+      "tagline": "Convection et ébullition",
+      "short": "Bouilloire",
       "chapters": {
         "motion": {
           "title": "Convection et ébullition",
@@ -155,6 +450,11 @@
             "L'eau chauffée se dilate et devient plus légère, donc elle monte au milieu et descend sur les côtés.",
             "Des points chauds au fond laissent se former des bulles de vapeur (nucléation), puis elles montent et éclatent.",
             "À 100 °C, l'énergie en plus sert à transformer l'eau en vapeur, pas à la chauffer. C'est la chaleur latente."
+          ],
+          "knobs": [
+            "chaleur",
+            "chaleur",
+            "chaleur"
           ]
         },
         "cutaway": {
@@ -164,6 +464,11 @@
             "Sous le fond de la bouilloire se trouve la résistance : un fil enroulé qui chauffe quand le courant passe.",
             "L'eau au contact du fond chaud se réchauffe, monte au centre, refroidit en haut et redescend sur les côtés.",
             "À l'ébullition, la vapeur descend par un tube vers une lame métallique dans le socle. La lame se courbe et coupe le courant."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
           ]
         },
         "whatif": {
@@ -172,7 +477,32 @@
           "captions": [
             "Le temps d'ébullition croît presque en ligne droite avec l'eau. Deux fois plus d'eau demande environ deux fois plus de temps et d'énergie.",
             "Une eau qui part de 60 °C n'a besoin que de la moitié du chauffage, donc elle bout en moitié moins de temps."
-          ]
+          ],
+          "knobs": [
+            "litres",
+            "litres"
+          ],
+          "spec": {
+            "x": {
+              "label": "litres"
+            },
+            "y": {
+              "label": "temps d’ébullition"
+            },
+            "series": [
+              {
+                "name": "Depuis 20 °C"
+              },
+              {
+                "name": "Depuis 60 °C"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 L : 3.2 min"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Suivre l'énergie",
@@ -182,7 +512,38 @@
             "La résistance s'oppose au courant, donc toute l'énergie électrique devient chaleur, qui passe dans l'eau.",
             "Environ 88 pour cent finissent dans l'eau. Le reste chauffe la bouilloire et l'air autour.",
             "À 100 °C l'eau devient vapeur. La vapeur chauffe une lame métallique qui se plie et éteint la bouilloire d'un clic."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Prise",
+                "sub": "230 V"
+              },
+              {
+                "label": "Résistance",
+                "sub": "2000 W"
+              },
+              {
+                "label": "Eau",
+                "sub": "de 20 à 100 °C"
+              },
+              {
+                "label": "Vapeur",
+                "sub": "coupe l’interrupteur"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Chaleur vers bol et air"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Le chiffre",
@@ -191,20 +552,60 @@
             "Chauffer un litre d'eau de 80 degrés demande 335 kilojoules. Depuis la prise, cela fait environ 0.11 kWh.",
             "Une bouilloire de 2 kW met environ trois minutes, et cela coûte environ deux centimes.",
             "La même énergie ferait briller une lampe LED de 10 watts plus de dix heures. Ne fais bouillir que le nécessaire."
-          ]
+          ],
+          "knobs": [
+            "litres",
+            "litres",
+            "litres"
+          ],
+          "spec": {
+            "headline": {
+              "label": "pour bouillir ce volume depuis 20 °C",
+              "unit": "kWh"
+            },
+            "rows": [
+              {
+                "label": "Temps dans une bouilloire de 2 kW",
+                "unit": "min"
+              },
+              {
+                "label": "Coût à 20 centimes/kWh",
+                "unit": "centimes"
+              },
+              {
+                "label": "Part reçue par l’eau",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "Même énergie : lampe LED de 10 W pendant",
+              "unit": "heures"
+            },
+            "knob": {
+              "label": "litres",
+              "unit": "L"
+            }
+          }
         }
       }
     },
     "pendulum": {
       "label": "Clés qui se balancent",
       "answer": "La durée dépend de la longueur, pas du poids.",
+      "tagline": "Période d’oscillation",
+      "short": "Clés",
       "chapters": {
         "motion": {
           "title": "Durée d'oscillation",
           "captions": [
-            "Pour de petites oscillations, une oscillation dure T = 2 pi sqrt(L/g). Un fil plus long oscille plus lentement.",
-            "L'angle suit une sinusoïde régulière. Quatre fois la longueur donne le double de période.",
+            "Pour de petites oscillations, leur durée dépend seulement de la longueur. Une ficelle plus longue oscille plus lentement.",
+            "L’angle suit une sinusoïde régulière avec T = 2 pi sqrt(L/g). Une longueur quadruple double la période.",
             "La masse s'annule : deux masses différentes au bout de fils égaux oscillent ensemble."
+          ],
+          "knobs": [
+            "longueur",
+            "longueur",
+            "longueur"
           ]
         },
         "whatif": {
@@ -213,7 +614,32 @@
           "captions": [
             "Allonge le fil et l'oscillation ralentit, mais la courbe s'aplatit. Quatre fois la longueur ne fait que doubler le temps.",
             "Sur la Lune, le même fil oscille environ deux fois et demie plus lentement, car la gravité rappelle plus doucement."
-          ]
+          ],
+          "knobs": [
+            "longueur",
+            "longueur"
+          ],
+          "spec": {
+            "x": {
+              "label": "longueur"
+            },
+            "y": {
+              "label": "durée de l’aller-retour"
+            },
+            "series": [
+              {
+                "name": "Terre"
+              },
+              {
+                "name": "Lune"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 m : 2 s"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Suivre l'énergie",
@@ -223,22 +649,84 @@
             "Lâche : l'énergie potentielle devient mouvement. En bas, tout est mouvement : un demi-mètre par seconde pour une oscillation de 20 degrés.",
             "De l'autre côté, les clés remontent et le mouvement redevient hauteur. Puis tout se déroule à l'envers.",
             "À chaque oscillation l'air prend un peu d'énergie en chaleur, donc l'amplitude diminue. La durée reste la même."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Tu le soulèves",
+                "sub": "énergie potent."
+              },
+              {
+                "label": "Point le plus bas",
+                "sub": "tout en mouvement"
+              },
+              {
+                "label": "Côté opposé",
+                "sub": "de nouveau en hauteur"
+              },
+              {
+                "label": "L’air",
+                "sub": "la prend lentement"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Résistance de l’air, un peu par oscillation"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Le chiffre",
           "lead": "Des clés sur un cordon de 25 cm font un aller-retour chaque seconde.",
           "captions": [
-            "La durée d'oscillation est 2 pi fois la racine carrée de la longueur sur g. Pour 25 centimètres, cela fait une seconde.",
-            "Quatre fois la longueur double le temps : deux secondes pour un mètre. Le poids des clés ne change rien.",
+            "Des clés au bout d’un cordon de 25 centimètres font un aller-retour en environ une seconde.",
+            "La période vaut 2 pi fois la racine carrée de la longueur divisée par g. Quadrupler la longueur la double. Le poids ne change rien.",
             "Une gravité plus faible rappelle plus doucement. Sur la Lune, le même cordon demande deux secondes et demie."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "un aller-retour sur une ficelle de 25 cm",
+              "unit": "s"
+            },
+            "rows": [
+              {
+                "label": "Sur une ficelle de 1 m",
+                "unit": "s"
+              },
+              {
+                "label": "Clés deux fois plus lourdes",
+                "unit": "s"
+              },
+              {
+                "label": "Vitesse en bas, oscillation 20°",
+                "unit": "m/s"
+              }
+            ],
+            "compare": {
+              "label": "Les mêmes clés oscillent sur la Lune en",
+              "unit": "s"
+            }
+          }
         }
       }
     },
     "phone": {
       "label": "Smartphone",
       "answer": "Environ neuf couches fines : verre, tactile, pixels, puces et une batterie.",
+      "tagline": "Ce qu’il y a dedans",
+      "short": "Téléphone",
       "chapters": {
         "inside": {
           "title": "Couches",
@@ -249,6 +737,14 @@
             "La carte logique porte le processeur, la mémoire et les puces radio. Le processeur fait des milliards d'étapes simples par seconde.",
             "Des ions lithium passent entre deux couches d'électrodes quand tu charges et utilises le téléphone. La batterie est la plus grosse pièce.",
             "La bobine charge sans câble par induction magnétique. L'appareil photo empile plusieurs lentilles sur un minuscule capteur."
+          ],
+          "knobs": [
+            "tourner",
+            "tourner",
+            "tourner",
+            "tourner",
+            "tourner",
+            "tourner"
           ]
         },
         "whatif": {
@@ -257,7 +753,32 @@
           "captions": [
             "Un chargeur de 5 watts demande plus de trois heures. Un de 20 watts, moins d'une. Les vrais téléphones ralentissent près du plein.",
             "Une batterie de tablette contient deux fois plus d'énergie, donc tout chargeur met deux fois plus longtemps."
-          ]
+          ],
+          "knobs": [
+            "chargeur",
+            "chargeur"
+          ],
+          "spec": {
+            "x": {
+              "label": "chargeur"
+            },
+            "y": {
+              "label": "temps minimal de charge"
+            },
+            "series": [
+              {
+                "name": "Téléphone, 15 Wh"
+              },
+              {
+                "name": "Tablette, 31 Wh"
+              }
+            ],
+            "marks": [
+              {
+                "label": "20 W : 0.9 h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Suivre l'énergie",
@@ -267,7 +788,42 @@
             "Dans la batterie, des ions lithium sont poussés d'une couche d'électrodes à l'autre. Cela stocke l'énergie.",
             "Quand tu utilises le téléphone, les ions reviennent. Le courant alimente le processeur, la radio et l'écran.",
             "Au final tout repart en lumière, en ondes radio et en chaleur. C'est pourquoi un téléphone très sollicité est chaud."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Prise",
+                "sub": "230 V AC"
+              },
+              {
+                "label": "Chargeur",
+                "sub": "produit 5 à 20 V DC"
+              },
+              {
+                "label": "Batterie",
+                "sub": "stocke 15 Wh"
+              },
+              {
+                "label": "Puces et écran",
+                "sub": "l’utilisent"
+              },
+              {
+                "label": "Lueur, RF, chaleur",
+                "sub": "quittent le téléphone"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Chaleur du chargeur"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Le chiffre",
@@ -276,13 +832,44 @@
             "4000 milliampères-heures à 3.85 volts font environ 15 wattheures : l'énergie d'une batterie pleine.",
             "La recharger coûte moins d'un demi-centime. Une année entière de charges quotidiennes coûte un peu plus d'un euro.",
             "Une bouilloire de 2 kW consomme une charge de téléphone en 28 secondes. Le téléphone la dépense en une journée entière."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "énergie d’une batterie pleine",
+              "unit": "Wh"
+            },
+            "rows": [
+              {
+                "label": "Une charge à 20 centimes/kWh",
+                "unit": "centimes"
+              },
+              {
+                "label": "Un an de recharge quotidienne",
+                "unit": "euros"
+              },
+              {
+                "label": "Pixels de l’écran",
+                "unit": "millions"
+              }
+            ],
+            "compare": {
+              "label": "Une bouilloire utilise la même énergie en",
+              "unit": "secondes"
+            }
+          }
         }
       }
     },
     "spoon": {
       "label": "Cuillère en métal",
       "answer": "Le métal éloigne vite la chaleur de ta peau.",
+      "tagline": "Pourquoi le métal semble froid",
+      "short": "Cuillère",
       "chapters": {
         "zoom": {
           "title": "Zoom avant",
@@ -291,7 +878,30 @@
             "Une cuillère en acier paraît lisse et pleine. Ses secrets sont bien trop petits pour être vus.",
             "Trois cents fois plus près, l'acier est une mosaïque de minuscules grains cristallins, chacun large de quelques centièmes de millimètre.",
             "Cent mille fois plus près encore, chaque grain est un réseau ordonné d'atomes. Des électrons libres circulent entre eux et aident à transporter la chaleur."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "levels": [
+              {
+                "label": "Cuillère"
+              },
+              {
+                "label": "Grains cristallins",
+                "times": "x 300"
+              },
+              {
+                "label": "Atomes et électrons",
+                "times": "x 50 000 000"
+              }
+            ],
+            "heat": {
+              "label": "chaleur"
+            }
+          }
         },
         "flow": {
           "title": "Suis la chaleur",
@@ -300,7 +910,37 @@
             "Le thé chaud fait vibrer les atomes de la cuillère. Cette vibration est de la chaleur.",
             "La vibration se transmet dans le métal, aidée par les électrons libres. En une minute le manche est tiède.",
             "Tes doigts prennent la chaleur du manche. Une partie s'échappe aussi dans l'air en chemin."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Thé chaud",
+                "sub": "80 °C"
+              },
+              {
+                "label": "Cuilleron",
+                "sub": "les atomes vibrent"
+              },
+              {
+                "label": "Manche",
+                "sub": "la chaleur avance"
+              },
+              {
+                "label": "Tes doigts",
+                "sub": "sentent la chaleur"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Chaleur vers l’air"
+              }
+            ]
+          }
         },
         "number": {
           "title": "Le chiffre",
@@ -309,7 +949,40 @@
             "L'acier conduit la chaleur environ 100 fois mieux que le bois et prend la chaleur de ta peau bien plus vite. C'est pourquoi il paraît froid.",
             "Les deux cuillères sont à température ambiante. Celle en acier retire seulement plus vite la chaleur de ta peau.",
             "L'argent conduit 27 fois mieux que l'acier. Une cuillère en argent dans du thé chaud peut devenir trop chaude à tenir en moins d'une minute."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "combien de fois mieux l’acier conduit que le bois",
+              "unit": "fois"
+            },
+            "rows": [
+              {
+                "label": "Acier inoxydable",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Bois",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Ta peau",
+                "unit": "°C"
+              },
+              {
+                "label": "La cuillère et la pièce",
+                "unit": "°C"
+              }
+            ],
+            "compare": {
+              "label": "L’argent conduit mieux que l’acier de",
+              "unit": "fois"
+            }
+          }
         }
       }
     }
