@@ -5,7 +5,7 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 11; current viewing cut 1:28.93)
+# Video script: "Never stop asking why" (draft 12; intro R_B3_lines chosen)
 
 > [!summary]
 > **Product: WonderWhy** (Meta Ray-Ban Display + Neural Band). **Max 1:30.** Every shot readable muted (phone viewer, first 3 s must hold).
@@ -13,6 +13,8 @@ updated: 2026-11-14
 > **Objects:** grass (child + ending), **noise-cancelling earbuds** (reveal, built and live), **3D printer** (one real run + answer; no second-printer comparison), **sauna** + **gym bike** (montage), **the glasses explaining themselves** (share scene).
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
+
+Changes 14 Nov 23:55 (draft 12): **Act 1 is now the team's intro `R_B3_lines`** (planet → kid's eye → kid in golden grass, 6.0 s, one question: *How does it all really work?*). It replaces the 4 s kinetic-questions variant B; the two old child lines are folded into this one. Mostly done; polish continues on the animation branch. **Runtime:** +2 s makes the current cut about **1:30.93**, 0.93 s over the 1:30 cap; a trim still needs owner approval.
 
 Changes 14 Nov 22:10: the earbuds-case-on-table shot (old shot 3) is cut (weak); Act 2 opens on the grass.
 Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), not AI · footage now mapped to real clip names (see [Footage map](#footage-map)) · object animations are **custom from scratch** (team, added later).
@@ -22,8 +24,7 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 ## All on-screen copy, in order
 | # | Line | Style |
 |---|---|---|
-| 1 | *Why is the grass green?* | child, soft |
-| 2 | *How does the world work?* | child, soft |
+| 1 | *How does it all really work?* | child, soft, handwritten gold ("How" from 3.3 s, rest 4.2–5.15 s) |
 | 3 | *You used to ask why.* | grey, small |
 | 4 | *Then you stopped.* | grey, small |
 | 5 | **Look at anything.** | gold, big |
@@ -47,8 +48,7 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 ## Spoken lines (VO / on set, burned-in captions)
 | Who | Line | Shot |
 |---|---|---|
-| Child (ElevenLabs) | "Why is the grass green?" | 1 |
-| Child | "How does the world work?" | 2 |
+| Child (ElevenLabs) | "How does it all really work?" (soft, wondering; starts 3.3 s) | 1 |
 | Child, happy | "Why?" | 24 |
 | IceFrost | "Wait, how did these block all that?" | 8 |
 | IceFrost (VO) | "How does it build this?" | 11 |
@@ -56,18 +56,22 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 | Friend | "Wait, how do these even work?" | 20 |
 | Friend | real laugh / "no way" | 23 |
 
-## Act 1: the child (0:00-0:04) — gold, dreamy · CODE
-**Pick one variant** (built in `Meta_Challenge/video/act1/`, renders in `act1/out/`): **A** drawn line-art memory (amber strokes drawing on) · **B** kinetic questions (warm type on a ~100 BPM grid, hard flip to grey) · **C** real grass + type (B1 grass shot warm-graded, seed-particle overlay carries the transition).
+## Act 1: the child (0:00-0:06) — gold, dreamy · CODE · **R_B3_lines**
+**Chosen intro:** `R_B3_lines`, one continuous overhead pull-back in glowing gold lines on dusk. Final render [`act1_intro/final/R_B3_lines.mp4`](https://github.com/IceFrosst/Junction-2026/tree/claude/confident-keller-pxs2tu/Meta_Challenge/video/act1_intro/final) on `claude/confident-keller-pxs2tu` (`e2a6c7b`): 1920×1080, 30 fps, 6.0 s, silent. Source + notes: `act1_intro/R_B3_lines/`. Old variants A/B/C (`act1/`) are retired.
 | # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
-| 1 | 0:00-0:02 | CODE | Child + sunlit blade of grass (per variant) | *Why is the grass green?* | Child: "Why is the grass green?" · soft piano |
-| 2 | 0:02-0:04 | CODE | Child looks up; seeds blow towards camera, fill frame and blur | *How does the world work?* | Child: "How does the world work?" · music cuts on "work" |
+| 1a | 0:00-1.3 | CODE | Line-drawn Earth turning in the dark (moon, orbit rings); the dark around it becomes a **pupil**, iris fibres draw in | — | Felt piano already playing, low space-air tone |
+| 1b | 1.3-3.0 | CODE | Eye, lashes, then the kid's face looking straight up at us; the Earth is the reflection in his eye | — | Space tone turns into evening field air (wind, far crickets) at 1.4 s |
+| 1c | 3.0-5.35 | CODE | Pull back: whole kid lying in glowing grass, arms behind head, knee up, dandelion clocks | *How does it all really work?* ("How" 3.3 s, rest writes on 4.2–5.15 s) | Child VO from 3.3 s · piano resolves to a warm chord |
+| 1d | 5.35-6.0 | CODE | Hold: grass sways, motes drift. Fully gold → **hard cut** to the grey adult on the grass | — | Chord held, wind only |
 
-## Act 2: the adult, shut off (0:04-0:09) — grey, fast, real
+**Polish still open (team):** faint "How" overlaps the raised arm at 3.6–3.9 s; Earth reflection is only a few pixels at the end; record child VO + piano/air bed (render is silent). Fallback wording if wanted: *How does the world really work?* (echoes the end card); change `text.q` in `config.json`.
+
+## Act 2: the adult, shut off (0:06-0:11) — grey, fast, real
 Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pass), only a dull tick is clear.
 | # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
-| 4 | 0:04-0:07 | REAL | Match cut: seed blur → IceFrost on grass outside, earbuds in, head down, scrolling | *You used to ask why.* → *Then you stopped.* | Sound drops to muffled, wind, tick |
+| 4 | 0:06-0:09 | REAL | Hard cut from the gold kid on the grass → IceFrost on grass outside, earbuds in, head down, scrolling | *You used to ask why.* → *Then you stopped.* | Sound drops to muffled, wind, tick |
 
 ## Act 3: the reveal (0:09-0:20) — earbuds
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -134,7 +138,7 @@ App renders (earbuds, ball, bicycle, guitar, kettle, pendulum, phone, spoon) are
 ## To make
 | What | How | Who | Blocker |
 |---|---|---|---|
-| Act 1 variant pick | Watch `act1/out/{A,B,C}.mp4` | IceFrost | render in progress |
+| Act 1 intro polish | `R_B3_lines` chosen; finish polish (see Act 1) + child VO, piano/air bed | team (animation branch) | — |
 | Remaining shots: 21 (pinch at the pair), GLASS 10/12/22 | Phone + Record display | IceFrost | — |
 | Custom object animations: first printer, sauna, gym bike, glasses/band, grass | Code renders on black, palette cyan #4df0ff, amber #ffc247, green #6dff9c | team (Alex owns some, see issue #22) | — |
 | GLASS recordings 10, 12, 22 | Meta AI "Record display", two takes each | IceFrost | objects in the library |
