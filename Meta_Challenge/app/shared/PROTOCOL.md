@@ -114,5 +114,18 @@ The library has 6 objects. For anything else the bridge can ask the model for a 
 | On screen | The title is the sketch's `label`; **every step carries the tag "Sketch · unverified"** in the loss colour. Numbers in a sketch are the model's estimates, not checked |
 | Language | The sketch text is written in the request's `lang` |
 
+### Follow-up question about the object on screen
+"Why does it click off?" should jump to the lens and step that answers it.
+
+| What | Rule |
+|---|---|
+| Request | `POST /ask` (protected like `/detect`): `{ "reqId"?, "question": "text, 200 chars at most", "aboutObjectId": "<library id>", "lang"? }`. No image |
+| What the bridge does | Picks the lens and step of that object whose text best answers the question, and writes a short answer (2 sentences at most, from the library text plus the model's own words when a model is configured) |
+| Without a model (`mock`) | Still works: the step is chosen by word overlap between the question and the captions, and the answer is that step's caption. Good enough for the offline demo |
+| Response and frames | `detecting` first, then a normal `show` for `aboutObjectId` with `question`, `answer`, and `lensHint: { "id": "kettle.cutaway", "step": 3 }` (step is 1-based; `lensHint` is absent when nothing fits). `standIn` and `lang` as for `/detect`. Errors as for `/detect` (`error` frame with `reqId`) |
+| Glasses | A `show` with `lensHint` opens that lens at that step instead of lens 1 step 1, and shows the question and answer line above the caption |
+| `/last` | The remembered `show` is this one, so a late Web App lands on the answer |
+| Unknown object | `aboutObjectId: "unknown"` is refused with 400 `bad_request` for now (sketches cannot be asked about yet) |
+
 ## Latency log
 The bridge appends every completed request as one JSON line to `bridge/latency.jsonl` (git-ignored) and serves a summary at `GET /latency` (count, p50, p90 per stage).
