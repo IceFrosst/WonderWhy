@@ -280,7 +280,8 @@ class GlassesController(
             showError(e.title, e.detail)
         } catch (e: BridgeException) {
             log("Bridge failed: ${e.message}")
-            showError("Couldn't explain that", e.userMessage)
+            if (e.unauthorized) showError("Bridge token", e.userMessage)
+            else showError("Couldn't explain that", e.userMessage)
         } catch (e: Exception) {
             log("Unexpected: $e")
             showError("Something went wrong", e.javaClass.simpleName)
