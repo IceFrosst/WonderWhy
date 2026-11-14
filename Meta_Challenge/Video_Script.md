@@ -73,7 +73,7 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pass), only a dull tick is clear.
 | # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
-| 4 | 0:06-0:09 | REAL | Hard cut from the gold kid on the grass → IceFrost on grass outside, earbuds in, head down, scrolling | *You used to ask why.* → *Then you stopped.* | Sound drops to muffled, wind, tick |
+| 4 | 0:06-0:09 | REAL | Hard cut from the red STOPPED. → IceFrost on grass outside, earbuds in, head down, scrolling | — (lines now in the kinetic drop just before) | Sound drops to muffled, wind, tick |
 
 ## Act 3: the reveal (0:09-0:20) — earbuds
 | # | Time | Source | Shot | Effect | Text | Audio |
