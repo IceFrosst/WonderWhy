@@ -5,7 +5,9 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 3, ~1:21; demo objects to be picked)
+# Video script: "Never stop asking why" (draft 4, ~1:21)
+
+> **Objects (picked 14 Nov):** grass (reveal, answers the child's question), 3D printer (the real demo run, Act 4), sauna and a gym machine (montage, Act 5), the glasses explaining themselves (ending, Act 7). Only these get built; Act 4 and 5 rows below still need rewriting for them.
 
 > [!summary]
 > Story in colour: **gold (child) → grey (adult) → gold + glowing lines (glasses)**. Readable muted: every shot has its text. Source key: **AI** = generated still/clip · **REAL** = filmed today · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our video-kit clip (clean, black background, Screen blend).
@@ -24,12 +26,12 @@ Fast cuts on a dull ticking beat. Desaturated, cold. Nobody looks at anything.
 | 4 | 0:05-0:06 | REAL | Thumb scrolling a feed | (text stays) | Tick, tick |
 | 5 | 0:06-0:07 | REAL | **IceFrost sitting in the grass** (same setting as the child, now adult), head down in the phone, ignoring everything around | *Then you stopped.* | Tick, distant wind |
 | 6 | 0:07-0:08 | REAL | **IceFrost walking through a crowd**, zoned out, noise all around, eyes empty | (hold) | Crowd noise rises, muffled |
-| 7 | 0:08-0:09 | REAL | The same person, glasses on, stops and looks up at the demo object. Close on the band hand | | Noise cuts to silence. **Click** on the pinch |
+| 7 | 0:08-0:09 | REAL | Back in the grass: you put the phone down, glasses on, and look at **one blade of grass** (the child's shot 1, now you). Close on the band hand | | Noise cuts to silence. **Click** on the pinch |
 
 ## Act 3: the reveal + intro lines (0:09-0:16)
 | # | Time | Source | Shot | Animation / effect | On-screen text | Audio |
 |---|---|---|---|---|---|---|
-| 8 | 0:09-0:12 | REAL + RENDER | Pinch. Glowing cyan lines appear in a **fixed square, right of centre** (the display is in one eye; lines are not stuck to the object) | 4-frame fade in, grade snaps back to gold | **Look at anything.** · **See how it really works.** | Music back in, brighter |
+| 8 | 0:09-0:12 | REAL + RENDER | Pinch. **The child's question answered**: sunlight splits into colours, red and blue are absorbed by the leaf, green bounces back to your eye. Glowing lines in a **fixed square, right of centre** (the display is in one eye; lines are not stuck to the object) | 4-frame fade in, grade snaps back to gold | **Look at anything.** · **See how it really works.** | Music back in, brighter |
 | 9 | 0:12-0:16 | GLASS | Real recording from the glasses of the same card, yellow system frame left in | Corner tag "Recorded on the glasses" | **Feed your curiosity. Grow.** · *Physics Lens* | Music continues |
 
 ## Act 4: how it works for you (0:16-0:38, retime after objects are picked) — one real run
