@@ -5,7 +5,7 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 7b, 1:22)
+# Video script: "Never stop asking why" (draft 8, 1:22)
 
 > **Name: WonderWhy.** No childhood photo exists: child shots stay AI.
 > **Owner changes 14:50:** "Look at anything." stays, followed by *An object or a concept.* and a quick text-only list of examples (not visualised): *Earbuds · Sauna steam · Wi-Fi · Why the sky is blue*. End with a CTA: *Come to our table. Try it.*
@@ -17,7 +17,7 @@ updated: 2026-11-14
 > **Edit rule:** waits are cut out, not shown. Small corner tag on the glasses shots: *Recorded on the glasses · edited for time*.
 
 ## All on-screen lines, in order
-*Why is the grass green?* · *How does the world work?* · *You used to ask why.* · *Then you stopped.* · **Look at anything.** · **See how it really works.** · **Feed your curiosity. Grow your understanding of the world.** · *Ask anything* · *Opens the part you asked about* · *Keep asking. It goes deeper.* · *Why steam bites* · *Lighter than it feels* · *It sees it. AI names it. Real physics explains it.* · *Try it.* · *Even this?* · *It even explains itself.* · **Never stop asking why.** · End card: **WonderWhy. See how the world really works.**
+*Why is the grass green?* · *How does the world work?* · *You used to ask why.* · *Then you stopped.* · **Look at anything.** · **See how it really works.** · **Feed your curiosity. Grow your understanding of the world.** · *Ask out loud* · *Opens the part you asked about* · *Keep asking. It goes deeper.* · *Why steam bites* · *Brakes without touching* · *It sees it. AI names it. Real physics explains it.* · *Try it.* · *Even this?* · *It even explains itself.* · **Never stop asking why.** · End card: **WonderWhy. See how the world really works.**
 
 ## Act 1: the child (0:00-0:04) — gold, dreamy
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -29,7 +29,7 @@ updated: 2026-11-14
 Desaturated and cold. **Headphones on the whole act**: every outside sound is muffled (low-pass filter), only a dull tick is clear.
 | # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
-| 3 | 0:04-0:05 | REAL | Match cut: the seed blur becomes a thumb snoozing a phone alarm | *You used to ask why.* | Alarm, cut short |
+| 3 | 0:04-0:05 | REAL | Match cut: the seed blur becomes a close-up of fingers pushing the **earbuds in** (sets up the reveal at 0:11) | *You used to ask why.* | Sound drops to muffled the moment they go in |
 | 4 | 0:05-0:07 | REAL | IceFrost sitting on grass outside, earbuds in, head down, scrolling | *Then you stopped.* | Muffled wind, tick |
 | 5 | 0:07-0:09 | REAL | IceFrost walking through the hackathon crowd, earbuds in, zoned out, people talking all around | (stays) | The crowd as a muffled wall of sound |
 
@@ -45,16 +45,16 @@ Desaturated and cold. **Headphones on the whole act**: every outside sound is mu
 ## Act 4: a real run with a follow-up — 3D printer (0:20-0:38)
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 11 | 0:20-0:23 | REAL | IceFrost at the 3D printer, looks, pinches | Close on the hand, then the face | *Ask anything* | Printer hum, click · IceFrost: "How does it build this?" |
+| 11 | 0:20-0:23 | REAL (POV) | POV at the 3D printer: IceFrost's hand reaches towards it, pinch (no medium shot) | Slow POV push | *Ask out loud* | Printer hum, click · VO: "How does it build this?" (burned-in caption) |
 | 12 | 0:23-0:29 | GLASS | The answer opens at that part: hot plastic squeezed out, laid down layer by layer | Cut on each pinch (step 1 → 2) | *Opens the part you asked about* | Click per step |
-| 13 | 0:29-0:31 | REAL | IceFrost leans closer, curious | | | IceFrost: "So why doesn't it melt the layer below?" |
-| 14 | 0:31-0:38 | GLASS | The deeper answer: each layer cools and hardens in seconds, the next one bonds on top | | *Keep asking. It goes deeper.* | Music |
+| 13 | 0:29-0:31 | REAL (POV) | POV leans closer to the nozzle | | | VO: "So why doesn't it melt the layer below?" (caption) |
+| 14 | 0:31-0:38 | GLASS | The deeper answer: it does, but only the skin of the layer below re-melts, and that is the glue | | *Keep asking. It goes deeper.* | Music |
 
 ## Act 5: everyday life has a backstage (0:38-0:46) — montage
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
 | 15 | 0:38-0:42 | REAL + RENDER | Sauna: water ladled on hot stones, steam rising (filmed on a phone; the glasses stay outside the hot room) | Lines: steam rising, heat flowing up | *Why steam bites* | Hiss of water on stones |
-| 16 | 0:42-0:46 | REAL + RENDER | Gym machine in use | Lines: the hidden mechanism | *Lighter than it feels* (cable machine) / *Brakes without touching* (spin bike) | Machine whirr, beat |
+| 16 | 0:42-0:46 | REAL + RENDER | Gym bike: the flywheel spinning, the magnet beside it (filmed) | Lines: the magnet brakes the wheel without touching (eddy currents) | *Brakes without touching* | Flywheel whirr, beat |
 
 ## Act 6: how it works (0:46-0:54)
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -73,6 +73,9 @@ Filmed by a third person: IceFrost already wears one pair; a friend sits next to
 | 23 | 1:08-1:12 | REAL | The friend puts them on, looks at something, pinches: a real wow reaction | | | Real laugh or "no way" |
 | 24 | 1:12-1:16 | REAL → AI | Both smile; match cut to the child in the grass, now with glowing lines on the blade | Grade fully gold | **Never stop asking why.** | Kid, happy: "Why?" · last note |
 | 25 | 1:16-1:22 | Title | Black, logo | Fade in | **WonderWhy. See how the world really works.** · then **Come to our table. Try it.** · Meta Ray-Ban Display · Junction 2026 | One click, silence |
+
+## Filmed so far (Sat 15:40)
+B1 (adult in the grass, mirror of the child), B3 (blade of grass + pinch, real glasses), shot A (grass, earbuds in, scrolling), sauna, gym bike, earbuds going in.
 
 ## To make
 | What | How | By |
