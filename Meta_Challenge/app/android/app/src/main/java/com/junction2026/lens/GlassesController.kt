@@ -471,7 +471,29 @@ class GlassesController(
     }
 
     /** Every step checks the session is still this one: a stale attach must not touch the next session. */
+    /**
+     * Camera-only test mode: the phone app takes no Display, so our Web App can stay in front on the glasses
+     * and play the result the bridge broadcasts to it. Set before Connect.
+     */
+    var cameraOnly = false
+
     private suspend fun attachCapabilities(sess: DeviceSession) {
+        if (cameraOnly) {
+            log("Camera only: no Display capability; results go to the Web App through the bridge")
+            displayReady.value = true
+            addInputsTo(sess)
+            // "Take photo" in the Web App reaches us through the bridge (GET /capture, polled each second).
+            sessionJobs += scope.launch {
+                var seen = bridge.pollCapture(0)?.second ?: 0
+                while (isActive && session === sess) {
+                    delay(1_000)
+                    val (want, id) = bridge.pollCapture(seen) ?: continue
+                    if (want && id > seen) { log("Web App asked for a photo (#$id)"); trigger() }
+                    seen = maxOf(seen, id)
+                }
+            }
+            return
+        }
         val addDisplayResult = sess.addDisplay()
         if (session !== sess) return
         val d = addDisplayResult.getOrNull()
@@ -996,7 +1018,7 @@ class GlassesController(
      * when the wearer pinches (skip), stays silent for [QUESTION_WAIT_MS], or speech is not available.
      */
     private suspend fun listenForQuestion(): String? {
-        if (!askWithPhoto || speech == null) return null
+        if (!askWithPhoto || speech == null || cameraOnly) return null
         val w = CompletableDeferred<String?>()
         heardPartial = false
         questionWait = w

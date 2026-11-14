@@ -153,20 +153,23 @@ interface HomeScreenProps {
   connected: boolean;
   openObject: (objectId: string) => void;
   startDemo: () => void;
+  /** Ask the phone app (camera-only mode) to take a photo; the result comes back as a normal `show`. */
+  takePhoto: () => void;
 }
 
 function clampHomeIndex(index: number, count: number): number {
   return Math.max(0, Math.min(count - 1, index));
 }
 
-function HomeScreen({connected, openObject, startDemo}: HomeScreenProps) {
+function HomeScreen({connected, openObject, startDemo, takePhoto}: HomeScreenProps) {
   const columns = OBJECTS.length > 6 ? 3 : 2;
   const choices = useMemo(
     () => [
+      ...(connected ? [{id: 'photo', label: 'Take photo', short: 'Photo', onClick: () => takePhoto()}] : []),
       ...OBJECTS.map(object => ({id: object.id, label: object.label, short: object.short, onClick: () => openObject(object.id)})),
       {id: 'demo', label: 'Demo', short: 'Demo', onClick: () => startDemo()},
     ],
-    [openObject, startDemo],
+    [connected, openObject, startDemo, takePhoto],
   );
   const rows: typeof choices[] = [];
   for (let index = 0; index < choices.length; index += columns) rows.push(choices.slice(index, index + columns));
@@ -392,6 +395,12 @@ export default function App() {
 
   // A library object opened on the glasses (home, demo): the bridge's media folder says whether
   // its Explore beats exist. Without them the object opens on its next lens.
+  // Camera-only mode: the phone app keeps no Display, so this Web App stays in front. The bridge relays
+  // `capture` to the phone app, which takes the photo; its result arrives here as `detecting` then `show`.
+  const takePhoto = useCallback(() => {
+    bridgeRef.current?.send({type: 'capture', t_sent: Date.now()});
+  }, []);
+
   const openLibrary = useCallback((objectId: string, extra?: Partial<View & {k: 'explain'}>) => {
     const base = findObject(objectId);
     const beats = exploreBeats(base);
@@ -891,7 +900,7 @@ export default function App() {
       </Page>
     );
   } else {
-    body = <HomeScreen connected={connected} openObject={openLibrary} startDemo={startDemo} />;
+    body = <HomeScreen connected={connected} openObject={openLibrary} startDemo={startDemo} takePhoto={takePhoto} />;
   }
 
   if (consentRequired) body = <ConsentScreen onAccept={acceptConsent} />;

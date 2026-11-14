@@ -11,6 +11,9 @@ object Prefs {
     fun setBridge(c: Context, v: String) = sp(c).edit().putString("bridge", v).apply()
     /** "Demo data (no bridge)": fixture answers instead of camera + bridge. Off by default. */
     fun fixture(c: Context) = sp(c).getBoolean("fixture", false)
+    /** Camera only: no glasses Display capability, so the Web App can stay on screen and show the result. */
+    fun cameraOnly(c: Context) = sp(c).getBoolean("cameraOnly", false)
+    fun setCameraOnly(c: Context, v: Boolean) = sp(c).edit().putBoolean("cameraOnly", v).apply()
     fun setFixture(c: Context, v: Boolean) = sp(c).edit().putBoolean("fixture", v).apply()
     fun bridgeToken(c: Context) = sp(c).getString("bridgeToken", "") ?: ""
     fun setBridgeToken(c: Context, v: String) = sp(c).edit().putString("bridgeToken", v).apply()

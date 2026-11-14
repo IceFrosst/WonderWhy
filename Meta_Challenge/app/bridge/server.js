@@ -374,6 +374,9 @@ export function start({
     };
   }
 
+  let pendingCapture = null;
+  let captureSeq = 0;
+
   function currentLast() {
     if (!lastShow) return { show: null, ageMs: null };
     const ageMs = Date.now() - lastShowAt;
@@ -718,7 +721,7 @@ export function start({
       }
       const headers = cors(req);
       if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
-      const protectedRoute = (req.method === 'POST' && ['/detect', '/ask', '/rendered'].includes(url.pathname)) || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
+      const protectedRoute = (req.method === 'POST' && ['/detect', '/ask', '/rendered'].includes(url.pathname)) || (req.method === 'GET' && ['/last', '/latency', '/capture'].includes(url.pathname));
       if (protectedRoute && !authorized(req)) {
         if (detailedRoute) return requestError(req, res, 401, 'unauthorized');
         return json(req, res, 401, { error: 'unauthorized' });
@@ -738,6 +741,12 @@ export function start({
         return json(req, res, 200, { objects: localized, lang: translation ? lang : 'en' });
       }
       if (req.method === 'GET' && url.pathname === '/last') return json(req, res, 200, currentLast());
+      // Camera-only mode: the phone app polls this; a request from the Web App younger than 10 s is handed out once.
+      if (req.method === 'GET' && url.pathname === '/capture') {
+        const after = Number(url.searchParams.get('after')) || 0;
+        const fresh = pendingCapture && pendingCapture.id > after && Date.now() - pendingCapture.at < 10000;
+        return json(req, res, 200, fresh ? { capture: true, id: pendingCapture.id } : { capture: false, id: pendingCapture ? pendingCapture.id : 0 });
+      }
       if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
       if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), ...(!token ? { open: true } : {}), provider, sketch: sketchMode, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
@@ -787,6 +796,8 @@ export function start({
         }
         if (role === 'phone' && ['nav', 'device', 'error'].includes(message.type)) return send(glasses, message);
         if (role === 'glasses' && message.type === 'state') return send(phones, message);
+        // Camera-only mode: the Web App asks for a photo; phone apps poll GET /capture (or get it over a socket).
+        if (role === 'glasses' && message.type === 'capture') { pendingCapture = { id: ++captureSeq, at: Date.now() }; return send(phones, { type: 'capture', id: pendingCapture.id }); }
         if (role === 'glasses' && message.type === 'rendered') finishLatency(message.reqId);
       } catch { /* ignore malformed or hostile frames */ }
     });

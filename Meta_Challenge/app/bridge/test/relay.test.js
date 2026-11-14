@@ -72,6 +72,19 @@ test('question: null means no question (the Android app sends it with every phot
   assert.equal(bad.status, 400);
 });
 
+test('capture: the Web App asks for a photo, the phone polls GET /capture once', async () => {
+  const before = await (await fetch(`${base}/capture`)).json();
+  assert.equal(before.capture, false);
+  const g = await client('glasses');
+  g.ws.send(JSON.stringify({ type: 'capture' }));
+  await new Promise((r) => setTimeout(r, 100));
+  const got = await (await fetch(`${base}/capture?after=${before.id}`)).json();
+  assert.equal(got.capture, true);
+  const again = await (await fetch(`${base}/capture?after=${got.id}`)).json();
+  assert.equal(again.capture, false);
+  g.ws.close();
+});
+
 test('mock provider returns unknown without forceObjectId', async () => {
   const r = await post({ reqId: 'r2', imageBase64: 'AAAA' });
   const b = await r.json();

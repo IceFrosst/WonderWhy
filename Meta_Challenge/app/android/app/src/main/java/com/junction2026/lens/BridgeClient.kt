@@ -88,6 +88,28 @@ class BridgeClient(config: BridgeConfig, private val log: (String) -> Unit = {})
         }
     }
 
+    /**
+     * Camera-only mode: has the Web App asked for a photo since [after]? Returns the new request id, or null.
+     * Short timeouts: this runs every second.
+     */
+    suspend fun pollCapture(after: Int): Pair<Boolean, Int>? = withContext(Dispatchers.IO) {
+        val cfg = config
+        var c: HttpURLConnection? = null
+        try {
+            c = url(cfg, "/capture?after=$after").openConnection() as HttpURLConnection
+            c.connectTimeout = 3000
+            c.readTimeout = 3000
+            BridgeAuth.headers(cfg.token).forEach { (k, v) -> c.setRequestProperty(k, v) }
+            if (c.responseCode != 200) return@withContext null
+            val o = org.json.JSONObject(c.inputStream.bufferedReader().use { it.readText() })
+            o.optBoolean("capture") to o.optInt("id")
+        } catch (_: Exception) {
+            null
+        } finally {
+            c?.disconnect()
+        }
+    }
+
     /** [focus] is the centre of [jpeg], zoomed: where the wearer is looking. The bridge classifies that. */
     suspend fun detect(jpeg: ByteArray, focus: ByteArray?, tCapture: Long, lang: String, forceObjectId: String? = null, question: String? = null): Detection = withContext(Dispatchers.IO) {
         val reqId = UUID.randomUUID().toString()

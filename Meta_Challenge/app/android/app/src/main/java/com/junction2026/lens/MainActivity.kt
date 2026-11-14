@@ -165,6 +165,7 @@ class MainActivity : ComponentActivity() {
             },
         )
         controller.useFixture = Prefs.fixture(this)
+        controller.cameraOnly = Prefs.cameraOnly(this)
         buildUi()
         // After buildUi: setLanguage logs, and the log view must exist (a saved language crashed the start).
         controller.setLanguage(Lang.effective(Prefs.lang(this), Locale.getDefault()))
@@ -464,6 +465,12 @@ class MainActivity : ComponentActivity() {
             updateStatus()
         }
         dev.addView(fixtureSwitch)
+        val cameraOnlySwitch = switch("Camera only (Web App shows the result)", Prefs.cameraOnly(this)) { on ->
+            Prefs.setCameraOnly(this, on)
+            controller.cameraOnly = on
+            log(if (on) "Camera only: Disconnect + Connect, then open the Web App on the glasses" else "Camera only off: cards on the glasses again")
+        }
+        dev.addView(cameraOnlySwitch)
         // Team tools: the real-glasses checklist (Glasses_Test.md) and emptying "Seen today".
         dev.addView(row(
             button("Glasses check") { openCheck() },
