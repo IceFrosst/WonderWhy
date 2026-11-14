@@ -1,0 +1,791 @@
+<!doctype html>
+<!-- Act 1 intro, variant R_B3_lines "Planet, eye, kid".
+     One continuous overhead pull-back in the film's glowing-line language, warm gold on deep dusk:
+     a line-drawn Earth turning in the dark -> it is the reflection in a kid's pupil -> iris, lashes, lids ->
+     face -> the whole kid lying in a field of glowing grass, looking straight up at the sky we are in.
+     Real perspective (camera height = F / zoom), so grass and hair separate in depth as we rise.
+     Pure function of t: window.renderFrame(t). Seeded, no clocks. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Act 1 · R_B3_lines · Planet, eye, kid</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="kit.js"></script>
+<script>
+(async () => {
+  const { W, H, clamp, lerp, prog, ease, hash, hash2, noise } = K;
+  const cv = document.getElementById('c'), M = cv.getContext('2d');
+  const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+  await K.loadFonts();
+  const TAU = Math.PI * 2, DEG = Math.PI / 180, rgba = K.rgba;
+  const C = { gold: '#ffc247', pale: '#ffd98a', amber: '#ff9d2e', cream: '#ffe9b8', rose: '#ffb48a' };
+  const sm = x => { x = clamp(x); return x * x * (3 - 2 * x); };
+
+  const L = K.layer(), Lg = L.getContext('2d');
+  const HB = K.layer(), Hb = HB.getContext('2d');        // scratch for one-pass blurred hair shapes          // everything drawn (fills occlude, lines glow)
+  const TX = K.layer(), Tg = TX.getContext('2d');        // question, before its write-on mask
+
+  // background: deep dusk ground, warm from the low sun (upper left), plum in the far corner
+  const BG = K.layer(), Bg = BG.getContext('2d');
+  {
+    let g = Bg.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, '#22120a'); g.addColorStop(0.45, '#120a0a'); g.addColorStop(1, '#0a060c');
+    Bg.fillStyle = g; Bg.fillRect(0, 0, W, H);
+    g = Bg.createRadialGradient(-80, -60, 0, -80, -60, 1500);
+    g.addColorStop(0, 'rgba(255,150,70,0.22)'); g.addColorStop(0.5, 'rgba(255,120,60,0.06)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    Bg.fillStyle = g; Bg.fillRect(0, 0, W, H);
+  }
+
+  // ---------------------------------------------------------------------------------------------------------
+  // camera. World units: px at zoom 1 (S px per cm). The face plane is h = 0, ground is h = -25 cm.
+  // Camera looks straight down from height Hc = F / z above the face, so lower things zoom less (real parallax).
+  const S = 5.2, F = 3000, GROUND = -25;
+  const CF = cfg.camera, T1 = CF.settle, TH_F = CF.rot, EF = CF.eyeFinal, ZE = CF.zEnd || 1;
+  const EYE = [-3.1 * S, 0];
+  const Z0 = 1150 / (0.27 * S);                           // the pupil just overfills the frame on frame 1
+  const A_ = 0.22, E = u => (3 * u * u - 2 * u * u * u + A_ * (1 - (1 - u) ** 3) / 3) / (1 + A_ / 3);
+  let CAM;
+  function setCam(t) {
+    const u = clamp(t / T1), e = E(u), hold = Math.max(0, t - T1);
+    const z = Math.exp(Math.log(Z0) * (1 - e) + Math.log(ZE) * e) * (1 - 0.008 * hold);
+    const th = TH_F * ease.inOut(u) - 0.004 * hold;
+    const c = Math.cos(th), s = Math.sin(th);
+    const ox = (EF[0] - 960) * e, oy = (EF[1] - 540) * e;
+    const Nx = EYE[0] - (c * ox + s * oy) / z, Ny = EYE[1] - (-s * ox + c * oy) / z;
+    CAM = { z, th, c, s, Nx, Ny, Hc: F / z, t };
+  }
+  const P = (x, y, h) => {                                  // world px -> screen
+    const d = CAM.Hc - h; if (d < 0.5) return null;
+    const k = F / d, dx = x - CAM.Nx, dy = y - CAM.Ny;
+    return [960 + k * (CAM.c * dx - CAM.s * dy), 540 + k * (CAM.s * dx + CAM.c * dy), k];
+  };
+  const useH = (g, hcm) => {                                // set g so local units are cm at height hcm; returns px per cm
+    const d = CAM.Hc - hcm * S; if (d < 0.5) return 0;
+    const k = F / d, sc = k * S;
+    const ex = 960 - k * (CAM.c * CAM.Nx - CAM.s * CAM.Ny), ey = 540 - k * (CAM.s * CAM.Nx + CAM.c * CAM.Ny);
+    g.setTransform(sc * CAM.c, sc * CAM.s, -sc * CAM.s, sc * CAM.c, ex, ey); return sc;
+  };
+
+  // ---------------------------------------------------------------------------------------------------------
+  // drawing helpers (local units)
+  const cr = (pts, closed, seg = 6) => {                   // Catmull-Rom -> dense polyline
+    const out = [], n = pts.length, N = closed ? n : n - 1;
+    for (let i = 0; i < N; i++) {
+      const p0 = closed ? pts[(i - 1 + n) % n] : pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[(i + 1) % n];
+      const p3 = closed ? pts[(i + 2) % n] : pts[Math.min(n - 1, i + 2)];
+      for (let k = 0; k < seg; k++) {
+        const u = k / seg, u2 = u * u, u3 = u2 * u, f = j => 0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * u + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * u2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * u3);
+        out.push([f(0), f(1)]);
+      }
+    }
+    if (!closed) out.push(pts[n - 1].slice());
+    return out;
+  };
+  // tapered pen stroke: filled ribbon, width w (local units), thin at both ends
+  function ribbon(g, pts, w, a0 = 0.2, a1 = 0.8, minw = 0.2) {
+    const n = pts.length; if (n < 2) return;
+    const cum = [0]; for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const Lt = cum[n - 1] || 1, Lf = [], Rt = [];
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], q = pts[Math.min(n - 1, i + 1)], o = pts[Math.max(0, i - 1)];
+      let dx = q[0] - o[0], dy = q[1] - o[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const u = cum[i] / Lt, f = Math.max(0, Math.min(1, a0 > 0 ? u / a0 : 1, a1 < 1 ? (1 - u) / (1 - a1) : 1));
+      const ww = w * 0.5 * (minw + (1 - minw) * Math.pow(f, 0.7));
+      Lf.push([p[0] - dy * ww, p[1] + dx * ww]); Rt.push([p[0] + dy * ww, p[1] - dx * ww]);
+    }
+    g.beginPath(); g.moveTo(Lf[0][0], Lf[0][1]); for (let i = 1; i < n; i++) g.lineTo(Lf[i][0], Lf[i][1]);
+    for (let i = n - 1; i >= 0; i--) g.lineTo(Rt[i][0], Rt[i][1]); g.closePath(); g.fill();
+  }
+  // rim-lit outline of a closed shape: edges facing the low sun glow, the far side fades to nothing
+  const LW = [-0.46, -0.87];                               // direction towards the sun, world space
+  function rim(g, pts, w, lo, hi, col, pred, mul = 1, wv = 0.55) {
+    const n = pts.length; let A = 0;
+    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; A += p[0] * q[1] - q[0] * p[1]; }
+    g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round';
+    let cur = -1, path = null;
+    const flush = () => { if (path && cur > 0) { g.strokeStyle = rgba(col, mul * cur / 10); g.lineWidth = w * (1 - wv + wv * 1.4 * cur / 10); g.stroke(path); } path = null; };
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], q = pts[(i + 1) % n];
+      if (pred && !pred(p)) { flush(); cur = -1; continue; }
+      let dx = q[0] - p[0], dy = q[1] - p[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const nx = A > 0 ? dy : -dy, ny = A > 0 ? -dx : dx;
+      const d = nx * LW[0] + ny * LW[1], a = lo + (hi - lo) * sm((d + 0.35) / 1.25), lvl = Math.round(a * 10);
+      if (lvl !== cur || !path) { flush(); cur = lvl; path = new Path2D(); path.moveTo(p[0], p[1]); }
+      path.lineTo(q[0], q[1]);
+    }
+    flush();
+  }
+  const inPoly = (pts, x, y) => { let c = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
+  const outside = (...polys) => p => !polys.some(q => inPoly(q, p[0], p[1]));
+  const fillPoly = (g, pts) => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fill(); };
+  const strokePoly = (g, pts) => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]); g.stroke(); };
+  // a limb: centre line + widths -> closed smooth outline with round ends
+  const segX = (a, b, c, d) => {
+    const rx = b[0] - a[0], ry = b[1] - a[1], sx = d[0] - c[0], sy = d[1] - c[1], den = rx * sy - ry * sx; if (Math.abs(den) < 1e-9) return null;
+    const u = ((c[0] - a[0]) * sy - (c[1] - a[1]) * sx) / den, v = ((c[0] - a[0]) * ry - (c[1] - a[1]) * rx) / den;
+    return (u >= 0 && u <= 1 && v >= 0 && v <= 1) ? [a[0] + u * rx, a[1] + u * ry] : null;
+  };
+  function unloop(p) {
+    const out = []; let i = 0;
+    while (i < p.length - 1) {
+      out.push(p[i]); let hit = null, hj = -1;
+      for (let j = Math.min(p.length - 2, i + 90); j >= i + 2; j--) { const x = segX(p[i], p[i + 1], p[j], p[j + 1]); if (x) { hit = x; hj = j; break; } }
+      if (hit) { out.push(hit); i = hj + 1; } else i++;
+    }
+    out.push(p[p.length - 1]); return out;
+  }
+  function limb(cl, wd) {
+    const c = cr(cl, false, 8), n = c.length, wv = i => { const u = i / (n - 1) * (wd.length - 1), k = Math.min(wd.length - 2, Math.floor(u)); return lerp(wd[k], wd[k + 1], u - k) / 2; };
+    const Lf = [], Rt = [];
+    for (let i = 0; i < n; i++) {
+      const p = c[i], q = c[Math.min(n - 1, i + 1)], o = c[Math.max(0, i - 1)];
+      let dx = q[0] - o[0], dy = q[1] - o[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const w = wv(i); Lf.push([p[0] - dy * w, p[1] + dx * w]); Rt.push([p[0] + dy * w, p[1] - dx * w]);
+    }
+    const cap = (p, a0, r, out) => { for (let k = 1; k < 10; k++) { const a = a0 - Math.PI * k / 10; out.push([p[0] + Math.cos(a) * r, p[1] + Math.sin(a) * r]); } };
+    const Lc = unloop(Lf), Rc = unloop(Rt); Lf.length = 0; Lf.push(...Lc); Rt.length = 0; Rt.push(...Rc);
+    const out = Lf.slice();
+    { const p = c[n - 1], q = c[n - 2], a = Math.atan2(p[1] - q[1], p[0] - q[0]); cap(p, a + Math.PI / 2, wv(n - 1), out); }
+    for (let i = Rt.length - 1; i >= 0; i--) out.push(Rt[i]);
+    { const p = c[0], q = c[1], a = Math.atan2(p[1] - q[1], p[0] - q[0]); cap(p, a + Math.PI / 2, wv(0), out); }
+    return out;
+  }
+  const mirror = pts => pts.map(p => [-p[0], p[1]]);
+
+  // ---------------------------------------------------------------------------------------------------------
+  // THE KID (cm, origin between the eyes, body along +y). Lying on his back, arms behind his head,
+  // right knee up, looking straight up at the camera.
+  const FACE = cr([[0, -9.2], [4.6, -8.2], [6.3, -5.2], [6.7, -1.5], [6.6, 1.5], [6.1, 4.4], [5.0, 6.9], [3.2, 8.4], [1.4, 9.3], [0, 9.5],
+    [-1.4, 9.3], [-3.2, 8.4], [-5.0, 6.9], [-6.1, 4.4], [-6.6, 1.5], [-6.7, -1.5], [-6.3, -5.2], [-4.6, -8.2]], true, 6);
+  const EARL = cr([[-6.3, -1.0], [-7.3, -1.5], [-8.0, -0.4], [-8.1, 1.3], [-7.7, 3.0], [-6.8, 3.9], [-6.1, 3.4]], true, 5);
+  const EARLin = cr([[-7.1, -0.5], [-7.5, 0.9], [-7.2, 2.4], [-6.8, 3.0]], false, 6);
+  const HAIRB = cr([[-7.6, 3.4], [-9.8, 1.0], [-11.0, -3], [-10.8, -7.5], [-8.8, -11.5], [-5, -14.2], [0, -15.0], [5, -14.3], [8.9, -11.6],
+    [10.9, -7.4], [11.0, -3], [9.9, 1.0], [7.6, 3.4], [6, -1], [0, -6], [-6, -1]], true, 6);
+  const NECK = cr([[-3.4, 8.0], [-3.6, 13.8], [-1.5, 15.0], [1.5, 15.0], [3.6, 13.8], [3.4, 8.0]], true, 4);
+  const TORSO = cr([[-5.4, 12.5], [-10, 13.2], [-14.4, 15.0], [-16.4, 18.6], [-15.4, 24], [-13.7, 32], [-12.9, 40], [-13.3, 46], [-13.9, 50.4], [-7, 51.1],
+    [0, 51.3], [7, 51.1], [13.9, 50.4], [13.3, 46], [12.9, 40], [13.7, 32], [15.4, 24], [16.4, 18.6], [14.4, 15.0], [10, 13.2], [5.4, 12.5],
+    [3, 14.4], [0, 15.1], [-3, 14.4]], true, 5);
+  const ARM = limb([[-14.2, 17.5], [-17.5, 8], [-20.4, -0.8], [-22.0, -5.6], [-20.2, -9.0], [-14.5, -10.6], [-9.0, -10.2]], [7.2, 6.9, 5.9, 5.5, 5.0, 4.6, 4.2]);
+  const SLEEVE = limb([[-13.8, 17.6], [-15.9, 12.4], [-17.8, 7.6]], [8.4, 8.0, 7.7]);
+  const HEM = { H: [-17.1, 9.6], d: [-0.379, -0.926] };                                    // sleeve hem point + arm direction
+  const hp = (a, b) => [HEM.H[0] + (-HEM.d[1]) * a + HEM.d[0] * b, HEM.H[1] + HEM.d[0] * a + HEM.d[1] * b];   // a across the arm, b along it
+  const HEMLINE = cr([hp(4.5, -0.1), hp(2.6, 0.45), hp(0, 0.62), hp(-2.6, 0.45), hp(-4.5, -0.1)], false, 6);   // hem bows round the arm
+  const HEMCLIP = HEMLINE.concat([hp(-20, -0.1), hp(-20, -30), hp(20, -30), hp(20, -0.1)]);
+  const LEGL = limb([[-7.2, 58], [-7.4, 70], [-7.4, 81], [-7.3, 90], [-7.1, 100], [-7.0, 107]], [11.4, 10.2, 8.4, 8.2, 6.8, 5.6]);
+  const LEGR = limb([[9.6, 56], [16.6, 65.6], [22.6, 72.4], [21.2, 77.6], [16.6, 86.6], [12, 94.6]], [11.6, 10.4, 9.0, 8.4, 7.4, 5.8]);
+  const SHORTS = cr([[-13.3, 48.6], [13.3, 48.6], [14.6, 54], [18.3, 57.8], [12.8, 62.6], [9.5, 64.6], [3.5, 60.5], [0, 61], [-1.4, 65],
+    [-7, 65.6], [-12.8, 64.4], [-13.8, 56]], true, 5);
+  const SHOEL = cr([[-11.4, 106], [-12.4, 110], [-12.6, 114.5], [-11.4, 118.4], [-8.6, 120.2], [-5.4, 119.4], [-3.6, 116], [-3.4, 111], [-4.4, 106.5], [-7.8, 105.2]], true, 5);
+  const SHOER = cr([[8.0, 95], [8.2, 101], [8.6, 108], [9.0, 113.5], [10.6, 117.2], [13.4, 118.4], [16.0, 116.6], [16.8, 111.6], [16.4, 104], [15.6, 97.5], [14.2, 93.6], [11.2, 92.6]], true, 5);
+
+  // hair: strands from the hairline, lying out on the grass around the head
+  const RH = K.mulberry(611);
+  const STRANDS = Array.from({ length: 300 }, (_, i) => {
+    const ph = lerp(-Math.PI - 0.32, 0.32, (i + RH() * 0.9) / 300), rr = 0.9 + 0.12 * RH();
+    const root = [6.5 * rr * Math.cos(ph), -1.8 + 7.6 * rr * Math.sin(ph)];
+    const rx = root[0] / 6.5, ry = (root[1] + 1.5) / 7.6, lock = noise(ph * 2.6, 41), out = Math.atan2(ry - 0.75, rx * 0.8) + 0.5 * lock + (RH() - 0.5) * 0.12, len = 3.2 + 3.0 * Math.pow(RH(), 0.6);
+    const bend = 1.1 * noise(ph * 2.6 + 7, 43) + (RH() - 0.5) * 0.18;
+    return { root, out, len, bend, w: 0.028 + 0.035 * RH(), a: 0.2 + 0.4 * RH(), ph: RH() * 9, gold: RH() < 0.55 };
+  });
+  const FRINGE = Array.from({ length: 34 }, (_, i) => {
+    const x0 = lerp(-5.4, 4.8, i / 33) + (RH() - 0.5) * 0.7, sw = 0.9 + RH() * 1.4;
+    return { p: [[x0 + 0.4, -10.2], [x0 - 0.3 * sw, -8.0], [x0 - sw, -6.0 - RH() * 0.8], [x0 - sw * 1.25, -5.2 - RH() * 0.6]], w: 0.026 + 0.03 * RH(), a: 0.25 + 0.4 * RH() };
+  });
+
+  // HAIR, round 3: a soft dark mass, 8 clumped locks falling back onto the grass under gravity, a few strays,
+  // and a short fringe of 3 locks. Gold only as rim light on the sun-side edges.
+  const HAIRM = cr([[-7.0, 2.6], [-8.3, 0.2], [-8.9, -3.4], [-8.5, -7.0], [-6.9, -10.0], [-3.9, -11.9], [0.2, -12.5], [4.2, -11.8], [7.1, -9.8],
+    [8.6, -6.8], [8.9, -3.3], [8.2, 0.2], [7.0, 2.6], [5.8, -1.4], [0, -6], [-5.8, -1.4]], true, 6);
+  const lockShape = (B, a, Lk, wk, curl, n = 14) => {         // tapered clump: wide root, soft pointed tip, gentle curl
+    const d = [Math.cos(a), Math.sin(a)], q = [-d[1], d[0]];
+    const cl = cr([B, [B[0] + d[0] * Lk * 0.45 + q[0] * curl * 0.25, B[1] + d[1] * Lk * 0.45 + q[1] * curl * 0.25], [B[0] + d[0] * Lk + q[0] * curl, B[1] + d[1] * Lk + q[1] * curl]], false, n / 2);
+    const m = cl.length, Lf = [], Rt = [];
+    for (let i = 0; i < m; i++) {
+      const p = cl[i], nx = cl[Math.min(m - 1, i + 1)], pv = cl[Math.max(0, i - 1)];
+      let dx = nx[0] - pv[0], dy = nx[1] - pv[1]; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const u = i / (m - 1), hw = wk / 2 * Math.pow(Math.max(0, 1 - Math.pow(u, 2.4)), 0.55) * (0.85 + 0.15 * Math.sin(Math.PI * u));
+      Lf.push([p[0] - dy * hw, p[1] + dx * hw]); Rt.push([p[0] + dy * hw, p[1] - dx * hw]);
+    }
+    return { out: Lf.concat(Rt.reverse()), cl, wk };
+  };
+  const RL = K.mulberry(733);
+  // [angle round the head, length, width, curl]; all curl the same way (a soft swirl), longer behind the head
+  const LOCKS = [[-2.95, 4.0, 4.2, 1.1], [-2.55, 5.4, 4.8, 1.5], [-2.15, 6.2, 5.0, 1.2], [-1.8, 6.6, 5.2, 1.7], [-1.45, 6.0, 5.0, 1.0],
+    [-1.1, 6.4, 5.2, 1.6], [-0.75, 5.6, 4.8, 1.2], [-0.4, 5.0, 4.4, 1.5], [-0.08, 3.8, 3.8, 0.9]].map(([a, Lk, wk, curl], i) => {
+    const B = [Math.cos(a) * 5.6, -2.8 + Math.sin(a) * 6.6], dir = a + 0.15 * (RL() - 0.5) + 0.12;
+    const sh = lockShape(B, dir, Lk * 0.88, wk, curl * (1.1 + 0.4 * RL())), cl = sh.cl, m = cl.length;
+    const sunny = Math.cos(dir) * LW[0] + Math.sin(dir) * LW[1];
+    const strands = Array.from({ length: 9 }, (_, k) => {
+      const o = (k / 8 - 0.5) * 0.9 + (RL() - 0.5) * 0.08, lf = 0.72 + 0.28 * RL(), jit = (RL() - 0.5) * 0.5;
+      const pts = [];
+      for (let j = 0; j < m; j++) {
+        const u = j / (m - 1); if (u > lf) break;
+        const p = cl[j], nx = cl[Math.min(m - 1, j + 1)], pv = cl[Math.max(0, j - 1)], dx = nx[0] - pv[0], dy = nx[1] - pv[1], l = Math.hypot(dx, dy) || 1;
+        const off = o * wk * (0.42 + 0.58 * Math.pow(1 - u, 1.1)) + o * 0.9 * u * u + jit * Math.sin(Math.PI * u) * 0.5;
+        pts.push([p[0] - dy / l * off, p[1] + dx / l * off]);
+      }
+      // the edge strand facing the sun catches the light; the rest stay dark
+      const edge = (o > 0 ? 1 : -1) * Math.sign(-Math.sin(dir) * LW[0] + Math.cos(dir) * LW[1]) > 0 ? Math.abs(o) / 0.45 : 0;
+      return { pts, a: 0.13 + 0.12 * RL() + 0.32 * sm(edge) * sm((sunny + 0.4) / 1.2) };
+    });
+    return { ...sh, strands, ph: RL() * 9 };
+  });
+  const STRAYS = Array.from({ length: 7 }, (_, i) => {
+    const a = lerp(-2.8, -0.3, (i + 0.5) / 7) + (RL() - 0.5) * 0.2, B = [Math.cos(a) * 10.5, -2.8 + Math.sin(a) * 12.5], L = 1.8 + 1.8 * RL(), c = 0.8 + RL() * 1.4;
+    return { pts: cr([B, [B[0] + Math.cos(a) * L * 0.5 + c * 0.2, B[1] + Math.sin(a) * L * 0.5], [B[0] + Math.cos(a + c * 0.25) * L, B[1] + Math.sin(a + c * 0.25) * L]], false, 6), a: 0.22 + 0.15 * RL() };
+  });
+  // flow lines across the mass: combed back from the hairline, following the locks
+  const FLOW = Array.from({ length: 26 }, (_, i) => {
+    const ph = lerp(-Math.PI - 0.2, 0.2, (i + RL()) / 26), r0 = [6.4 * Math.cos(ph), -1.8 + 7.4 * Math.sin(ph)];
+    const a = Math.atan2(r0[1] + 3, r0[0]) - 0.1 * Math.cos(ph), L = 2.6 + 1.6 * RL(), c = (RL() - 0.5) * 1.2;
+    return { pts: cr([r0, [r0[0] + Math.cos(a) * L * 0.5, r0[1] + Math.sin(a) * L * 0.5], [r0[0] + Math.cos(a + c * 0.3) * L, r0[1] + Math.sin(a + c * 0.3) * L]], false, 6), a: 0.14 + 0.16 * RL(), out: a };
+  });
+    const FRSHAPE = cr([[-6.3, -4.9], [-5.3, -7.9], [-2.7, -9.6], [0, -10.0], [2.7, -9.6], [5.2, -7.9], [6.3, -5.1], [5.3, -5.8], [4.1, -5.5], [2.9, -6.4], [1.5, -5.8],
+    [0.1, -6.6], [-1.3, -5.9], [-2.7, -6.5], [-4.0, -5.7], [-5.2, -6.1]], true, 6);   // soft scalloped fringe
+  const FRSTR = Array.from({ length: 16 }, (_, i) => { const x = lerp(-5.0, 4.8, i / 15) + (RL() - 0.5) * 0.4, e = -6.0 - 0.6 * Math.abs(Math.sin(i * 1.7)); return { pts: cr([[x + 1.0, -10.0], [x + 0.4, -8.0], [x - 0.5 - 0.3 * RL(), e]], false, 6), a: 0.12 + 0.16 * RL() + (x < -2 ? 0.12 : 0) }; });
+
+  // the eye (cm, relative to its centre; -x = outer corner for the left eye)
+  const UPL = cr([[-1.35, 0.12], [-1.1, -0.28], [-0.6, -0.53], [0, -0.6], [0.55, -0.55], [1.0, -0.35], [1.35, 0.2]], false, 8);
+  const LOL = cr([[-1.35, 0.12], [-1.0, 0.42], [-0.45, 0.6], [0.15, 0.63], [0.7, 0.53], [1.15, 0.36], [1.35, 0.2]], false, 8);
+  const CREASE = cr([[-1.3, -0.42], [-0.6, -0.97], [0.2, -1.07], [0.9, -0.88], [1.32, -0.5]], false, 6);
+  const OPEN = UPL.concat(LOL.slice().reverse());
+  const RI = 0.58, RP = 0.27;
+  const RE = K.mulberry(99);
+  const FIB = Array.from({ length: 260 }, (_, i) => ({ a: i / 260 * TAU + (RE() - 0.5) * 0.02, r1: 0.5 + 0.07 * RE(), ph: RE() * 9, al: 0.25 + 0.45 * RE(), am: RE() < 0.4 }));
+  const LASH = Array.from({ length: 30 }, (_, i) => ({ u: 0.06 + 0.9 * (i + RE() * 0.6) / 30, l: 0.34 + 0.22 * RE(), c: RE() }));
+  const LLASH = Array.from({ length: 11 }, (_, i) => ({ u: 0.12 + 0.7 * (i + RE() * 0.5) / 11, l: 0.12 + 0.1 * RE() }));
+  const STARS = Array.from({ length: 80 }, () => { const r = 0.25 * Math.sqrt(RE()), a = RE() * TAU; return { x: r * Math.cos(a), y: r * Math.sin(a), s: 0.6 + 1.4 * RE() ** 2, ph: RE() * 9, warm: RE() < 0.5 }; });
+
+  // ---------------------------------------------------------------------------------------------------------
+  // THE EARTH (line contours, orthographic, turning slowly). Coastlines are rough hand-made outlines (lon, lat).
+  const LAND = [
+    [[-165, 66], [-160, 70], [-150, 71], [-140, 70], [-128, 70], [-115, 68], [-100, 68], [-95, 72], [-85, 70], [-82, 66], [-90, 63], [-94, 59], [-88, 56], [-82, 53], [-79, 55], [-77, 60], [-72, 62], [-65, 60], [-62, 55], [-56, 52], [-60, 47], [-66, 45], [-70, 43], [-70, 41], [-74, 40], [-76, 37], [-76, 35], [-81, 31], [-80, 26], [-81, 25], [-83, 29], [-85, 30], [-89, 30], [-94, 29], [-97, 27], [-97, 22], [-95, 19], [-91, 19], [-90, 21], [-87, 21], [-88, 16], [-84, 15], [-83, 10], [-80, 8], [-78, 9], [-80, 7], [-85, 10], [-87, 13], [-92, 15], [-96, 16], [-101, 17], [-105, 20], [-110, 26], [-117, 32], [-121, 35], [-124, 40], [-124, 46], [-125, 49], [-130, 54], [-135, 58], [-140, 60], [-147, 61], [-152, 59], [-158, 57], [-162, 55], [-158, 58], [-162, 60], [-165, 62]],
+    [[-78, 9], [-75, 11], [-71, 12], [-66, 10.5], [-61, 10.5], [-58, 7], [-52, 5], [-50, 1], [-48, -1], [-44, -2.5], [-39, -4], [-35, -6], [-35, -9], [-37, -12], [-39, -15], [-40, -20], [-42, -23], [-46, -24], [-48, -26], [-49, -29], [-52, -32], [-55, -35], [-57, -37], [-59, -39], [-62, -39], [-65, -41], [-64, -43], [-67, -46], [-66, -48], [-69, -51], [-68, -54], [-71, -54], [-74, -52], [-75, -48], [-74, -43], [-73, -38], [-71, -32], [-71, -25], [-70, -18], [-75, -15], [-77, -12], [-79, -8], [-81, -5], [-80, -2], [-80, 1], [-78, 3], [-77, 7]],
+    [[-17, 21], [-16, 24], [-13, 27], [-10, 30], [-9, 33], [-6, 36], [0, 36], [5, 37], [10, 37], [11, 34], [11, 33], [15, 32], [20, 31], [20, 32.5], [25, 32], [29, 31], [32, 31.5], [34, 28], [35, 24], [37, 21], [38, 18], [40, 15], [43, 12], [44, 11], [51, 11.5], [49, 7], [46, 2], [42, -1], [40, -4], [39, -7], [40, -11], [40, -15], [37, -18], [35, -22], [33, -26], [32, -29], [30, -31], [27, -33.5], [23, -34], [20, -35], [18, -33], [18, -30], [16, -28], [15, -25], [14, -22], [12, -18], [12, -14], [13, -11], [12, -6], [10, -3], [9, 1], [9, 4], [7, 4.5], [4, 6], [1, 6], [-2, 5], [-5, 5], [-7, 4.5], [-10, 6], [-13, 8], [-15, 11], [-17, 14], [-17, 18]],
+    [[-9, 37], [-9, 43], [-2, 43.5], [-1, 46], [-4, 48], [-1, 49.5], [2, 51], [5, 53], [8, 54], [9, 57], [11, 56], [12, 54.5], [14, 54], [19, 54.5], [21, 57], [24, 59.5], [28, 60], [23, 61], [21, 63], [25, 65.5], [22, 66], [18, 63], [17, 61], [18, 59.5], [16, 56], [13, 55.5], [11, 58], [8, 58], [5, 59], [5, 62], [10, 64], [14, 67], [18, 70], [25, 71], [30, 70], [33, 69], [41, 67], [44, 68], [53, 68], [59, 69], [66, 69], [70, 73], [75, 72], [80, 73], [87, 75], [95, 76], [105, 78], [113, 74], [120, 73], [130, 72], [140, 72], [150, 71], [160, 70], [170, 70], [180, 69], [178, 65], [173, 61], [163, 60], [162, 57], [160, 53], [156, 51], [155, 56], [155, 59], [150, 59.5], [143, 59], [138, 55], [141, 52], [140, 48], [135, 43], [131, 42.5], [129, 40], [129, 36], [126, 35], [126, 37.5], [125, 39.5], [121, 40], [118, 39], [121, 37], [122, 35], [121, 32], [122, 29], [119, 25], [115, 22.5], [110, 21], [108, 21.5], [106, 19], [109, 13], [109, 11], [105, 8.6], [103, 10], [101, 13], [100, 10], [99, 8], [101, 6], [103, 2], [101, 3], [99, 7], [98, 9], [98, 13], [97, 16], [94, 17], [92, 21], [91, 22.5], [88, 22], [86, 20], [80, 15], [80, 10], [77, 8], [75, 11], [73, 16], [72, 21], [70, 22.5], [67, 24], [62, 25], [57, 25.5], [56, 27], [52, 28], [50, 30], [48, 29], [50, 26], [51, 24], [54, 24], [56, 26], [59, 22], [58, 20], [55, 17], [52, 16], [44, 13], [43, 15], [42, 17], [39, 21], [37, 25], [35, 28], [32.5, 30], [34, 31.5], [35, 33], [36, 35], [36, 36.5], [32, 36.5], [28, 36.7], [26, 39], [26.5, 40.5], [28, 41], [26, 40.8], [23, 40.5], [24, 38], [22, 36.5], [21, 38.5], [19.5, 41], [19, 42.5], [15, 45], [13, 45.5], [12.5, 44], [14, 42], [16, 41], [18, 40], [16, 38], [15.5, 40], [12, 42], [10, 44], [8, 44], [6, 43], [3, 43.5], [3, 42], [0, 39], [-1, 37], [-5, 36], [-6, 37]],
+    [[114, -22], [114, -26], [115, -31], [115, -34], [118, -35], [123, -34], [126, -32], [131, -31.5], [135, -34.5], [138, -35], [140, -38], [144, -38.5], [147, -38], [150, -37], [151, -34], [153, -31], [153, -27], [153, -25], [150, -22], [147, -19], [146, -17], [145, -15], [143, -13], [142, -11], [141, -13], [141, -17], [139, -17.5], [137, -16], [136, -12.5], [132, -11.5], [130, -13], [129, -15], [127, -14], [125, -15], [123, -17], [121, -19], [117, -20.5]],
+    [[-73, 78], [-60, 82], [-40, 83], [-25, 81], [-20, 75], [-22, 70], [-30, 68], [-40, 65], [-43, 60], [-48, 61], [-52, 65], [-54, 70], [-58, 75], [-66, 76]],
+    [[-5, 50], [1, 51], [1.7, 52.7], [0, 54], [-2, 56], [-2, 57.6], [-3, 58.6], [-5, 58.6], [-6, 57], [-5, 55], [-3, 54.5], [-3, 53.5], [-4.5, 53], [-5, 51.7], [-3, 51.4]],
+    [[130, 31], [131, 34], [135, 34], [137, 35], [140, 35], [141, 38], [142, 40], [141, 42], [143, 44.5], [145, 43.5], [141, 41.5], [140, 40], [139, 38], [137, 37], [133, 35.5], [130, 33.5]],
+    [[44, -25], [47, -25], [49.5, -16], [50, -13], [48, -14], [44, -19]],
+    [[109, 1], [110, -3], [114, -4], [116, -4], [118, 1], [119, 5], [117, 7], [115, 5], [111, 2]],
+    [[95, 5.5], [98, 4], [104, -2], [106, -6], [102, -5], [99, 0]],
+    [[131, -1], [135, -3], [138, -2], [141, -3], [145, -5], [150, -10], [147, -8], [143, -9], [139, -8], [137, -5], [132, -3]],
+    [[172.7, -34.5], [174.5, -36.5], [178, -37.7], [176.9, -39.5], [174.7, -41.4], [173, -40.6], [174.6, -39]],
+    [[172.7, -40.5], [174, -41.7], [173, -43], [171, -44.5], [169, -46.6], [166.5, -46], [168, -44], [171, -42]],
+    [[-24, 65.5], [-18, 66.5], [-14, 65], [-15, 63.5], [-21, 63.5]],
+  ].map(poly => {
+    const dense = [];                                        // subdivide every edge (closed) so it bends with the globe
+    for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; for (let k = 0; k < 3; k++) dense.push([lerp(p[0], q[0], k / 3) * DEG, lerp(p[1], q[1], k / 3) * DEG]); }
+    const cx = dense.reduce((s, p) => s + p[0], 0) / dense.length, cy = dense.reduce((s, p) => s + p[1], 0) / dense.length;
+    return { dense, inner: dense.map(p => [cx + (p[0] - cx) * 0.86, cy + (p[1] - cy) * 0.86]), big: poly.length > 20 };
+  });
+  const LS = (() => { const v = [-0.72, 0.32, 0.62], l = Math.hypot(...v); return v.map(x => x / l); })();   // sun, globe view space
+
+  function drawEarth(g, cx, cy, R, rot, t, alpha) {
+    if (R < 1.2 || alpha <= 0) return;
+    const lon0 = (18 - 7 * t) * DEG, phi = 0.36, cph = Math.cos(phi), sph = Math.sin(phi);
+    const ca = Math.cos(rot), sa = Math.sin(rot);
+    const pr = (lon, lat) => {
+      const cl = Math.cos(lat), x = cl * Math.sin(lon - lon0), y = Math.sin(lat), z = cl * Math.cos(lon - lon0);
+      const y2 = y * cph - z * sph, z2 = y * sph + z * cph, X = x, Y = -y2;
+      return [cx + R * (X * ca - Y * sa), cy + R * (X * sa + Y * ca), z2, x * LS[0] + y2 * LS[1] + z2 * LS[2]];
+    };
+    const detail = sm((R - 6) / 40), lw = Math.max(0.8, Math.min(2.6, R / 150));
+    g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+    // night-side disc (occludes the stars behind) + atmosphere
+    let gr = g.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.22);
+    gr.addColorStop(0, rgba('#ffcf80', 0.18 * alpha)); gr.addColorStop(1, 'rgba(255,190,110,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, R * 1.22, 0, TAU); g.fill();
+    gr = g.createRadialGradient(cx - R * 0.45 * Math.cos(rot) , cy - R * 0.3, 0, cx, cy, R);
+    gr.addColorStop(0, `rgba(58,34,22,${alpha})`); gr.addColorStop(0.7, `rgba(22,14,18,${alpha})`); gr.addColorStop(1, `rgba(14,10,18,${alpha})`);
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.fill();
+    // graticule
+    if (detail > 0) {
+      g.lineWidth = lw * 0.6;
+      for (const lit of [0, 1]) {
+        g.strokeStyle = rgba(C.pale, (lit ? 0.16 : 0.06) * alpha * detail); g.beginPath();
+        const seg = (a, b) => { if (a[2] > 0 && b[2] > 0 && (a[3] > 0.05) === !!lit) { g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } };
+        for (let la = -60; la <= 60; la += 30) { let p = pr(-Math.PI, la * DEG); for (let k = 1; k <= 72; k++) { const q = pr(-Math.PI + k / 72 * TAU, la * DEG); seg(p, q); p = q; } }
+        for (let lo = 0; lo < 360; lo += 30) { let p = pr(lo * DEG, -88 * DEG); for (let k = 1; k <= 36; k++) { const q = pr(lo * DEG, (-88 + k / 36 * 176) * DEG); seg(p, q); p = q; } }
+        g.stroke();
+      }
+    }
+    // coastlines (+ a faint inner contour), lit side brighter, fading at the limb
+    const lvls = new Map();
+    const add = (a, b, k, w) => {
+      if (a[2] <= 0 || b[2] <= 0) return;
+      const lit = 0.22 + 0.78 * sm((a[3] + 0.15) / 0.6), al = Math.round(10 * k * lit * sm(a[2] / 0.22)) / 10;
+      if (al <= 0) return; const key = al + '|' + w;
+      if (!lvls.has(key)) lvls.set(key, new Path2D());
+      const p = lvls.get(key); p.moveTo(a[0], a[1]); p.lineTo(b[0], b[1]);
+    };
+    for (const land of LAND) {
+      if (!land.big && detail <= 0.05) continue;
+      let P0 = land.dense.map(p => pr(p[0], p[1]));
+      for (let i = 0; i < P0.length; i++) add(P0[i], P0[(i + 1) % P0.length], 0.95, 1);
+      if (detail > 0.2 && land.big) { const Q = land.inner.map(p => pr(p[0], p[1])); for (let i = 0; i < Q.length; i++) add(Q[i], Q[(i + 1) % Q.length], 0.35 * detail, 0); }
+    }
+    for (const [key, path] of lvls) { const [a, w] = key.split('|').map(Number); g.strokeStyle = rgba(w ? C.gold : C.pale, a * alpha); g.lineWidth = w ? lw * 1.15 : lw * 0.6; g.stroke(path); }
+    // limb: a crescent of light on the sun side
+    for (let k = 0; k < 64; k++) {
+      const a0 = k / 64 * TAU, a1 = (k + 1) / 64 * TAU, nx = Math.cos(a0 + 0.05), ny = -Math.sin(a0 + 0.05);
+      const d = nx * LS[0] + ny * LS[1], al = 0.22 + 0.78 * sm((d + 0.2) / 0.9);
+      g.strokeStyle = rgba(C.cream, al * alpha); g.lineWidth = lw * 1.5;
+      g.beginPath(); g.arc(cx, cy, R, a0 + rot - 0.0, a1 + rot + 0.002); g.stroke();
+    }
+    g.restore();
+    return pr;
+  }
+  function drawOrbits(g, cx, cy, R, rot, t, alpha, front) {   // two tilted rings and a small moon; back halves hide behind the globe
+    if (R < 2 || alpha <= 0) return;
+    const rings = [{ a: 1.75, b: 0.34, tilt: -0.3, al: 0.55, dash: null, moon: 0.9 + 0.32 * t }, { a: 2.3, b: 0.26, tilt: 0.36, al: 0.32, dash: [2, 10], moon: null }];
+    g.save(); g.lineCap = 'round';
+    for (const r of rings) {
+      const ct = Math.cos(r.tilt + rot), st = Math.sin(r.tilt + rot), path = new Path2D();
+      let started = false;
+      for (let k = 0; k <= 160; k++) {
+        const u = k / 160 * TAU, ex = Math.cos(u) * r.a * R, ey = Math.sin(u) * r.b * R, isFront = Math.sin(u) > 0;
+        const hidden = !isFront && Math.hypot(ex, ey) < R * 1.02;
+        if (isFront !== front || hidden) { started = false; continue; }
+        const x = cx + ex * ct - ey * st, y = cy + ex * st + ey * ct;
+        if (!started) { path.moveTo(x, y); started = true; } else path.lineTo(x, y);
+      }
+      g.setLineDash(r.dash ? r.dash.map(v => v * Math.max(1, R / 200)) : []);
+      g.strokeStyle = rgba(C.pale, r.al * alpha * (front ? 1 : 0.6)); g.lineWidth = Math.max(0.7, Math.min(2.0, R / 190)); g.stroke(path);
+      g.setLineDash([]);
+      if (r.moon != null) {
+        const u = r.moon, isFront = Math.sin(u) > 0, ex = Math.cos(u) * r.a * R, ey = Math.sin(u) * r.b * R;
+        if (isFront === front && !(!isFront && Math.hypot(ex, ey) < R * 1.05)) {
+          const x = cx + ex * ct - ey * st, y = cy + ex * st + ey * ct, mr = Math.max(1.2, R * 0.075);
+          g.fillStyle = `rgba(16,10,16,${alpha})`; g.beginPath(); g.arc(x, y, mr, 0, TAU); g.fill();
+          g.strokeStyle = rgba(C.cream, 0.9 * alpha); g.lineWidth = Math.max(0.8, Math.min(2.2, R / 160)); g.stroke();
+          g.beginPath(); g.arc(x, y, mr, rot + 2.0, rot + 4.2); g.lineWidth *= 1.6; g.stroke();
+        }
+      }
+    }
+    g.restore();
+  }
+
+  // ---------------------------------------------------------------------------------------------------------
+  // the eye, drawn in its own local frame (cm, centre at 0,0). side = -1 for the left eye (hero), +1 mirrored.
+  function drawEye(g, ex, side, t, scW) {
+    // scW: px per cm at this eye
+    const px = v => v / scW;
+    g.save(); g.translate(ex, 0); if (side > 0) g.scale(-1, 1);
+    // opening: sclera in dusk shadow under the upper lid
+    g.save();
+    g.beginPath(); g.moveTo(OPEN[0][0], OPEN[0][1]); for (const p of OPEN) g.lineTo(p[0], p[1]); g.closePath(); g.clip();
+    let gr = g.createLinearGradient(0, -0.62, 0, 0.62);
+    gr.addColorStop(0, '#0e0807'); gr.addColorStop(0.45, '#251a15'); gr.addColorStop(1, '#1b120e');
+    g.fillStyle = gr; g.fillRect(-1.5, -0.8, 3, 1.6);
+    // iris
+    gr = g.createRadialGradient(0, 0, RP, 0, 0, RI);
+    gr.addColorStop(0, '#3a2309'); gr.addColorStop(0.5, '#25160a'); gr.addColorStop(0.92, '#170c06'); gr.addColorStop(1, '#0b0604');
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, RI, 0, TAU); g.fill();
+    const irisPx = RI * scW;
+    if (irisPx > 14) {
+      const fa = sm((irisPx - 14) / 60);
+      g.lineCap = 'round';
+      for (const bucket of [0, 1, 2]) {
+        for (const am of [false, true]) {
+          g.beginPath();
+          for (let i = 0; i < FIB.length; i++) {
+            const f = FIB[i]; if (f.am !== am) continue;
+            const lightA = 0.55 + 0.45 * (Math.cos(f.a) * 0.55 * -side + Math.sin(f.a) * 0.8);   // iris glows opposite the catchlight
+            const b = Math.min(2, Math.floor(f.al * lightA * 4.2)); if (b !== bucket) continue;
+            for (let k = 0; k <= 7; k++) {
+              const r = lerp(RP * 1.04, f.r1, k / 7), a = f.a + 0.012 * Math.sin(r * 30 + f.ph);
+              k ? g.lineTo(Math.cos(a) * r, Math.sin(a) * r) : g.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+            }
+          }
+          g.strokeStyle = rgba(am ? C.amber : C.gold, (0.22 + bucket * 0.2) * fa); g.lineWidth = px(Math.max(0.8, Math.min(2.6, 0.006 * scW))); g.stroke();
+        }
+      }
+      // collarette: a soft wavy ring
+      g.beginPath();
+      for (let k = 0; k <= 180; k++) { const a = k / 180 * TAU, r = 0.37 + 0.013 * Math.sin(a * 11 + 0.6) + 0.006 * Math.sin(a * 27); k ? g.lineTo(Math.cos(a) * r, Math.sin(a) * r) : g.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+      g.strokeStyle = rgba(C.pale, 0.5 * fa); g.lineWidth = px(Math.max(1, Math.min(3, 0.008 * scW))); g.stroke();
+    }
+    // limbal ring
+    g.strokeStyle = rgba(C.pale, 0.55); g.lineWidth = px(Math.max(0.8, Math.min(3.2, 0.012 * scW))); g.beginPath(); g.arc(0, 0, RI - 0.008, 0, TAU); g.stroke();
+    // pupil: a little piece of dusk sky, with the Earth reflected in it
+    gr = g.createRadialGradient(0.04 * side, 0.08, 0, 0, 0, RP);
+    gr.addColorStop(0, '#0c0913'); gr.addColorStop(0.7, '#08060d'); gr.addColorStop(1, '#140b0e');
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, RP, 0, TAU); g.fill();
+    const pupPx = RP * scW;
+    g.restore();
+    g.restore();
+    return pupPx;
+  }
+  function drawEyeLids(g, ex, side, t, scW, ZK) {
+    const px = v => v / scW;
+    g.save(); g.translate(ex, 0); if (side > 0) g.scale(-1, 1);
+    // upper lid shadow over the top of the iris
+    g.save(); g.beginPath(); g.moveTo(OPEN[0][0], OPEN[0][1]); for (const p of OPEN) g.lineTo(p[0], p[1]); g.closePath(); g.clip();
+    const gr = g.createLinearGradient(0, -0.62, 0, -0.18); gr.addColorStop(0, 'rgba(8,4,3,0.8)'); gr.addColorStop(1, 'rgba(8,4,3,0)');
+    g.fillStyle = gr; g.fillRect(-1.5, -0.8, 3, 0.7);
+    g.restore();
+    const wl = (phys, lo, hi) => px(Math.max(lo, Math.min(hi, phys * scW)));
+    // crease, lid margins, lower lid
+    g.fillStyle = rgba(C.gold, 0.28); ribbon(g, CREASE, wl(0.035, 0.7, 4), 0.25, 0.7);
+    g.fillStyle = rgba(C.pale, 0.95); ribbon(g, UPL, wl(0.07, 1.4, 9), 0.12, 0.9, 0.3);
+    g.fillStyle = rgba(C.gold, 0.5); ribbon(g, LOL, wl(0.04, 0.9, 5), 0.2, 0.85);
+    // inner corner
+    g.fillStyle = rgba(C.rose, 0.45); ribbon(g, cr([[1.12, 0.05], [1.3, 0.2], [1.12, 0.33]], false, 5), wl(0.03, 0.7, 4), 0.3, 0.7);
+    // lashes: upper, curling up and out
+    if (scW * 0.4 > 1.6) {
+      const la = sm((scW * 0.4 - 1.6) / 6);
+      g.fillStyle = rgba(C.pale, 0.8 * la);
+      for (const l of LASH) {
+        const i = Math.min(UPL.length - 2, Math.floor(l.u * (UPL.length - 1))), p = UPL[i], q = UPL[i + 1];
+        let tx = q[0] - p[0], ty = q[1] - p[1]; const tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+        const outer = 1 - l.u, ang = Math.atan2(-tx, ty);                 // normal pointing up (away from the eye)
+        const a = ang - (0.15 + 0.85 * outer) * 0.9;                                 // sweep towards the outer corner
+        const len = l.l * (0.7 + 0.5 * Math.sin(Math.PI * Math.min(1, l.u * 1.15)));
+        const p1 = [p[0] + Math.cos(a) * len * 0.5, p[1] + Math.sin(a) * len * 0.5], a2 = a - 0.5 - 0.3 * l.c;
+        const p2 = [p1[0] + Math.cos(a2) * len * 0.55, p1[1] + Math.sin(a2) * len * 0.55];
+        ribbon(g, cr([p, p1, p2], false, 6), wl(0.03, 0.8, 5), 0.0, 0.25, 0.05);
+      }
+      g.fillStyle = rgba(C.gold, 0.4 * la);
+      for (const l of LLASH) {
+        const i = Math.min(LOL.length - 2, Math.floor(l.u * (LOL.length - 1))), p = LOL[i];
+        const a = Math.PI / 2 + 0.5 * (1 - l.u);
+        ribbon(g, [p, [p[0] + Math.cos(a) * l.l * 0.5 - 0.02, p[1] + Math.sin(a) * l.l * 0.5], [p[0] + Math.cos(a + 0.25) * l.l - 0.04, p[1] + Math.sin(a + 0.25) * l.l]], wl(0.016, 0.6, 3), 0, 0.2, 0.05);
+      }
+    }
+    g.restore();
+  }
+
+  // ---------------------------------------------------------------------------------------------------------
+  // silhouette mask (world px) for the grass: where he lies, the soft shadow, the flattened ring around him
+  const MX0 = -200, MY0 = -110, MW = 520, MH = 790;
+  const MASK = K.layer(MW, MH), Mk = MASK.getContext('2d'), MBL = K.layer(MW, MH), Mb = MBL.getContext('2d');
+  {
+    Mk.setTransform(S, 0, 0, S, -MX0, -MY0); Mk.fillStyle = '#fff';
+    for (const s of [FACE, EARL, mirror(EARL), HAIRB, NECK, TORSO, ARM, mirror(ARM), SLEEVE, mirror(SLEEVE), LEGL, LEGR, SHORTS, SHOEL, SHOER]) fillPoly(Mk, s);
+    Mb.filter = 'blur(16px)'; Mb.drawImage(MASK, 0, 0); Mb.filter = 'none';
+  }
+  const MD = Mk.getImageData(0, 0, MW, MH).data, BD = Mb.getImageData(0, 0, MW, MH).data;
+  const smp = (D, x, y) => { const i = Math.round(x - MX0), j = Math.round(y - MY0); return (i < 0 || j < 0 || i >= MW || j >= MH) ? 0 : D[(j * MW + i) * 4 + 3] / 255; };
+
+  // grass field: blades in a disc around the final framing
+  const RG = K.mulberry(2024);
+  const BLADES = [], OVER = [];
+  {
+    // world point under the final screen centre
+    const c = Math.cos(TH_F), s = Math.sin(TH_F), ox = EF[0] - 960, oy = EF[1] - 540;
+    const NFx = EYE[0] - (c * ox + s * oy) / ZE, NFy = EYE[1] - (-s * ox + c * oy) / ZE;
+    const NC = 1570, RAD = 1150, KCx = 2 * S, KCy = 55 * S;
+    let id = 0;
+    for (let ci = 0; ci < NC; ci++) {
+      const r0 = RAD * Math.sqrt(RG()), a0 = RG() * TAU, cx0 = NFx + r0 * Math.cos(a0), cy0 = NFy + r0 * Math.sin(a0);
+      const nb = 2 + Math.floor(RG() * 4), cdir = 0.95 + 1.1 * noise(cx0 * 0.0014 + cy0 * 0.0009, 5) + (RG() - 0.5) * 0.5, spread = 0.4 + RG() * 0.8;
+      const ch = 10 + 15 * Math.pow(RG(), 1.1), cbr = RG();
+      for (let k = 0; k < nb; k++, id++) {
+        const x = cx0 + (RG() - 0.5) * 9, y = cy0 + (RG() - 0.5) * 9;
+        if (smp(MD, x, y) > 0.2) continue;
+        const near = smp(BD, x, y);
+        let dir = cdir + (nb > 1 ? (k / (nb - 1) - 0.5) * spread : 0) + (RG() - 0.5) * 0.3, lean = 0.62 + 0.33 * RG(), h = ch * (0.7 + 0.5 * RG()) * S;
+        const bend = 0.35 * Math.sign(noise(cx0 * 0.002, 21) + 0.01) + (RG() - 0.5) * 0.7, ph = RG() * TAU, br = clamp(cbr * 0.6 + RG() * 0.5);
+        const sunward = (x - KCx) * LW[0] + (y - KCy) * LW[1];
+        const dk = Math.hypot(x - KCx, (y - KCy) * 0.8), pool = Math.exp(-((dk / 620) ** 2));
+        const lf = clamp(0.14 + 0.7 * pool + 0.3 * sm((sunward + 500) / 1100) + 0.22 * noise(x * 0.0035 - y * 0.002, 9) + 0.12 * noise(x * 0.001 + y * 0.004, 13), 0.1, 1.15);
+        if (near > 0.03) {                                   // flattened outward around his body
+          const gx = smp(BD, x + 4, y) - smp(BD, x - 4, y), gy = smp(BD, x, y + 4) - smp(BD, x, y - 4), aw = Math.atan2(-gy, -gx);
+          const kk = sm(near / 0.5);
+          dir = Math.atan2(lerp(Math.sin(dir), Math.sin(aw), kk), lerp(Math.cos(dir), Math.cos(aw), kk));
+          lean = lerp(lean, 0.92, kk * 0.8); h *= 1 - 0.3 * kk;
+          if (near > 0.12 && near < 0.6 && y > 15 * S && hash(id * 7 + 3) < 0.4) {   // some lean back over him instead
+            OVER.push({ x, y, dir: aw + Math.PI + (RG() - 0.5) * 0.7, lean: 0.85, h: h * 1.1, bend, ph, br, sh: 0, lf: Math.max(lf, 0.75) }); continue;
+          }
+        }
+        const shade = smp(BD, x + LW[0] * 80, y + LW[1] * 80);
+        BLADES.push({ x, y, dir, lean, h, bend, ph, br, sh: shade, lf });
+      }
+    }
+  }
+  const MOTES = Array.from({ length: 16 }, (_, i) => ({ x: lerp(-260, 420, hash(i * 3 + 1)), y: lerp(-180, 720, hash(i * 3 + 2)), h: lerp(-10, 70, hash(i * 3 + 3)) * S, ph: hash(i + 77) * 9 }));
+
+  // dandelion clocks seen from above: a ring of seeds round a bright centre (they rhyme with the Earth)
+  const DANDS = [[-150, 330, 3.0], [330, 160, 2.6], [250, 590, 3.3], [-120, 640, 2.4]].map(([x, y, r], i) => ({ x, y, r, ph: i * 1.7 }));
+  function drawDandelions(g, t) {
+    g.setTransform(1, 0, 0, 1, 0, 0); g.lineCap = 'round';
+    for (const d of DANDS) {
+      const c = P(d.x, d.y, (GROUND + 22) * S); if (!c) continue;
+      const R = d.r * S * c[2] / 1, rr = R; if (rr < 3 || c[0] < -100 || c[0] > W + 100 || c[1] < -100 || c[1] > H + 100) continue;
+      g.strokeStyle = rgba(C.cream, 0.5); g.lineWidth = 1; g.beginPath();
+      for (let k = 0; k < 40; k++) {
+        const a = k / 40 * TAU + 0.04 * Math.sin(t * 1.1 + d.ph + k), r1 = rr * (0.92 + 0.08 * hash(k + d.ph * 10));
+        g.moveTo(c[0] + Math.cos(a) * rr * 0.18, c[1] + Math.sin(a) * rr * 0.18); g.lineTo(c[0] + Math.cos(a) * r1, c[1] + Math.sin(a) * r1);
+      }
+      g.stroke();
+      g.strokeStyle = rgba(C.cream, 0.32); g.beginPath(); g.arc(c[0], c[1], rr, 0, TAU); g.stroke();
+      g.fillStyle = rgba(C.pale, 0.85); g.beginPath(); g.arc(c[0], c[1], Math.max(1.2, rr * 0.12), 0, TAU); g.fill();
+    }
+  }
+  function drawGrass(g, t, list, ZK, over) {
+    const buckets = new Map();
+    const gz = GROUND * S;
+    for (let i = 0; i < list.length; i++) {
+      const b = list[i];
+      const sway = 0.09 * Math.sin(t * 1.15 + b.x * 0.004 + b.y * 0.003 + b.ph * 0.3) + 0.04 * Math.sin(t * 2.3 + b.ph);
+      const d = b.dir + sway, cx = Math.cos(d), cy = Math.sin(d), lean = b.lean, hh = b.h;
+      const B = P(b.x, b.y, gz); if (!B) continue;
+      if (B[0] < -300 || B[0] > 2220 || B[1] < -300 || B[1] > 1380) continue;
+      const tipH = gz + hh * Math.sqrt(1 - lean * lean) * 0.95;
+      if (CAM.Hc - tipH < 60) continue;
+      const bo = b.bend * lean * hh * 0.35, Cc = P(b.x + cx * lean * hh * 0.4 - cy * bo, b.y + cy * lean * hh * 0.4 + cx * bo, gz + hh * 0.62), T = P(b.x + cx * lean * hh, b.y + cy * lean * hh, tipH);
+      if (!Cc || !T) continue;
+      const near = sm((CAM.Hc - tipH - 60) / 260);
+      const a = (0.16 + 0.55 * b.br * b.br) * b.lf * (1 - 0.7 * b.sh) * near * (over ? 1.15 : 1);
+      if (a < 0.04) continue;
+      const lvl = Math.max(1, Math.min(16, Math.round(a * 20))), pale = b.br > 0.86 ? 1 : 0, key = lvl * 2 + pale;
+      if (!buckets.has(key)) buckets.set(key, new Path2D());
+      const p = buckets.get(key); p.moveTo(B[0], B[1]); p.quadraticCurveTo(Cc[0], Cc[1], T[0], T[1]);
+    }
+    g.setTransform(1, 0, 0, 1, 0, 0); g.lineCap = 'round';
+    for (const [key, path] of buckets) {
+      const lvl = key >> 1, pale = key & 1;
+      g.strokeStyle = rgba(pale ? C.pale : C.gold, lvl / 20); g.lineWidth = (pale ? 1.6 : 1.25) * (1 + 0.9 * ZK); g.stroke(path);
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------------------
+  function drawKid(g, t, ZK) {
+    const W0 = 2.4 * (1 + 0.7 * ZK);                         // outline width, screen px
+    let sc;
+    const fillK = () => { const gr = g.createLinearGradient(-20, -16, 26, 118); gr.addColorStop(0, '#24130a'); gr.addColorStop(0.3, '#160c08'); gr.addColorStop(1, '#0c0707'); return gr; };
+    // soft light inside a form along its sunlit edge (blurred), so fills read as volume, not flat vector
+    const inner = (shape, col, k = 1, clip) => {
+      g.save(); g.beginPath(); g.moveTo(shape[0][0], shape[0][1]); for (const p of shape) g.lineTo(p[0], p[1]); g.closePath(); g.clip();
+      if (clip) { g.beginPath(); g.moveTo(clip[0][0], clip[0][1]); for (const p of clip) g.lineTo(p[0], p[1]); g.closePath(); g.clip(); }
+      g.filter = `blur(${clamp(0.45 * sc, 1.2, 36).toFixed(1)}px)`;
+      rim(g, shape, Math.min(1.5, 70 / sc), 0, 1, col, null, 0.18 * k, 0);
+      g.filter = 'none'; g.restore();
+    };
+    const part = (shape, h, col, lo, hi, pred, fill, k = 1, clip) => {
+      sc = useH(g, h); if (!sc) return;
+      if (clip) { g.save(); g.beginPath(); g.moveTo(clip[0][0], clip[0][1]); for (const p of clip) g.lineTo(p[0], p[1]); g.closePath(); g.clip(); }
+      g.fillStyle = fill || fillK(); fillPoly(g, shape);
+      if (k > 0) inner(shape, col === C.cream ? C.pale : C.amber, k);
+      rim(g, shape, W0 / sc, lo, hi, col, pred);
+      if (clip) g.restore();
+    };
+    const sole = (shape, h) => {                              // the rubber sole edge: a fainter inner contour
+      sc = useH(g, h); if (!sc) return;
+      const cx = shape.reduce((v, p) => v + p[0], 0) / shape.length, cy = shape.reduce((v, p) => v + p[1], 0) / shape.length;
+      g.strokeStyle = rgba(C.cream, 0.28); g.lineWidth = 1.1 * (1 + 0.6 * ZK) / sc; g.lineJoin = 'round';
+      strokePoly(g, shape.map(p => [cx + (p[0] - cx) * 0.84, cy + (p[1] - cy) * 0.86]).concat([[cx + (shape[0][0] - cx) * 0.84, cy + (shape[0][1] - cy) * 0.86]]));
+    };
+    const det = (pts, h, col, a, wpx, a0 = 0.2, a1 = 0.8) => { sc = useH(g, h); if (!sc) return; g.fillStyle = rgba(col, a); ribbon(g, pts, wpx * (1 + 0.8 * ZK) / sc, a0, a1); };
+    // arms behind the head
+    part(ARM, -17, C.gold, 0.06, 0.95); part(mirror(ARM), -17, C.gold, 0.06, 0.95);
+    part(SLEEVE, -14, C.cream, 0.08, 0.9, null, null, 1, HEMCLIP); part(mirror(SLEEVE), -14, C.cream, 0.08, 0.9, null, null, 1, mirror(HEMCLIP));
+    det(HEMLINE, -14, C.cream, 0.55, 1.3, 0.15, 0.85); det(mirror(HEMLINE), -14, C.cream, 0.4, 1.3, 0.15, 0.85);
+    // legs and sneakers
+    part(LEGL, -17, C.gold, 0.1, 1.0);
+    det(cr([[-9.4, 81.2], [-7.4, 82.8], [-5.4, 81.4]], false, 5), -17, C.gold, 0.3, 1.4);
+    part(SHOER, -20, C.cream, 0.25, 0.9, null, '#211813', 0.6);
+    sole(SHOER, -20);
+    for (const yy of [99.6, 102.7, 105.7]) det([[9.3, yy + 0.4], [12.5, yy], [15.6, yy - 0.5]], -20, C.cream, 0.5, 1.2, 0.1, 0.9);
+    det(cr([[9.6, 112.6], [12.8, 114.8], [16.1, 112.4]], false, 5), -20, C.cream, 0.45, 1.3);
+    part(LEGR, -10, C.gold, 0.08, 1.0);
+    det(cr([[23.0, 70.8], [25.2, 72.6], [25.8, 75.0]], false, 5), -10, C.pale, 0.35, 1.3);
+    det(cr([[9.6, 92.4], [12.2, 93.8], [14.6, 95.2]], false, 5), -12, C.cream, 0.4, 1.3);
+    part(SHOEL, -15, C.cream, 0.25, 0.9, null, '#211813', 0.6);
+    sole(SHOEL, -15);
+    for (const yy of [109.6, 112.1, 114.6]) det([[-10.6, yy], [-8, yy - 0.3], [-5.4, yy - 0.2]], -15, C.cream, 0.5, 1.2, 0.1, 0.9);
+    det(cr([[-11.2, 116.6], [-8.4, 118.6], [-5.2, 117.6]], false, 5), -15, C.cream, 0.45, 1.3);
+    det(cr([[-10.8, 105.8], [-7.4, 104.8], [-4.2, 106]], false, 5), -15, C.cream, 0.5, 1.4);
+    // shorts and T-shirt
+    part(SHORTS, -11, C.amber, 0.12, 0.95);
+    det(cr([[0, 50.5], [0.3, 55.5], [0, 60.4]], false, 4), -11, C.amber, 0.3, 1.2);
+    det(cr([[-12.6, 63.2], [-7, 64.3], [-1.6, 63.7]], false, 5), -11, C.amber, 0.25, 1.1);
+    part(TORSO, -9, C.cream, 0.1, 0.95);
+    det(cr([[-11.5, 24], [-8.4, 28.6], [-5.6, 31]], false, 5), -9, C.pale, 0.28, 1.3);
+    det(cr([[11.2, 21.4], [8.8, 25.2], [7.4, 26.4]], false, 5), -9, C.pale, 0.22, 1.2);
+    det(cr([[-4, 43.6], [1.4, 46.2], [6.4, 45.6]], false, 5), -9, C.pale, 0.18, 1.1);
+    det(cr([[-13.6, 49.0], [0, 49.9], [13.6, 49.0]], false, 5), -9, C.pale, 0.22, 1.0);
+    part(NECK, -8, C.gold, 0.1, 0.5, null, null, 0.5);
+    det(cr([[-5.6, 12.4], [-3.2, 14.6], [0, 15.4], [3.2, 14.6], [5.6, 12.4]], false, 6), -8.5, C.cream, 0.7, 1.8);
+    det(cr([[-4.9, 12.7], [-2.9, 14.0], [0, 14.7], [2.9, 14.0], [4.9, 12.7]], false, 6), -8.5, C.pale, 0.28, 1.1);
+    // hair: a soft dark mass (no outline) with each lock drawn as a bundle of fine strands; light only on sun-side strands
+    const HF = '#0d0705';
+    const softFill = (shape, px, a = 1) => { g.save(); g.filter = `blur(${clamp(px, 0.6, 30).toFixed(1)}px)`; g.globalAlpha = a; g.fillStyle = HF; fillPoly(g, shape); g.restore(); };
+    const blurred = (px, draw) => {                         // draw into the scratch layer with g's transform, then blur once onto g
+      const m = g.getTransform(); Hb.setTransform(1, 0, 0, 1, 0, 0); Hb.clearRect(0, 0, W, H); Hb.setTransform(m); draw(Hb);
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.filter = `blur(${clamp(px, 0.6, 30).toFixed(1)}px)`; g.drawImage(HB, 0, 0); g.restore();
+    };
+    sc = useH(g, -13);
+    if (sc) {
+      blurred(0.3 * sc, h => { h.fillStyle = HF; for (const L of LOCKS) fillPoly(h, L.out); fillPoly(h, HAIRM); });
+      blurred(Math.min(14, 0.18 * sc), h => { for (const L of LOCKS) rim(h, L.out, Math.max(0.08, 2.4 / sc), 0, 1, C.gold, null, 0.75, 0); });   // soft gold rim, sun side only
+      for (const L of LOCKS) {
+        g.save(); g.translate(L.cl[0][0], L.cl[0][1]); g.rotate(0.03 * Math.sin(t * 1.2 + L.ph)); g.translate(-L.cl[0][0], -L.cl[0][1]);
+        for (const st of L.strands) { if (st.pts.length < 2) continue; g.fillStyle = rgba(C.gold, st.a); ribbon(g, cr(st.pts, false, 2), Math.max(0.03, 0.9 / sc), 0.05, 0.55, 0.25); }
+        g.restore();
+      }
+      for (const st of STRAYS) { g.fillStyle = rgba(C.gold, st.a * 0.7); ribbon(g, st.pts, Math.max(0.025, 0.8 / sc), 0.05, 0.4, 0.2); }
+    }
+    // ears (behind the cheeks) then the face
+    part(EARL, -6, C.gold, 0.0, 0.6, null, null, 0.5); det(EARLin, -6, C.gold, 0.3, 1.1);
+    part(mirror(EARL), -6, C.gold, 0.0, 0.45, null, null, 0.5); det(mirror(EARLin), -6, C.gold, 0.2, 1.1);
+    sc = useH(g, 0); if (!sc) return;
+    { const gr = g.createRadialGradient(-5.5, -7, 0, -5.5, -7, 19); gr.addColorStop(0, '#2e1a0d'); gr.addColorStop(0.45, '#1a0f09'); gr.addColorStop(1, '#0d0807'); g.fillStyle = gr; fillPoly(g, FACE); }
+    inner(FACE, C.amber, 1.1);
+    rim(g, FACE, W0 * 0.9 / sc, 0.12, 0.85, C.gold, p => p[1] > -3.2);
+    sc = useH(g, 0);
+    const ZE = clamp(Math.log10(Math.max(1, sc / S)) / 2.2);
+    const pupL = drawEye(g, -3.1, -1, t, sc), pupR = drawEye(g, 3.1, 1, t, sc);
+    // reflections: the Earth in the pupils (screen space)
+    for (const [exx, pup, mir] of [[-3.1, pupL, 1], [3.1, pupR, -1]]) {
+      const c = P(exx * S, 0, 0); if (!c) continue;
+      const R = 0.09 * sc, rot = CAM.th - 0.38;
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+      g.beginPath(); g.arc(c[0], c[1], pup, 0, TAU); g.clip();
+      // stars of the reflected dusk sky
+      if (pup > 30) {
+        const sa = sm((pup - 30) / 120);
+        for (const st of STARS) {
+          const x = c[0] + (st.x * CAM.c - st.y * CAM.s) * sc, y = c[1] + (st.x * CAM.s + st.y * CAM.c) * sc;
+          if (Math.hypot(x - c[0], y - c[1]) < R * 1.05) continue;
+          g.fillStyle = rgba(st.warm ? C.pale : '#e8e4ff', sa * (0.35 + 0.35 * Math.sin(t * 2.1 + st.ph))); g.beginPath(); g.arc(x, y, st.s * Math.min(1.6, 0.6 + pup / 900), 0, TAU); g.fill();
+        }
+      }
+      const ea = mir > 0 ? 1 : 0.8;
+      drawOrbits(g, c[0], c[1], R, rot, t, ea, false);
+      drawEarth(g, c[0], c[1], R, rot, t, ea);
+      drawOrbits(g, c[0], c[1], R, rot, t, ea, true);
+      // pupil margin: the outermost ring
+      g.restore();
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+      g.strokeStyle = rgba(C.gold, 0.35); g.lineWidth = Math.max(0.6, Math.min(2.4, pup / 300)); g.beginPath(); g.arc(c[0], c[1], pup, 0, TAU); g.stroke();
+      // catchlight: the bright evening sky, a soft window up-left on the iris (same side in both eyes)
+      const cl = [exx - 0.24, -0.23], q = P(cl[0] * S, cl[1] * S, 0), r = Math.min(0.055 * sc, 38);
+      if (q && r > 0.6) {
+        const gr = g.createRadialGradient(q[0], q[1], 0, q[0], q[1], r * 1.5);
+        gr.addColorStop(0, 'rgba(255,246,220,0.9)'); gr.addColorStop(0.45, 'rgba(255,236,190,0.6)'); gr.addColorStop(1, 'rgba(255,220,160,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(q[0], q[1], r * 1.5, 0, TAU); g.fill();
+      }
+      g.restore();
+    }
+    sc = useH(g, 0);
+    drawEyeLids(g, -3.1, -1, t, sc, ZE); drawEyeLids(g, 3.1, 1, t, sc, ZE);
+    // brows (a touch raised: wonder), nose, mouth
+    const wb = v => v * (1 + 0.8 * ZK);
+    det(cr([[-5.3, -2.3], [-3.7, -3.2], [-1.7, -3.0]], false, 6), 0, C.gold, 0.55, wb(2.6), 0.2, 0.7);
+    det(cr([[5.3, -2.3], [3.7, -3.2], [1.7, -3.0]], false, 6), 0, C.gold, 0.4, wb(2.6), 0.2, 0.7);
+    det(cr([[-1.25, 3.0], [-1.5, 3.5], [-1.1, 3.9], [-0.55, 3.85]], false, 5), 0, C.gold, 0.45, wb(1.4));
+    det(cr([[1.25, 3.0], [1.5, 3.5], [1.1, 3.9], [0.55, 3.85]], false, 5), 0, C.gold, 0.3, wb(1.4));
+    det(cr([[-0.5, 4.1], [0, 4.25], [0.5, 4.1]], false, 4), 0, C.gold, 0.25, wb(1.1));
+    det(cr([[0.85, -0.9], [1.0, 1.0], [1.2, 2.6]], false, 5), 0, C.gold, 0.16, wb(1.2), 0.3, 0.6);
+    det(cr([[-1.9, 6.1], [-0.9, 6.15], [0, 6.35], [0.9, 6.15], [1.9, 6.1]], false, 6), 0, C.rose, 0.55, wb(1.7), 0.2, 0.8);
+    det(cr([[-0.95, 7.05], [0, 7.3], [0.95, 7.05]], false, 5), 0, C.rose, 0.22, wb(1.2));
+    // fringe falling over the forehead
+    sc = useH(g, 0.5);
+    if (sc) {
+      softFill(FRSHAPE, 0.3 * sc, 0.8);
+      for (const f of FRSTR) { g.fillStyle = rgba(C.gold, f.a); ribbon(g, f.pts, Math.max(0.03, 0.85 / sc), 0.05, 0.5, 0.2); }
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------------------
+  // the question
+  const Q = cfg.text, QT = cfg.timing.question;
+  let QFS = Q.size; Tg.font = `700 ${QFS}px Caveat`;
+  QFS = Math.floor(QFS * Math.min(1, 940 / Tg.measureText(Q.q).width)); Tg.font = `700 ${QFS}px Caveat`;
+  const QW = Tg.measureText(Q.q).width;
+  const QH = Tg.measureText(Q.q.split(' ')[0] + ' ').width;
+  function drawQuestion(g, t) {
+    const e = prog(t, QT[0], QT[3]); if (e <= 0) return;
+    const [cx, cy] = Q.pos, x0 = cx - QW / 2, y = cy + 10 * (1 - ease.out3(prog(t, QT[0], QT[1] + 0.3)));
+    const eH = ease.inOut(prog(t, QT[0], QT[1])), eR = ease.inOut(prog(t, QT[2], QT[3]));
+    // a soft darkening behind the words so they sit calmly on the grass
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    const gr = g.createRadialGradient(cx, cy - QFS * 0.3, 0, cx, cy - QFS * 0.3, QW * 0.7);
+    gr.addColorStop(0, `rgba(10,5,5,${0.8 * sm(e * 4)})`); gr.addColorStop(0.55, `rgba(10,5,5,${0.55 * sm(e * 4)})`); gr.addColorStop(1, 'rgba(10,5,5,0)');
+    g.save(); g.translate(cx, cy - QFS * 0.3); g.scale(1, 0.36); g.translate(-cx, -(cy - QFS * 0.3)); g.fillStyle = gr; g.fillRect(cx - QW, cy - QFS * 0.3 - QW, QW * 2, QW * 2); g.restore();
+    Tg.setTransform(1, 0, 0, 1, 0, 0); Tg.globalCompositeOperation = 'source-over'; Tg.clearRect(0, 0, W, H);
+    Tg.font = `700 ${QFS}px Caveat`; Tg.textBaseline = 'alphabetic'; Tg.textAlign = 'left';
+    Tg.fillStyle = rgba(C.cream, 0.95 * sm(prog(t, QT[0], QT[1] - 0.1))); Tg.fillText(Q.q, x0, y);
+    // write-on: a soft edge moving left to right. It drifts slowly across the first word, rests, then writes the rest.
+    const edge = eR > 0 ? lerp(x0 + QH + 60, x0 + QW + 170, eR) : lerp(x0 + 40, x0 + QH + 60, eH);
+    Tg.globalCompositeOperation = 'destination-in';
+    const mg = Tg.createLinearGradient(edge - 170, 0, edge, 0); mg.addColorStop(0, 'rgba(0,0,0,1)'); mg.addColorStop(1, 'rgba(0,0,0,0)');
+    Tg.fillStyle = mg; Tg.fillRect(0, 0, W, H); Tg.globalCompositeOperation = 'source-over';
+    g.drawImage(TX, 0, 0);
+  }
+
+  // bloom from the bright lines only: the quarter-res copy is multiplied by itself (dark fills -> ~0), then blurred
+  const GQ = K.layer(W / 4, H / 4), Gq = GQ.getContext('2d'), GQ2 = K.layer(W / 4, H / 4), Gq2 = GQ2.getContext('2d'), GQ3 = K.layer(W / 4, H / 4), Gq3 = GQ3.getContext('2d');
+  let gqFor = -1;
+  function glow(src, radius, strength) {
+    if (gqFor !== CAM.t) {
+      Gq.globalCompositeOperation = 'source-over'; Gq.clearRect(0, 0, W / 4, H / 4); Gq.imageSmoothingQuality = 'high'; Gq.drawImage(src, 0, 0, W / 4, H / 4);
+      Gq2.clearRect(0, 0, W / 4, H / 4); Gq2.drawImage(GQ, 0, 0);
+      Gq.globalCompositeOperation = 'multiply'; Gq.drawImage(GQ2, 0, 0); Gq.globalCompositeOperation = 'source-over';
+      gqFor = CAM.t;
+    }
+    Gq3.clearRect(0, 0, W / 4, H / 4); Gq3.filter = `blur(${radius / 4}px)`; Gq3.drawImage(GQ, 0, 0); Gq3.filter = 'none';
+    M.save(); M.setTransform(1, 0, 0, 1, 0, 0); M.globalCompositeOperation = 'lighter'; M.globalAlpha = strength; M.imageSmoothingQuality = 'high';
+    M.drawImage(GQ3, 0, 0, W, H); M.restore();
+  }
+
+  // ---------------------------------------------------------------------------------------------------------
+  const MR = K.layer(), MRg = MR.getContext('2d');
+  window.renderFrame = t => {
+    setCam(t);
+    const ZK = clamp(Math.log10(Math.max(1, CAM.z)) / 2.2);
+    M.setTransform(1, 0, 0, 1, 0, 0); M.globalCompositeOperation = 'source-over'; M.globalAlpha = 1; M.filter = 'none';
+    M.drawImage(BG, 0, 0);
+    const g = Lg; g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
+    if (CAM.z < 40) drawGrass(g, t, BLADES, clamp(Math.log10(Math.max(1, CAM.z * 0.6)) / 1.6), false);
+    drawKid(g, t, ZK);
+    if (CAM.z < 40) drawGrass(g, t, OVER, clamp(Math.log10(Math.max(1, CAM.z * 0.6)) / 1.6), true);
+    // a few drifting evening motes between us and him
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    for (const m of MOTES) {
+      const q = P(m.x + 14 * Math.sin(t * 0.5 + m.ph), m.y + 10 * Math.cos(t * 0.4 + m.ph), m.h); if (!q) continue;
+      const dist = CAM.Hc - m.h; if (dist < 80) continue;
+      const a = 0.55 * sm((dist - 80) / 300) * (0.6 + 0.4 * Math.sin(t * 1.7 + m.ph * 3));
+      g.fillStyle = rgba(C.cream, a); g.beginPath(); g.arc(q[0], q[1], Math.min(5, 1.6 * q[2] / CAM.z + 0.6), 0, TAU); g.fill();
+    }
+    drawDandelions(g, t);
+    // R_B3_match: mirror the drawn world (not the question) so the kid's last pose lands on the real man's pose
+    if (CF.mirror) { MRg.setTransform(1, 0, 0, 1, 0, 0); MRg.clearRect(0, 0, W, H); MRg.setTransform(-1, 0, 0, 1, W, 0); MRg.drawImage(L, 0, 0);
+      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.drawImage(MR, 0, 0); }
+    drawQuestion(g, t);
+    M.drawImage(L, 0, 0);
+    // last light: warm wash from the low sun, and a soft pool around him (only once we are out over the field)
+    {
+      const f = sm(1 - Math.log10(Math.max(1, CAM.z)) / 1.3);
+      if (f > 0) {
+        M.save(); M.setTransform(1, 0, 0, 1, 0, 0); M.globalCompositeOperation = 'lighter';
+        const kc = P(2 * S, 50 * S, -15 * S) || [960, 540];
+        if (CF.mirror) kc[0] = W - kc[0];
+        let gr = M.createRadialGradient(kc[0], kc[1], 0, kc[0], kc[1], 760);
+        gr.addColorStop(0, `rgba(255,150,70,${0.11 * f})`); gr.addColorStop(1, 'rgba(255,150,70,0)');
+        M.fillStyle = gr; M.fillRect(0, 0, W, H);
+        gr = M.createRadialGradient(-150, -120, 0, -150, -120, 1500);
+        gr.addColorStop(0, `rgba(255,170,90,${0.16 * f})`); gr.addColorStop(0.6, `rgba(255,140,70,${0.04 * f})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        M.fillStyle = gr; M.fillRect(0, 0, W, H);
+        M.restore();
+      }
+    }
+    glow(L, 12, 1.0); glow(L, 56, 0.6);
+    K.vignette(M, 0.5, '10,4,8');
+    K.grain(M, t, 0.05);
+  };
+  window.renderFrame(0);
+  window.ready = true;
+})();
+</script>
+</body>
+</html>

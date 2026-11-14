@@ -10,6 +10,16 @@
 const W = 1920, H = 1080, ctx = document.getElementById('c').getContext('2d');
 const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
 await K.loadFonts(); await K.loadFootage();
+// overlay: { img (path relative to CUT/), t = 0, dur, a0 = 1, a1 = 0, blend = 'screen' }: a still laid over the shot,
+// fading a0 -> a1 (e.g. the intro's last frame lingering over the match cut)
+const OV = {};
+for (const sh of cfg.shots) if (sh.overlay) OV[sh.overlay.img] ??= await new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(null); im.src = sh.overlay.img; });
+function drawOverlay(g, s, lt) {
+  const o = s.overlay, im = o && OV[o.img]; if (!im) return;
+  const u = clamp((lt - (o.t || 0)) / (o.dur || s.dur)); if (lt < (o.t || 0) || u >= 1) return;
+  const a = (o.a0 ?? 1) + ((o.a1 ?? 0) - (o.a0 ?? 1)) * (u * u * (3 - 2 * u));
+  g.save(); g.globalCompositeOperation = o.blend || 'screen'; g.globalAlpha = clamp(a); g.drawImage(im, 0, 0, W, H); g.restore();
+}
 const shots = cfg.shots, clamp = K.clamp;
 const small = K.layer(96, 54).getContext('2d'), tiny = small.canvas;
 const lay = K.layer(), lg = lay.getContext('2d');
@@ -109,6 +119,7 @@ window.renderFrame = async t => {
       const dxAt = u => 520 * Math.pow(1 - clamp(u / whipT), 2); // starts off to the right, settles
       K.accumulate(ctx, lt, 8, 1 / 30 * 2, (g, tt) => drawShot(g, s, im, lt, dxAt(tt)));
     } else drawShot(ctx, s, im, lt);
+    drawOverlay(ctx, s, lt);
   }
   (s.boxes || []).forEach(b => drawBox(ctx, b, lt)); // also on cards (e.g. the diagram placeholder)
   (s.text || []).forEach(x => drawText(ctx, x, lt));

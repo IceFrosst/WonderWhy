@@ -1,84 +1,572 @@
 {
-  "meta": { "title": "WonderWhy rough cut 1 (same guy, same grass)", "fps": 30, "debug": true,
-    "sheet": [2, 6, 10, 16, 24, 31, 38, 45, 52, 58, 64, 70] },
-  "shots": [
-    { "id": "s01", "label": "ACT 1 stand-in: leaf held to the sky, dreamy gold (kid intro goes here)", "raw": "A001_11141519_C100.MOV", "in": 12.0, "dur": 4.5, "frame": "fit", "push": 0.05,
-      "grade": [[0, 1.15, 0.85]], "gain": 0.5,
-      "text": [
-        { "t": 0.3, "dur": 1.9, "text": "Why is the grass green?", "style": "child", "pos": "center" },
-        { "t": 2.35, "dur": 2.0, "text": "How does the world work?", "style": "child", "pos": "center" },
-        { "t": 0.0, "dur": 4.5, "text": "ACT 1: kid intro (in progress) replaces this", "style": "tag", "pos": "upper-right" }
-      ] },
-
-    { "id": "s02", "label": "Grey: close, earbud in, phone, blank face", "raw": "A001_11141516_C098 2.MOV", "in": 4.0, "dur": 2.2, "frame": "fit", "zoom": 1.15, "focusY": 0.32,
-      "grade": [[0, 0]], "gain": 0.35,
-      "text": [{ "t": 0.3, "dur": 1.9, "text": "You used to ask why.", "style": "grey", "pos": "lower-left" }] },
-    { "id": "s03", "label": "Grey: low profile, phone up, trees behind", "raw": "A001_11141516_C098 2.MOV", "in": 12.5, "dur": 2.6, "frame": "fit",
-      "grade": [[0, 0]], "gain": 0.35,
-      "text": [{ "t": 0.2, "dur": 2.3, "text": "Then you stopped.", "style": "grey", "pos": "lower-left" }] },
-    { "id": "s04", "label": "Hall, head in phone (grey) -> glasses on, colour floods back", "raw": "IMG_5557.MOV", "in": 7.6, "dur": 5.0, "frame": "fit",
-      "grade": [[0, 0], [2.9, 0], [3.7, 1, 0.35]], "gain": 0.45,
-      "text": [{ "t": 3.4, "dur": 1.6, "text": "Look at anything.", "style": "big", "pos": "center" }] },
-    { "id": "s05", "label": "Glasses on, looks around", "raw": "IMG_5557.MOV", "in": 12.6, "dur": 1.8, "frame": "fit",
-      "grade": [[0, 1, 0.35]], "gain": 1.2,
-      "text": [{ "t": 0.1, "dur": 1.6, "text": "An object or a concept.", "style": "label", "pos": "lower-left" }] },
-
-    { "id": "s06", "label": "EARBUDS composite (act3_earbuds V3_air): palm, pinch, noise vs anti-noise", "raw": "video/ar/CUT/assets/V3_air.mp4", "in": 0, "dur": 8.0, "frame": "asset" },
-    { "id": "s07", "label": "Product line over the hall (GLASS recording of the earbuds answer goes here)", "raw": "IMG_5545.MOV", "in": 4.0, "dur": 3.0, "frame": "fit",
-      "grade": [[0, 1, 0.35]],
-      "text": [
-        { "t": 0.2, "dur": 2.7, "text": "Feed your curiosity.", "style": "big", "pos": "upper-left" },
-        { "t": 0.9, "dur": 2.0, "text": "WonderWhy", "style": "label", "pos": "lower-left" }
-      ],
-      "boxes": [{ "t": 0.1, "dur": 2.8, "x": 1320, "y": 250, "w": 540, "h": 540, "label": "GLASS", "sub": "Record display: the earbuds answer, yellow system frame" }] },
-
-    { "id": "s08", "label": "Printer: walk-up push-in, 'How does it build this?'", "raw": "printer_1_core_one.mp4", "in": 1.4, "dur": 2.6, "frame": "fit",
-      "grade": [[0, 1, 0.2]],
-      "text": [
-        { "t": 0.2, "dur": 2.3, "text": "\"How does it build this?\"", "style": "caption", "pos": "bottom" },
-        { "t": 0.2, "dur": 2.3, "text": "Ask out loud", "style": "label", "pos": "upper-left" }
-      ] },
-    { "id": "s09", "label": "Printer close + the answer (printer3d render / GLASS)", "raw": "printer_1_core_one.mp4", "in": 4.0, "dur": 4.0, "frame": "fit",
-      "grade": [[0, 1, 0.2]],
-      "text": [{ "t": 0.3, "dur": 3.5, "text": "Opens the part you asked about", "style": "label", "pos": "upper-left" }],
-      "boxes": [{ "t": 0.2, "dur": 3.7, "x": 1320, "y": 250, "w": 540, "h": 540, "label": "RENDER", "sub": "printer3d: hot plastic squeezed out, laid layer by layer" }] },
-
-    { "id": "s10", "label": "Sauna stove (S2 Journey composite goes here)", "raw": "sauna.mp4", "in": 2.0, "dur": 4.0, "frame": "fit", "cut": "whip",
-      "grade": [[0, 1, 0.3]],
-      "text": [{ "t": 0.3, "dur": 3.5, "text": "Why steam bites", "style": "label", "pos": "upper-left" }],
-      "boxes": [{ "t": 0.2, "dur": 3.7, "x": 1320, "y": 250, "w": 540, "h": 540, "label": "RENDER", "sub": "S2 Journey: water on stones, steam, condenses on skin" }] },
-    { "id": "s11", "label": "GYM composite (act5_bike B1_airflow)", "raw": "video/ar/CUT/assets/B1_airflow.mp4", "in": 0, "dur": 5.0, "frame": "asset", "cut": "whip" },
-
-    { "id": "s12", "label": "How it works diagram", "frame": "card", "dur": 4.0,
-      "card": { "text": "", "sub": "" },
-      "text": [{ "t": 0.3, "dur": 3.6, "text": "It sees it. AI names it. Real physics explains it.", "style": "caption", "pos": "bottom" }],
-      "boxes": [{ "t": 0.1, "dur": 3.8, "x": 260, "y": 260, "w": 1400, "h": 440, "label": "DIAGRAM", "sub": "glasses camera -> phone -> AI names it -> our checked physics -> back to the display (each step lights in turn)" }] },
-    { "id": "s13", "label": "Pinch", "raw": "IMG_5544.MOV", "in": 0.2, "dur": 1.3, "frame": "fit", "grade": [[0, 1, 0.3]],
-      "text": [{ "t": 0.1, "dur": 1.15, "text": "Pinch.", "style": "big", "pos": "center" }] },
-    { "id": "s14", "label": "One photo", "raw": "IMG_5545.MOV", "in": 13.0, "dur": 1.3, "frame": "fit", "grade": [[0, 1, 0.3]],
-      "text": [{ "t": 0.1, "dur": 1.15, "text": "One photo.", "style": "big", "pos": "center" }] },
-    { "id": "s15", "label": "Answer in your view", "raw": "IMG_5543.MOV", "in": 4.5, "dur": 1.4, "frame": "fit", "grade": [[0, 1, 0.3]],
-      "text": [{ "t": 0.1, "dur": 1.25, "text": "Answer in your view.", "style": "big", "pos": "center" }] },
-
-    { "id": "s16", "label": "Share: glasses on the table, hand takes them", "raw": "share_scene_glasses_friend.mp4", "in": 3.0, "dur": 3.0, "frame": "fit", "grade": [[0, 1, 0.3]],
-      "text": [
-        { "t": 0.2, "dur": 2.6, "text": "\"Here, try these.\"", "style": "caption", "pos": "bottom" },
-        { "t": 0.2, "dur": 2.6, "text": "Try it.", "style": "label", "pos": "upper-left" }
-      ] },
-    { "id": "s17", "label": "Glasses explain themselves (AR render V04)", "raw": "video/ar/renders/V04.mp4", "in": 0.4, "dur": 5.6, "frame": "asset",
-      "text": [{ "t": 3.4, "dur": 2.1, "text": "It even explains itself.", "style": "label", "pos": "upper-left" }] },
-    { "id": "s18", "label": "Friend wearing them, looking around", "raw": "share_scene_glasses_friend.mp4", "in": 10.0, "dur": 3.4, "frame": "fit", "grade": [[0, 1, 0.35]], "gain": 1.1 },
-    { "id": "s19", "label": "Friend turns to camera, smile", "raw": "share_scene_glasses_friend.mp4", "in": 13.4, "dur": 1.3, "frame": "fit", "grade": [[0, 1, 0.4]], "gain": 1.2 },
-
-    { "id": "s20", "label": "Same grass, now curious: arms thrown up", "raw": "A001_11141518_C099 2.MOV", "in": 3.4, "dur": 1.8, "frame": "fit", "cut": "whip",
-      "grade": [[0, 1.1, 0.55]], "gain": 0.6 },
-    { "id": "s21", "label": "Bookend: the leaf to the sky, sharp and in colour", "raw": "A001_11141519_C100.MOV", "in": 12.0, "dur": 3.4, "frame": "fit",
-      "grade": [[0, 1.1, 0.55]], "gain": 0.6,
-      "text": [{ "t": 0.4, "dur": 2.9, "text": "Never stop asking why.", "style": "big", "pos": "center" }] },
-    { "id": "s22", "label": "Sits up, grins at camera", "raw": "A001_11141519_C100.MOV", "in": 19.5, "dur": 1.5, "frame": "fit",
-      "grade": [[0, 1.1, 0.55]], "gain": 0.8 },
-
-    { "id": "s23", "label": "End card 1", "frame": "card", "dur": 3.0, "card": { "text": "WonderWhy", "sub": "See how the world really works." } },
-    { "id": "s24", "label": "End card 2", "frame": "card", "dur": 3.0, "card": { "text": "Come to our table. Try it.", "sub": "Meta Ray-Ban Display · Junction 2026" } }
+ "meta": {
+  "title": "WonderWhy rough cut 2 (intro matched into the grass)",
+  "fps": 30,
+  "debug": true,
+  "sheet": [
+   2,
+   6,
+   10,
+   16,
+   24,
+   31,
+   38,
+   45,
+   52,
+   58,
+   64,
+   70
   ]
+ },
+ "shots": [
+  {
+   "id": "s01",
+   "label": "ACT 1 intro R_B3_lines, end camera matched to the man (R_B3_match)",
+   "raw": "video/ar/renders/R_B3_match.mp4",
+   "in": 0,
+   "dur": 6.0,
+   "frame": "asset"
+  },
+  {
+   "id": "s01m",
+   "label": "MATCH CUT: same pose, grey man with phone; the kid's lines fade off him",
+   "raw": "A001_11141516_C098 2.MOV",
+   "in": 7.0,
+   "dur": 2.4,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     0
+    ]
+   ],
+   "gain": 0.35,
+   "overlay": {
+    "img": "intro_last.jpg",
+    "t": 0,
+    "dur": 0.8,
+    "a0": 0.85,
+    "a1": 0,
+    "blend": "screen"
+   },
+   "text": [
+    {
+     "t": 0.7,
+     "dur": 1.6,
+     "text": "You used to ask why.",
+     "style": "grey",
+     "pos": "lower-left"
+    }
+   ]
+  },
+  {
+   "id": "s02",
+   "label": "Grey: close, earbud in, phone, blank face",
+   "raw": "A001_11141516_C098 2.MOV",
+   "in": 4.0,
+   "dur": 2.2,
+   "frame": "fit",
+   "zoom": 1.15,
+   "focusY": 0.32,
+   "grade": [
+    [
+     0,
+     0
+    ]
+   ],
+   "gain": 0.35,
+   "text": [
+    {
+     "t": 0.2,
+     "dur": 1.9,
+     "text": "Then you stopped.",
+     "style": "grey",
+     "pos": "lower-left"
+    }
+   ]
+  },
+  {
+   "id": "s04",
+   "label": "Hall, head in phone (grey) -> glasses on, colour floods back",
+   "raw": "IMG_5557.MOV",
+   "in": 7.6,
+   "dur": 5.0,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     0
+    ],
+    [
+     2.9,
+     0
+    ],
+    [
+     3.7,
+     1,
+     0.35
+    ]
+   ],
+   "gain": 0.45,
+   "text": [
+    {
+     "t": 3.4,
+     "dur": 1.6,
+     "text": "Look at anything.",
+     "style": "big",
+     "pos": "center"
+    }
+   ]
+  },
+  {
+   "id": "s05",
+   "label": "Glasses on, looks around",
+   "raw": "IMG_5557.MOV",
+   "in": 12.6,
+   "dur": 1.8,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.35
+    ]
+   ],
+   "gain": 1.2,
+   "text": [
+    {
+     "t": 0.1,
+     "dur": 1.6,
+     "text": "An object or a concept.",
+     "style": "label",
+     "pos": "lower-left"
+    }
+   ]
+  },
+  {
+   "id": "s06",
+   "label": "EARBUDS composite (act3_earbuds V3_air): palm, pinch, noise vs anti-noise",
+   "raw": "video/ar/CUT/assets/V3_air.mp4",
+   "in": 0,
+   "dur": 8.0,
+   "frame": "asset"
+  },
+  {
+   "id": "s07",
+   "label": "Product line over the hall (GLASS recording of the earbuds answer goes here)",
+   "raw": "IMG_5545.MOV",
+   "in": 4.0,
+   "dur": 3.0,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.35
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.2,
+     "dur": 2.7,
+     "text": "Feed your curiosity.",
+     "style": "big",
+     "pos": "upper-left"
+    },
+    {
+     "t": 0.9,
+     "dur": 2.0,
+     "text": "WonderWhy",
+     "style": "label",
+     "pos": "lower-left"
+    }
+   ],
+   "boxes": [
+    {
+     "t": 0.1,
+     "dur": 2.8,
+     "x": 1320,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "label": "GLASS",
+     "sub": "Record display: the earbuds answer, yellow system frame"
+    }
+   ]
+  },
+  {
+   "id": "s08",
+   "label": "Printer: walk-up push-in, 'How does it build this?'",
+   "raw": "printer_1_core_one.mp4",
+   "in": 1.4,
+   "dur": 2.6,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.2
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.2,
+     "dur": 2.3,
+     "text": "\"How does it build this?\"",
+     "style": "caption",
+     "pos": "bottom"
+    },
+    {
+     "t": 0.2,
+     "dur": 2.3,
+     "text": "Ask out loud",
+     "style": "label",
+     "pos": "upper-left"
+    }
+   ]
+  },
+  {
+   "id": "s09",
+   "label": "Printer close + the answer (printer3d render / GLASS)",
+   "raw": "printer_1_core_one.mp4",
+   "in": 4.0,
+   "dur": 4.0,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.2
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.3,
+     "dur": 3.5,
+     "text": "Opens the part you asked about",
+     "style": "label",
+     "pos": "upper-left"
+    }
+   ],
+   "boxes": [
+    {
+     "t": 0.2,
+     "dur": 3.7,
+     "x": 1320,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "label": "RENDER",
+     "sub": "printer3d answer. Look: V02's scan-line lock-on as the transition, V09's panel spacing in the corner"
+    }
+   ]
+  },
+  {
+   "id": "s10",
+   "label": "Sauna stove (S2 Journey composite goes here)",
+   "raw": "sauna.mp4",
+   "in": 2.0,
+   "dur": 4.0,
+   "frame": "fit",
+   "cut": "whip",
+   "grade": [
+    [
+     0,
+     1,
+     0.3
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.3,
+     "dur": 3.5,
+     "text": "Why steam bites",
+     "style": "label",
+     "pos": "upper-left"
+    }
+   ],
+   "boxes": [
+    {
+     "t": 0.2,
+     "dur": 3.7,
+     "x": 1320,
+     "y": 250,
+     "w": 540,
+     "h": 540,
+     "label": "RENDER",
+     "sub": "S2 Journey: water on stones, steam, condenses on skin"
+    }
+   ]
+  },
+  {
+   "id": "s11",
+   "label": "GYM composite (act5_bike B1_airflow)",
+   "raw": "video/ar/CUT/assets/B1_airflow.mp4",
+   "in": 0,
+   "dur": 5.0,
+   "frame": "asset",
+   "cut": "whip"
+  },
+  {
+   "id": "s12",
+   "label": "How it works diagram",
+   "frame": "card",
+   "dur": 4.0,
+   "card": {
+    "text": "",
+    "sub": ""
+   },
+   "text": [
+    {
+     "t": 0.3,
+     "dur": 3.6,
+     "text": "It sees it. AI names it. Real physics explains it.",
+     "style": "caption",
+     "pos": "bottom"
+    }
+   ],
+   "boxes": [
+    {
+     "t": 0.1,
+     "dur": 3.8,
+     "x": 260,
+     "y": 260,
+     "w": 1400,
+     "h": 440,
+     "label": "DIAGRAM",
+     "sub": "glasses camera -> phone -> AI names it -> our checked physics -> back to the display (each step lights in turn)"
+    }
+   ]
+  },
+  {
+   "id": "s13",
+   "label": "Pinch",
+   "raw": "IMG_5544.MOV",
+   "in": 0.2,
+   "dur": 1.3,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.3
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.1,
+     "dur": 1.15,
+     "text": "Pinch.",
+     "style": "big",
+     "pos": "center"
+    }
+   ]
+  },
+  {
+   "id": "s14",
+   "label": "One photo",
+   "raw": "IMG_5545.MOV",
+   "in": 13.0,
+   "dur": 1.3,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.3
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.1,
+     "dur": 1.15,
+     "text": "One photo.",
+     "style": "big",
+     "pos": "center"
+    }
+   ]
+  },
+  {
+   "id": "s15",
+   "label": "Answer in your view",
+   "raw": "IMG_5543.MOV",
+   "in": 4.5,
+   "dur": 1.4,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.3
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.1,
+     "dur": 1.25,
+     "text": "Answer in your view.",
+     "style": "big",
+     "pos": "center"
+    }
+   ]
+  },
+  {
+   "id": "s16",
+   "label": "Share: glasses on the table, hand takes them",
+   "raw": "share_scene_glasses_friend.mp4",
+   "in": 3.0,
+   "dur": 3.0,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.3
+    ]
+   ],
+   "text": [
+    {
+     "t": 0.2,
+     "dur": 2.6,
+     "text": "\"Here, try these.\"",
+     "style": "caption",
+     "pos": "bottom"
+    },
+    {
+     "t": 0.2,
+     "dur": 2.6,
+     "text": "Try it.",
+     "style": "label",
+     "pos": "upper-left"
+    }
+   ]
+  },
+  {
+   "id": "s17",
+   "label": "Glasses explain themselves (AR render V04)",
+   "raw": "video/ar/renders/V04.mp4",
+   "in": 0.4,
+   "dur": 5.6,
+   "frame": "asset",
+   "text": [
+    {
+     "t": 3.4,
+     "dur": 2.1,
+     "text": "It even explains itself.",
+     "style": "label",
+     "pos": "upper-left"
+    }
+   ]
+  },
+  {
+   "id": "s18",
+   "label": "Friend wearing them, looking around",
+   "raw": "share_scene_glasses_friend.mp4",
+   "in": 10.0,
+   "dur": 3.4,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.35
+    ]
+   ],
+   "gain": 1.1
+  },
+  {
+   "id": "s19",
+   "label": "Friend turns to camera, smile",
+   "raw": "share_scene_glasses_friend.mp4",
+   "in": 13.4,
+   "dur": 1.3,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1,
+     0.4
+    ]
+   ],
+   "gain": 1.2
+  },
+  {
+   "id": "s20",
+   "label": "Same grass, now curious: arms thrown up",
+   "raw": "A001_11141518_C099 2.MOV",
+   "in": 3.4,
+   "dur": 1.8,
+   "frame": "fit",
+   "cut": "whip",
+   "grade": [
+    [
+     0,
+     1.1,
+     0.55
+    ]
+   ],
+   "gain": 0.6
+  },
+  {
+   "id": "s21",
+   "label": "Bookend: the leaf to the sky, sharp and in colour",
+   "raw": "A001_11141519_C100.MOV",
+   "in": 12.0,
+   "dur": 3.4,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1.1,
+     0.55
+    ]
+   ],
+   "gain": 0.6,
+   "text": [
+    {
+     "t": 0.4,
+     "dur": 2.9,
+     "text": "Never stop asking why.",
+     "style": "big",
+     "pos": "center"
+    }
+   ]
+  },
+  {
+   "id": "s22",
+   "label": "Sits up, grins at camera",
+   "raw": "A001_11141519_C100.MOV",
+   "in": 19.5,
+   "dur": 1.5,
+   "frame": "fit",
+   "grade": [
+    [
+     0,
+     1.1,
+     0.55
+    ]
+   ],
+   "gain": 0.8
+  },
+  {
+   "id": "s23",
+   "label": "End card 1",
+   "frame": "card",
+   "dur": 3.0,
+   "card": {
+    "text": "WonderWhy",
+    "sub": "See how the world really works."
+   }
+  },
+  {
+   "id": "s24",
+   "label": "End card 2",
+   "frame": "card",
+   "dur": 3.0,
+   "card": {
+    "text": "Come to our table. Try it.",
+    "sub": "Meta Ray-Ban Display \u00b7 Junction 2026"
+   }
+  }
+ ]
 }

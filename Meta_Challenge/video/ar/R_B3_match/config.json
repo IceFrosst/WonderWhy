@@ -1,0 +1,65 @@
+{
+  "variant": "R_B3_match",
+  "title": "Planet, eye, kid: one pull-back in glowing lines",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration": 6.0,
+  "note": "Copy of the team intro R_B3_lines (animation branch) with only the end camera changed: mirrored, rolled and placed so the kid's last pose lands on the real man in A001_11141516_C098 2.MOV @ 7.0 s (CUT \"fit\" layout), for a match cut into the grey adult. One continuous overhead pull-back, warm gold lines on deep dusk. A line-drawn Earth turns slowly in the dark; it is the reflection in a kid's pupil. Iris fibres, lashes and lids draw the eye around it, then the face, then the whole kid lying in a field of glowing grass lines, arms behind his head, one knee up, looking straight up at the sky we are in. The question writes itself on softly as he is revealed. Ends still and golden.",
+  "camera": {
+    "settle": 5.35,
+    "rot": -0.067,
+    "eyeFinal": [
+      916,
+      367
+    ],
+    "zEnd": 1.15,
+    "mirror": true
+  },
+  "timing": {
+    "question": [
+      3.3,
+      4.15,
+      4.2,
+      5.15
+    ]
+  },
+  "text": {
+    "q": "How does it all really work?",
+    "pos": [
+      1455,
+      165
+    ],
+    "size": 86
+  },
+  "cues": [
+    {
+      "t": 0.0,
+      "sound": "music: soft felt piano, already playing (no fade in), one slow note per beat; faint low space air tone",
+      "line": ""
+    },
+    {
+      "t": 1.4,
+      "sound": "space tone gives way to evening field air: soft wind in grass, distant crickets",
+      "line": ""
+    },
+    {
+      "t": 3.3,
+      "sound": "piano resolves to a warm chord",
+      "line": "Child VO, soft, wondering: \"How does it all really work?\""
+    },
+    {
+      "t": 5.4,
+      "sound": "hold the chord, wind only; the edit hard-cuts to the grey adult at 6.0",
+      "line": ""
+    }
+  ],
+  "sheet": [
+    0.0,
+    1.7,
+    3.0,
+    4.4,
+    5.4,
+    5.95
+  ]
+}
