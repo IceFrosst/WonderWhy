@@ -21,11 +21,24 @@ class BridgeAuthTest {
 
     @Test fun status401IsTokenError() {
         assertEquals(BridgeAuth.ErrorKind.TOKEN, BridgeAuth.kindFor(401))
-        assertEquals("Bridge token is wrong or missing. Set it in the phone app.", BridgeAuth.TOKEN_ERROR)
+        assertEquals("Wrong bridge token. Set it in the app.", BridgeAuth.TOKEN_ERROR)
     }
 
     @Test fun status500IsGenericBridgeError() {
         assertEquals(BridgeAuth.ErrorKind.BRIDGE, BridgeAuth.kindFor(500))
         assertEquals(BridgeAuth.ErrorKind.TIMEOUT, BridgeAuth.kindFor(504, "detect_timeout"))
+        assertEquals(BridgeAuth.ErrorKind.BRIDGE, BridgeAuth.kindFor(502, "detect_failed"))
+    }
+
+    /** A proxy's 502/503/504 without a bridge body means the bridge is down: offline card, not an error. */
+    @Test fun proxyGatewayErrorIsUnreachable() {
+        assertEquals(BridgeAuth.ErrorKind.UNREACHABLE, BridgeAuth.kindFor(502))
+        assertEquals(BridgeAuth.ErrorKind.UNREACHABLE, BridgeAuth.kindFor(503))
+        assertEquals(BridgeAuth.ErrorKind.BRIDGE, BridgeAuth.kindFor(500))
+    }
+
+    @Test fun tokenMessageFitsStateCardCap() {
+        assertTrue(BridgeAuth.TOKEN_ERROR.split(" ").size <= 8)
+        assertEquals(Lang.ui("en", Lang.TOKEN), BridgeAuth.TOKEN_ERROR)
     }
 }

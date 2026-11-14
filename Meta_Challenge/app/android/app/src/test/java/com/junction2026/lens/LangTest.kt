@@ -26,7 +26,7 @@ class LangTest {
         for (k in Lang.KEYS) assert(Lang.ui("fi", k).isNotBlank())
     }
 
-    /** DESIGN.md: state card body 8 words. The token message is longer; it is reported, not failed. */
+    /** DESIGN.md: state card body 8 words, in every language. */
     @Test fun uiWordCaps() {
         val offenders = ArrayList<String>()
         for (tag in listOf("en", "fi")) for (k in Lang.KEYS) {
@@ -36,6 +36,6 @@ class LangTest {
             assert(!s.contains('!')) { "no exclamation marks: $tag/$k" }
         }
         println("UI CAP OFFENDERS: $offenders")
-        assertEquals(listOf("ui en/token: 12 words", "ui fi/token: 9 words"), offenders)
+        assertEquals(emptyList<String>(), offenders)
     }
 }

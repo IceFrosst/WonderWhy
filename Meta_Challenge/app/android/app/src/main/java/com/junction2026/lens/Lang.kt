@@ -37,7 +37,7 @@ object Lang {
         AGAIN to "Again",
         DONE to "Done",
         OFFLINE to "Offline: showing a saved card",
-        TOKEN to "Bridge token is wrong or missing. Set it in the phone app.",
+        TOKEN to "Wrong bridge token. Set it in the app.",
     )
 
     private val FI = mapOf(
@@ -48,7 +48,7 @@ object Lang {
         AGAIN to "Uudelleen",
         DONE to "Valmis",
         OFFLINE to "Ei yhteyttä: tallennettu kortti",
-        TOKEN to "Avain puuttuu tai on väärä. Aseta se puhelimen sovelluksessa.",
+        TOKEN to "Väärä avain. Aseta se sovelluksessa.",
     )
 
     private val TABLES = mapOf("en" to EN, "fi" to FI)

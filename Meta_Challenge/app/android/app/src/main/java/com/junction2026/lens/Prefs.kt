@@ -9,6 +9,9 @@ object Prefs {
     fun setMock(c: Context, v: Boolean) = sp(c).edit().putBoolean("mock", v).apply()
     fun bridge(c: Context) = sp(c).getString("bridge", DEFAULT_BRIDGE) ?: DEFAULT_BRIDGE
     fun setBridge(c: Context, v: String) = sp(c).edit().putString("bridge", v).apply()
+    /** "Demo data (no bridge)": fixture answers instead of camera + bridge. Off by default. */
+    fun fixture(c: Context) = sp(c).getBoolean("fixture", false)
+    fun setFixture(c: Context, v: Boolean) = sp(c).edit().putBoolean("fixture", v).apply()
     fun bridgeToken(c: Context) = sp(c).getString("bridgeToken", "") ?: ""
     fun setBridgeToken(c: Context, v: String) = sp(c).edit().putString("bridgeToken", v).apply()
 }

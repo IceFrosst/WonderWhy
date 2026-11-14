@@ -18,6 +18,8 @@ import com.meta.wearable.dat.core.session.DeviceSessionState
 import com.meta.wearable.dat.core.types.DatResult
 import com.meta.wearable.dat.core.types.DeviceSessionError
 import com.meta.wearable.dat.core.types.DonState
+import com.meta.wearable.dat.core.types.HingeState
+import com.meta.wearable.dat.core.types.LinkState
 import com.meta.wearable.dat.core.types.Permission
 import com.meta.wearable.dat.core.types.PermissionError
 import com.meta.wearable.dat.core.types.PermissionStatus
@@ -40,6 +42,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,7 +52,10 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Failure of one capture/detect run, with text for the glasses card. */
-private class CaptureFailure(val title: String, val detail: String) : Exception("$title: $detail")
+private open class CaptureFailure(val title: String, val detail: String) : Exception("$title: $detail")
+
+/** Camera permission refused: its own decision card (DESIGN.md "camera denied"). */
+private class CameraDenied : CaptureFailure("Camera denied", "Allow camera access in Meta AI")
 
 class GlassesController(
     private val ctx: Context,
@@ -66,21 +72,34 @@ class GlassesController(
     private val _session = MutableStateFlow("not connected")
     private val _display = MutableStateFlow("-")
     private val _battery = MutableStateFlow("-")
-    private val _don = MutableStateFlow("-")
+    private val _device = MutableStateFlow("Worn: -")
+    private val _alert = MutableStateFlow<DeviceAlert?>(null)
     val registration: StateFlow<String> = _registration
     val sessionStatus: StateFlow<String> = _session
     val displayStatus: StateFlow<String> = _display
     val battery: StateFlow<String> = _battery
-    val don: StateFlow<String> = _don
+    /** Worn, hinge, thermal and link, one line for the phone. */
+    val device: StateFlow<String> = _device
+    /** The device or error state the phone card shows (highest priority), or null. */
+    val alert: StateFlow<DeviceAlert?> = _alert
+    /** Last battery level the glasses reported (for the state card text). */
+    @Volatile var batteryLevel: Int? = null
+        private set
 
     private var session: DeviceSession? = null
     private var display: Display? = null
     private var sessionJobs = mutableListOf<Job>()
     private var inputsJob: Job? = null
     private var captureJob: Job? = null
+    private var reconnectJob: Job? = null
+    /** Follows the glasses' state outside any session (a folded pair ends the session but keeps reporting). */
+    private var deviceWatchJob: Job? = null
+    /** The device watch saw the Bluetooth link go down and not come back yet. */
+    private var linkDown = false
     private var attached = false
-    private var batteryWarned = false
+    private var userStopping = false
     private var lastDon: DonState? = null
+    private var lastHinge: HingeState? = null
     private var concepts: Map<String, String> = emptyMap()
     private val busy = AtomicBoolean(false) // one capture at a time, whatever the trigger
     private var connecting = false
@@ -92,9 +111,23 @@ class GlassesController(
     @Volatile var useFixture = false
     private var fixtureIndex = 0
 
-    // Explainer state. Touched only on the main thread (inside [scope]).
+    // Screen state. Touched only on the main thread (inside [scope]).
     private var current: Detection? = null
     private var explainer: ExplainerState? = null
+    /** True while [current] comes from the bundled library (offline), not from a photo. */
+    private var currentSaved = false
+    /** Offline picker, while it is on screen. */
+    private var picker: OfflinePicker? = null
+    private var pickerIndex = 0
+    private var library: Map<String, OfflineObject>? = null
+    /** Last non-transient card, re-sent after a notice or when the glasses come back. */
+    private var lastContent: (ContentScope.() -> Unit)? = null
+    /** Auto-dismissing state card on screen (battery, heat), if any. */
+    private var notice: DeviceAlert? = null
+    private var noticeJob: Job? = null
+    /** Device and error states in force. */
+    private val active = LinkedHashSet<DeviceAlert>()
+    private val watch = DeviceWatch()
     /** Last explainer action (pinch or card button), to swallow the twin of a pinch that also clicks a button. */
     private var lastNavAt = 0L
     private val media = SceneMedia(scope) { path ->
@@ -103,12 +136,20 @@ class GlassesController(
 
     // ---- connect / disconnect ----
 
-    /** Registers (real mode) and starts a device session. Mock must already be enabled by the caller. */
     /** The mock feeds the phone camera in sensor orientation (sideways); real glasses frames are already upright. */
     private var rotateLandscape = false
 
+    /** Registers (real mode) and starts a device session. Mock must already be enabled by the caller. */
     suspend fun connect(activity: Activity, mock: Boolean) {
         rotateLandscape = mock
+        reconnectJob?.cancel()
+        // "Glasses busy" card: Connect takes the glasses back with a new session.
+        session?.takeIf { DeviceAlert.TAKEN_OVER in active }?.let {
+            log("Taking the glasses back")
+            userStopping = true
+            stopSession(it)
+            teardown("Disconnected", keepAlerts = true)
+        }
         if (connecting || session != null) { log("Already connected or connecting"); return }
         connecting = true
         try {
@@ -129,49 +170,86 @@ class GlassesController(
                 }
                 if (ok == null) { log("Registration did not finish"); return }
             }
+            watchDevice()
             concepts = bridge.objects()
             log("Bridge objects: ${concepts.size}")
-            startSession()
+            if (!startSession(tries = 6)) _session.value = "no session"
         } finally {
             connecting = false
         }
     }
 
-    private suspend fun startSession() {
+    /** Creates and starts a session. False when no glasses answered in [tries] attempts. */
+    private suspend fun startSession(tries: Int): Boolean {
         // Mock devices show up a moment after pairing, so retry a few times.
         var s: DeviceSession? = null
         var lastErr = ""
-        repeat(6) {
-            if (s == null) {
-                Wearables.createSession(AutoDeviceSelector(filter = { it.isDisplayCapable() })).fold(
-                    onSuccess = { s = it },
-                    onFailure = { e, _ -> lastErr = e.description },
-                )
-                if (s == null) delay(1000)
-            }
+        for (i in 0 until tries) {
+            Wearables.createSession(AutoDeviceSelector(filter = { it.isDisplayCapable() })).fold(
+                onSuccess = { s = it },
+                onFailure = { e, _ -> lastErr = e.description },
+            )
+            if (s != null) break
+            if (i < tries - 1) delay(1000)
         }
-        val sess = s ?: run { log("No session: $lastErr"); _session.value = "no session"; return }
+        val sess = s ?: run { log("No session: $lastErr"); return false }
         session = sess
         attached = false
+        userStopping = false
         sessionJobs += scope.launch { sess.state.collect { onSessionState(sess, it) } }
         sessionJobs += scope.launch {
             sess.errors.collect { e ->
                 log("Session error: ${e.description}")
                 if (e == DeviceSessionError.DAT_APP_ON_THE_GLASSES_UPDATE_REQUIRED) onUpdateRequired()
+                DeviceStates.forSessionError(e.name)?.let { raise(it) }
             }
         }
         sessionJobs += scope.launch { sess.deviceInfo.collect { onDeviceInfo(it) } }
         sess.start()
+        return true
     }
 
     fun disconnect() {
-        session?.let { runCatching { it.stop() } }
-        teardown("Disconnected")
+        reconnectJob?.cancel()
+        deviceWatchJob?.cancel()
+        deviceWatchJob = null
+        userStopping = true
+        session?.let { stopSession(it) }
+        teardown("Disconnected", keepAlerts = false)
+        watch.reset()
+        linkDown = false
+        lastDon = null
+        lastHinge = null
     }
 
-    private fun teardown(status: String) {
+    /**
+     * `Wearables.devices` / `devicesMetadata` (SDK): the glasses' state with or without a session, so a
+     * fold (which ends the session) is still seen, and so is the unfold that lets us reconnect.
+     */
+    private fun watchDevice() {
+        if (deviceWatchJob?.isActive == true) return
+        deviceWatchJob = scope.launch {
+            Wearables.devices.collectLatest { ids ->
+                val flows = ids.mapNotNull { Wearables.devicesMetadata[it] }
+                val flow = flows.firstOrNull { it.value.isDisplayCapable() } ?: flows.firstOrNull() ?: return@collectLatest
+                flow.collect { onDeviceInfo(it) }
+            }
+        }
+    }
+
+    /** Capabilities first, then the session: removing them from a stopped session does not free them. */
+    private fun stopSession(s: DeviceSession) {
+        inputsJob?.cancel()
+        runCatching { s.removeInputs() }
+        runCatching { s.removeDisplay() }
+        runCatching { s.stop() }
+    }
+
+    /** [keepAlerts]: the session ended by itself, so the wearer still needs to see why. */
+    private fun teardown(status: String, keepAlerts: Boolean) {
         captureJob?.cancel()
         inputsJob?.cancel()
+        noticeJob?.cancel()
         sessionJobs.forEach { it.cancel() }
         sessionJobs.clear()
         session?.let {
@@ -183,10 +261,13 @@ class GlassesController(
         attached = false
         explainer = null
         current = null
+        picker = null
+        lastContent = null
+        notice = null
         media.clear()
-        batteryWarned = false
-        lastDon = null
         busy.set(false)
+        if (keepAlerts) active.remove(DeviceAlert.CAMERA_DENIED) else active.clear()
+        publish()
         _session.value = status
         _display.value = "-"
     }
@@ -200,10 +281,58 @@ class GlassesController(
                 _session.value = st.name
             DeviceSessionState.STARTED -> {
                 _session.value = "STARTED"
+                val wasAway = DeviceAlert.TAKEN_OVER in active || DeviceAlert.DISCONNECTED in active
+                lower(DeviceAlert.TAKEN_OVER)
+                lower(DeviceAlert.DISCONNECTED)
                 if (!attached) { attached = true; scope.launch { attachCapabilities(sess) } }
+                else if (wasAway) restore()
             }
-            DeviceSessionState.PAUSED -> _session.value = "Paused by the glasses"
-            DeviceSessionState.STOPPED -> teardown("Disconnected") // terminal: Connect makes a new session
+            // The SDK pauses a session when another experience takes the glasses over. Taking them off
+            // or folding them may pause it too; those have their own cards, so they win.
+            DeviceSessionState.PAUSED -> {
+                _session.value = "PAUSED"
+                if (DeviceAlert.OFF !in active && DeviceAlert.FOLDED !in active) raise(DeviceAlert.TAKEN_OVER)
+            }
+            DeviceSessionState.STOPPED -> {
+                // Terminal. Ours (Disconnect): done. Not ours (Bluetooth drop, fold, glasses ended it):
+                // recreate the session (Plan.md section 5), unless another app has the glasses (then the
+                // wearer taps Connect when it is done). Folded / taken off: their own card, and the
+                // reconnect waits until the glasses are open and worn again.
+                val unexpected = !userStopping
+                val takenOver = DeviceAlert.TAKEN_OVER in active
+                teardown(if (unexpected) "Stopped by the glasses" else "Disconnected", keepAlerts = unexpected)
+                if (unexpected && !takenOver) {
+                    if (!blockedByDevice()) raise(DeviceAlert.DISCONNECTED)
+                    startReconnect()
+                }
+            }
+        }
+    }
+
+    /** Folded or taken off: no point starting a session; the device watch says when that ends. */
+    private fun blockedByDevice() = DeviceAlert.FOLDED in active || DeviceAlert.OFF in active || linkDown
+
+    /**
+     * Plan.md section 5: recreate the session after a Bluetooth drop. One loop at a time (a session that
+     * fails to start does not restart the count). Tries only count while the glasses are open and worn.
+     */
+    private fun startReconnect() {
+        if (reconnectJob?.isActive == true) return
+        reconnectJob = scope.launch {
+            var tries = 0
+            while (tries < RECONNECT_TRIES) {
+                delay(RECONNECT_EVERY_MS)
+                if (session != null) return@launch
+                if (blockedByDevice()) continue
+                tries++
+                log("Reconnecting ($tries/$RECONNECT_TRIES)...")
+                if (!startSession(tries = 1)) continue
+                val st = withTimeoutOrNull(8_000) {
+                    session?.state?.first { it == DeviceSessionState.STARTED || it == DeviceSessionState.STOPPED }
+                }
+                if (st == DeviceSessionState.STARTED) { log("Reconnected"); return@launch }
+            }
+            log("Could not reconnect: tap Connect")
         }
     }
 
@@ -216,7 +345,9 @@ class GlassesController(
             display = d
             sessionJobs += scope.launch { d.state.collect { _display.value = it.name } }
             val ready = withTimeoutOrNull(10_000) { d.state.first { it == DisplayState.STARTED } }
-            if (ready == null) log("Display did not start") else showIdle()
+            if (ready == null) log("Display did not start")
+            else if (DeviceStates.suppressesDisplay(active)) clearDisplay()
+            else if (lastContent != null) restore() else showIdle()
         }
         sess.addInputs(InputsConfiguration()).fold(
             onSuccess = { inputs ->
@@ -233,46 +364,152 @@ class GlassesController(
                 }
                 sessionJobs += inputsJob!!
             },
-            // Real glasses may refuse inputs; Display buttons and the phone button still work.
+            // Real glasses may refuse inputs; Display buttons and the phone buttons still work.
             onFailure = { e, _ -> log("Inputs unavailable: ${e.description}") },
         )
     }
 
-    private suspend fun onDeviceInfo(d: com.meta.wearable.dat.core.types.Device) {
+    private fun onDeviceInfo(d: com.meta.wearable.dat.core.types.Device) {
+        batteryLevel = d.batteryLevel
         _battery.value = "${d.batteryLevel}%"
-        _don.value = d.donState.name
-        if (d.donState == DonState.DOFFED && lastDon != DonState.DOFFED && busy.get()) {
-            log("Glasses taken off: cancelling capture")
+        _device.value = "Worn: ${d.donState.name} · Hinge: ${d.hingeState.name} · Heat: ${d.thermalLevel.name} · Link: ${d.linkState.name}"
+        val off = d.donState == DonState.DOFFED && lastDon != DonState.DOFFED
+        val folded = d.hingeState == HingeState.CLOSED && lastHinge != HingeState.CLOSED
+        if ((off || folded) && busy.get()) {
+            log("Glasses ${if (off) "taken off" else "folded"}: cancelling capture")
             captureJob?.cancel()
         }
         lastDon = d.donState
-        if (d.batteryLevel <= 15 && !batteryWarned) {
-            batteryWarned = true
-            if (!busy.get()) {
-                explainer = null
-                show(Cards.notice("Battery low", "${d.batteryLevel}% left on the glasses") { scope.launch { showIdle() } })
+        lastHinge = d.hingeState
+        val snap = DeviceSnapshot(
+            donned = when (d.donState) { DonState.DONNED -> true; DonState.DOFFED -> false; else -> null },
+            folded = when (d.hingeState) { HingeState.CLOSED -> true; HingeState.OPEN -> false; else -> null },
+            battery = d.batteryLevel,
+            thermal = d.thermalLevel.name,
+            connected = when (d.linkState) { LinkState.CONNECTED -> true; LinkState.DISCONNECTED -> false; else -> null },
+        )
+        for (c in watch.update(snap)) when {
+            c is DeviceChange.Raise && c.alert == DeviceAlert.DISCONNECTED -> {
+                // Seen on the emulator: after the link drops the old session still says STARTED but can
+                // no longer draw. End it ourselves; the STOPPED handler recreates it once the link is back.
+                linkDown = true
+                raise(DeviceAlert.DISCONNECTED)
+                session?.let { log("Link lost: ending the session to recreate it"); stopSession(it) }
             }
+            // The card stays until the new session has started (STARTED clears it).
+            c is DeviceChange.Clear && c.alert == DeviceAlert.DISCONNECTED -> { linkDown = false; log("Link back") }
+            c is DeviceChange.Raise -> raise(c.alert)
+            c is DeviceChange.Clear -> lower(c.alert)
+        }
+    }
+
+    // ---- device and error states ----
+
+    private fun publish() { _alert.value = DeviceStates.top(active) }
+
+    private fun raise(a: DeviceAlert) {
+        if (!active.add(a)) return
+        log("State: $a")
+        if (a == DeviceAlert.OFF || a == DeviceAlert.FOLDED) {
+            active.remove(DeviceAlert.TAKEN_OVER)
+            if (session == null && !linkDown) active.remove(DeviceAlert.DISCONNECTED) // the session ended because of this
+        }
+        publish()
+        scope.launch { applyGlasses(a) }
+    }
+
+    private fun lower(a: DeviceAlert) {
+        if (!active.remove(a)) return
+        log("State cleared: $a")
+        val wasSuppressing = DeviceStates.text(a).glasses.let { it == GlassesShow.BLANK || it == GlassesShow.NOTHING }
+        publish()
+        scope.launch {
+            if (notice == a) dismissNotice()
+            else if (wasSuppressing && !DeviceStates.suppressesDisplay(active)) restore()
+        }
+    }
+
+    private suspend fun applyGlasses(a: DeviceAlert) {
+        val t = DeviceStates.text(a, batteryLevel)
+        when (t.glasses) {
+            GlassesShow.BLANK -> { noticeJob?.cancel(); notice = null; clearDisplay() }
+            GlassesShow.NOTHING -> noticeJob?.cancel()
+            GlassesShow.CARD_DECIDE -> show(Cards.error(t.title, t.body, ::trigger, ::done))
+            GlassesShow.CARD_AUTO -> {
+                noticeJob?.cancel()
+                notice = a
+                show(Cards.notice(t.title, t.body) { scope.launch { if (navAllowed()) dismissNotice() } }, record = false)
+                noticeJob = scope.launch {
+                    delay(DeviceStates.AUTO_DISMISS_MS)
+                    scope.launch { dismissNotice() } // outside this job, which dismissNotice cancels
+                }
+            }
+        }
+    }
+
+    /** Ends the auto-dismissing card: back to what was on screen. */
+    private suspend fun dismissNotice() {
+        val a = notice ?: return
+        notice = null
+        noticeJob?.cancel()
+        lastNavAt = SystemClock.uptimeMillis() // the pinch that dismissed it must not also act
+        if (active.remove(a)) publish()
+        restore()
+    }
+
+    private suspend fun clearDisplay() {
+        val d = display ?: return
+        if (d.state.value != DisplayState.STARTED) return // the session already ended: nothing on screen
+        d.clearDisplay().onFailure { e, _ -> log("Clear failed: ${e.description}") }
+    }
+
+    /**
+     * Mock only, labelled "simulate" on the phone: the Mock Device Kit has no call for "another app took the
+     * glasses". This feeds the session state the SDK reports for it (PAUSED, then STARTED when it leaves)
+     * into the same handler the real state flow uses.
+     */
+    val takenOver: Boolean get() = DeviceAlert.TAKEN_OVER in active
+
+    fun simulateTakeOver(takeOver: Boolean) {
+        val s = session ?: run { log("Not connected"); return }
+        scope.launch {
+            // Stands in for the other app drawing over our card (the kit cannot run a second app).
+            if (takeOver) clearDisplay()
+            onSessionState(s, if (takeOver) DeviceSessionState.PAUSED else DeviceSessionState.STARTED)
         }
     }
 
     // ---- display helpers ----
 
-    private suspend fun show(content: ContentScope.() -> Unit) {
+    /** [record]: remember it for [restore] (everything but transient notices). */
+    private suspend fun show(content: ContentScope.() -> Unit, record: Boolean = true) {
+        if (record) {
+            lastContent = content
+            if (notice != null) {
+                active.remove(notice!!); notice = null; noticeJob?.cancel(); publish()
+            }
+        }
+        if (DeviceStates.suppressesDisplay(active)) return // taken off, folded, no link, not ours
         val d = display ?: return
         d.sendContent(content).onFailure { e, _ -> log("Display error: ${e.description}") }
     }
+
+    private suspend fun restore() = show(lastContent ?: Cards.idle(), record = false)
 
     suspend fun showIdle() = show(Cards.idle())
 
     // ---- the capture loop ----
 
-    /** Pinch, capture button, display "Again" and the phone button all land here. */
+    /** Pinch, capture button, display "Again"/"Try again" and the phone button all land here. */
     fun trigger() {
         if (session == null || display == null) { log("Not connected"); return }
+        if (DeviceStates.suppressesDisplay(active)) { log("Glasses not available: ${DeviceStates.top(active)}"); return }
         if (!busy.compareAndSet(false, true)) { log("Busy: ignoring trigger"); return }
         captureJob = scope.launch {
             try {
                 explainer = null
+                picker = null
+                lower(DeviceAlert.CAMERA_DENIED)
                 runCapture()
             } finally {
                 busy.set(false)
@@ -297,20 +534,26 @@ class GlassesController(
                 (if (det.lowConfidence) " lowConfidence" else "") +
                 (if (det.lenses.isNotEmpty() || det.steps.isNotEmpty()) " lenses=${det.lenses.size} steps=${det.steps.size}" else ""))
             present(det)
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            showError("Camera timed out", "The glasses did not deliver a photo")
         } catch (e: CancellationException) {
             withContext(NonCancellable) {
                 show(Cards.error("Cancelled", "Capture stopped", ::trigger, ::done))
             }
             throw e
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            showError("Camera timed out", "The glasses did not deliver a photo")
+        } catch (e: CameraDenied) {
+            log("Camera permission denied")
+            raise(DeviceAlert.CAMERA_DENIED)
         } catch (e: CaptureFailure) {
             log("Capture failed: ${e.message}")
             showError(e.title, e.detail)
         } catch (e: BridgeException) {
             log("Bridge failed: ${e.message}")
-            if (e.unauthorized) showError("Bridge token", e.userMessage)
-            else showError("Couldn't explain that", e.userMessage)
+            when {
+                e.offline -> showOfflinePicker()
+                e.unauthorized -> showError("Bridge token", Cards.t(Lang.TOKEN))
+                else -> showError("Couldn't explain that", e.userMessage)
+            }
         } catch (e: Exception) {
             log("Unexpected: $e")
             showError("Something went wrong", e.javaClass.simpleName)
@@ -320,18 +563,65 @@ class GlassesController(
     private suspend fun showError(title: String, detail: String) =
         show(Cards.error(title, detail, ::trigger, ::done))
 
-    private fun done() { scope.launch { explainer = null; showIdle() } }
+    private fun done() {
+        scope.launch {
+            explainer = null
+            picker = null
+            lower(DeviceAlert.CAMERA_DENIED)
+            showIdle()
+        }
+    }
+
+    // ---- offline picker ----
+
+    private suspend fun library(): Map<String, OfflineObject> {
+        library?.let { return it }
+        val lib = withContext(Dispatchers.IO) {
+            runCatching { OfflineCards.load(ctx.assets.open(OfflineCards.ASSET_NAME)) }
+                .onFailure { log("Saved cards unavailable: $it") }
+                .getOrDefault(emptyMap())
+        }
+        library = lib
+        return lib
+    }
+
+    /** Offline card: pick a saved library object with left/right, open with pinch. */
+    private suspend fun showOfflinePicker() {
+        val lib = library()
+        if (lib.isEmpty()) { showError("Offline", "Can't reach the bridge. Try again later."); return }
+        val p = OfflinePicker(lib.keys.toList(), pickerIndex.coerceIn(0, lib.size - 1))
+        picker = p
+        pickerIndex = p.index
+        explainer = null
+        current = null
+        val o = lib.getValue(p.current)
+        show(Cards.offlinePicker(
+            p, o.label, o.tagline,
+            onOpen = { scope.launch { pickerOpen() } },
+            onRetry = { if (navAllowed()) trigger() },
+        ))
+    }
+
+    private suspend fun pickerOpen() {
+        val p = picker ?: return
+        if (!navAllowed()) return
+        val o = library()[p.current] ?: return
+        picker = null
+        log("Offline: opening saved card ${o.id}")
+        present(OfflineConvert.toDetection(OfflineCards.toDetect(o)), saved = true)
+    }
 
     // ---- result and explainer ----
 
     /** Picks the result screen. An old bridge (no v1 fields) lands on exactly the cards it always did. */
-    private suspend fun present(det: Detection) {
+    private suspend fun present(det: Detection, saved: Boolean = false) {
         media.clear()
         current = det
+        currentSaved = saved
         explainer = null
         when (val v = DetectionParser.verdict(det)) {
             is Verdict.NotSure -> show(Cards.notSure(v.guess, ::trigger, ::done))
-            is Verdict.Unrecognised -> show(Cards.result("Not sure what this is", null, v.answer, ::trigger, ::done))
+            is Verdict.Unrecognised -> show(Cards.result(Cards.t(Lang.NOT_SURE), null, v.answer, ::trigger, ::done))
             is Verdict.Plain -> show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, ::done))
             is Verdict.Explainer -> showExplainer(ExplainerState(v.tracks))
         }
@@ -369,6 +659,7 @@ class GlassesController(
         still = still,
         onPrimary = { scope.launch { explainerPrimary() } },
         onSecondary = { scope.launch { explainerSecondary() } },
+        saved = currentSaved,
     )
 
     /** True once per pinch: a pinch may arrive both as a Select event and as a click on the focused button. */
@@ -379,11 +670,16 @@ class GlassesController(
         return true
     }
 
-    private fun onSelect() {
+    /** Pinch (`InputEvent.Select`). Public so the phone's mock buttons can drive it too. */
+    fun onSelect() {
         scope.launch {
-            if (explainer != null) explainerPrimary()
-            // Twin of an explainer button click that just closed the explainer: ignore it.
-            else if (SystemClock.uptimeMillis() - lastNavAt >= NAV_DEBOUNCE_MS) trigger()
+            when {
+                notice != null -> if (navAllowed()) dismissNotice()
+                picker != null -> pickerOpen()
+                explainer != null -> explainerPrimary()
+                // Twin of a button click that just closed a card: ignore it.
+                SystemClock.uptimeMillis() - lastNavAt >= NAV_DEBOUNCE_MS -> trigger()
+            }
         }
     }
 
@@ -405,9 +701,23 @@ class GlassesController(
         if (s.isOverview) trigger() else showIdle()
     }
 
-    /** D-pad: left/right changes lens (starts at its step 1), down/up steps forward/back. */
-    private fun onNav(dir: NavDirection) {
+    /**
+     * D-pad (`InputEvent.Nav`). Explainer: left/right changes lens (starts at its step 1), down/up steps
+     * forward/back. Offline picker: left/right changes the object. Public for the phone's D-pad buttons.
+     */
+    fun onNav(dir: NavDirection) {
         scope.launch {
+            if (notice != null) return@launch
+            picker?.let { p ->
+                val n = when (dir) {
+                    NavDirection.LEFT -> p.move(-1)
+                    NavDirection.RIGHT -> p.move(+1)
+                    else -> return@launch
+                }
+                pickerIndex = n.index
+                showOfflinePicker()
+                return@launch
+            }
             val s = explainer ?: return@launch
             val n = when (dir) {
                 NavDirection.LEFT -> s.switchLens(-1)
@@ -419,12 +729,26 @@ class GlassesController(
         }
     }
 
-    /** Back: one step back, then the overview, then idle. Outside the explainer Back does nothing (as before). */
-    private fun onBack() {
+    /**
+     * Back (`InputEvent.Back`): one step back, then the overview, then idle (a saved card goes back to the
+     * offline picker). Any other card is dismissed to idle (DESIGN.md: dismiss with Back). Public for the phone.
+     */
+    fun onBack() {
         scope.launch {
-            val s = explainer ?: return@launch
+            if (notice != null) { dismissNotice(); return@launch }
+            if (picker != null) { picker = null; showIdle(); return@launch }
+            val s = explainer
+            if (s == null) {
+                if (busy.get()) return@launch // "Looking..." leaves by itself
+                if (lastContent != null) { current = null; lower(DeviceAlert.CAMERA_DENIED); showIdle() }
+                return@launch
+            }
             val b = s.back()
-            if (b != null) showExplainer(b) else { explainer = null; showIdle() }
+            when {
+                b != null -> showExplainer(b)
+                currentSaved -> { explainer = null; current = null; showOfflinePicker() }
+                else -> { explainer = null; showIdle() }
+            }
         }
     }
 
@@ -448,7 +772,7 @@ class GlassesController(
         if (status !is PermissionStatus.Granted) {
             status = requestCameraPermission().getOrNull()
         }
-        if (status !is PermissionStatus.Granted) throw CaptureFailure("Camera denied", "Allow camera access in Meta AI")
+        if (status !is PermissionStatus.Granted) throw CameraDenied()
 
         val camera = sess.addCamera(StreamConfiguration(videoQuality = VideoQuality.MEDIUM, frameRate = 15))
             .fold(onSuccess = { it }, onFailure = { e, _ -> throw CaptureFailure("Camera unavailable", e.description) })
@@ -513,6 +837,8 @@ class GlassesController(
         /** Share of the photo's width and height that counts as "what the wearer is looking at". */
         const val AIM_FRACTION = 0.5f
         private const val NAV_DEBOUNCE_MS = 350L
+        private const val RECONNECT_TRIES = 20
+        private const val RECONNECT_EVERY_MS = 3_000L
         /** Fixture order for [useFixture]: `assets/fixture/detect_<name>.json`. */
         private val FIXTURES = listOf("ball", "guitar", "lowconf")
     }

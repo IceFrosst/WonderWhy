@@ -14,6 +14,11 @@ class BridgeException(
     cause: Throwable? = null,
     /** True when the bridge answered 401: the token is wrong or missing. */
     val unauthorized: Boolean = false,
+    /**
+     * True when the bridge could not be reached at all (no connection, or a proxy's 502-504 with no
+     * bridge body). Not set for 401, bridge errors with a body, or a bridge that is reachable but slow.
+     */
+    val offline: Boolean = false,
 ) : Exception(userMessage, cause)
 
 class BridgeClient(var baseUrl: String, var token: String = "") {
@@ -60,6 +65,12 @@ class BridgeClient(var baseUrl: String, var token: String = "") {
             c.readTimeout = 28000 // API providers answer in a few seconds; the dev-only pi provider needs up to 25 s
             c.setRequestProperty("Content-Type", "application/json")
             BridgeAuth.headers(token).forEach { (k, v) -> c.setRequestProperty(k, v) }
+            // Connect on its own so "cannot reach" (offline card) is told apart from "reached but slow".
+            try {
+                c.connect()
+            } catch (e: java.io.IOException) {
+                throw BridgeException("Can't reach the bridge", e, offline = true)
+            }
             c.outputStream.use { it.write(body.toByteArray()) }
             val code = c.responseCode
             val text = (if (code in 200..299) c.inputStream else c.errorStream)
@@ -71,6 +82,7 @@ class BridgeClient(var baseUrl: String, var token: String = "") {
                     BridgeAuth.ErrorKind.TOKEN -> BridgeException(BridgeAuth.TOKEN_ERROR, unauthorized = true)
                     BridgeAuth.ErrorKind.TIMEOUT -> BridgeException("Detection timed out")
                     BridgeAuth.ErrorKind.BRIDGE -> BridgeException("Bridge error (${kind.ifEmpty { "HTTP $code" }})")
+                    BridgeAuth.ErrorKind.UNREACHABLE -> BridgeException("Can't reach the bridge (HTTP $code)", offline = true)
                 }
             }
             DetectionParser.parse(text) // v1 fields optional; see Detection.kt

@@ -34,7 +34,7 @@ class SceneMedia(
             scope.async {
                 val bmp = try {
                     withContext(Dispatchers.IO) {
-                        load(path)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+                        load(path)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.let { band(it) }
                     }
                 } catch (e: CancellationException) {
                     throw e // cleared: leave the new cache alone
@@ -53,11 +53,39 @@ class SceneMedia(
         paths.forEach { p -> if (p !in cache && p !in failed) scope.launch { runCatching { get(p) } } }
     }
 
+    /**
+     * Puts a (usually square) still in the middle of a wide black band. The display scales an image to the
+     * card's width, so a square still would push the title off the 600x600 screen. Black is see-through.
+     */
+    private fun band(src: Bitmap): Bitmap {
+        val (w, h) = StillBand.size(src.width, src.height)
+        if (w == src.width && h == src.height) return src
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(out).apply {
+            drawColor(android.graphics.Color.BLACK)
+            drawBitmap(src, ((w - src.width) / 2).toFloat(), ((h - src.height) / 2).toFloat(), null)
+        }
+        return out
+    }
+
     /** Drop everything (new detection, disconnect). */
     fun clear() {
         inflight.values.forEach { it.cancel() }
         inflight.clear()
         cache.clear()
         failed.clear()
+    }
+}
+
+/** Geometry of the band a still is shown in. Pure, for JVM tests. */
+object StillBand {
+    /** Width / height of the band (about 552x184 on the 600x600 card). */
+    const val ASPECT = 3.0
+
+    /** Band size for a [w]x[h] still: same height, wide enough for [ASPECT]; a wider still is kept as is. */
+    fun size(w: Int, h: Int): Pair<Int, Int> {
+        if (w <= 0 || h <= 0) return w to h
+        val bw = Math.ceil(h * ASPECT).toInt()
+        return if (w >= bw) w to h else bw to h
     }
 }

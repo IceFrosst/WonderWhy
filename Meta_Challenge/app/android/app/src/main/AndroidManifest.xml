@@ -13,7 +13,7 @@
         android:allowBackup="false"
         android:label="Physics Lens"
         android:usesCleartextTraffic="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@android:style/Theme.Material.NoActionBar">
 
         <meta-data
             android:name="com.meta.wearable.mwdat.APPLICATION_ID"

@@ -3,11 +3,15 @@ package com.junction2026.lens
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputType
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -26,6 +30,7 @@ import com.meta.wearable.dat.core.types.DatResult
 import com.meta.wearable.dat.core.types.Permission
 import com.meta.wearable.dat.core.types.PermissionError
 import com.meta.wearable.dat.core.types.PermissionStatus
+import com.meta.wearable.dat.inputs.types.NavDirection
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -33,6 +38,7 @@ import java.util.ArrayDeque
 import java.util.Date
 import java.util.Locale
 
+/** Phone screen. Colours, sizes and card anatomy follow shared/DESIGN.md ("Phone page and Android"). */
 class MainActivity : ComponentActivity() {
     private lateinit var bridge: BridgeClient
     private lateinit var controller: GlassesController
@@ -41,17 +47,31 @@ class MainActivity : ComponentActivity() {
     private lateinit var urlField: EditText
     private lateinit var tokenField: EditText
     private lateinit var mockSwitch: Switch
+    private lateinit var fixtureSwitch: Switch
     private lateinit var previewBox: FrameLayout
     private lateinit var photoView: android.widget.ImageView
     private lateinit var photoLabel: TextView
-    private lateinit var mockRow: LinearLayout
+    private lateinit var mockSection: LinearLayout
+    private lateinit var stateCard: LinearLayout
+    private lateinit var stateTitle: TextView
+    private lateinit var stateBody: TextView
+    private lateinit var stateAction: Button
     private lateinit var regView: TextView
     private lateinit var sessionView: TextView
     private lateinit var displayView: TextView
     private lateinit var batteryView: TextView
-    private lateinit var donView: TextView
+    private lateinit var deviceView: TextView
     private lateinit var logView: TextView
     private lateinit var logScroll: ScrollView
+
+    // Mock toggles, relabelled after each tap so the button says what it will do next.
+    private lateinit var donBtn: Button
+    private lateinit var foldBtn: Button
+    private lateinit var batteryBtn: Button
+    private lateinit var heatBtn: Button
+    private lateinit var powerBtn: Button
+    private lateinit var cameraBtn: Button
+    private lateinit var takeOverBtn: Button
 
     private val logLines = ArrayDeque<String>()
     private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.US)
@@ -80,12 +100,13 @@ class MainActivity : ComponentActivity() {
                     // Draw the aim box on the thumbnail only; the photo that was sent has no box.
                     val f = GlassesController.AIM_FRACTION
                     val paint = android.graphics.Paint().apply {
-                        style = android.graphics.Paint.Style.STROKE; strokeWidth = bmp.width / 90f; color = 0xFF00E5FF.toInt()
+                        style = android.graphics.Paint.Style.STROKE; strokeWidth = bmp.width / 90f; color = ACCENT
                     }
                     android.graphics.Canvas(bmp).drawRect(
                         bmp.width * (1 - f) / 2, bmp.height * (1 - f) / 2, bmp.width * (1 + f) / 2, bmp.height * (1 + f) / 2, paint)
                     photoView.setImageBitmap(bmp)
-                    photoLabel.text = "Last photo sent (${jpeg.size / 1024} KB, not saved). Blue box = what you are aiming at"
+                    photoView.visibility = View.VISIBLE
+                    photoLabel.text = "Last photo sent (${jpeg.size / 1024} KB, not saved). Box: what you aim at"
                 }
             },
             requestCameraPermission = {
@@ -99,6 +120,7 @@ class MainActivity : ComponentActivity() {
                 Wearables.openDATGlassesAppUpdate(this)
             },
         )
+        controller.useFixture = Prefs.fixture(this)
         buildUi()
         observe()
         requestRuntimePermissions()
@@ -127,93 +149,224 @@ class MainActivity : ComponentActivity() {
         if (want.isNotEmpty()) runtimePerms.launch(want.toTypedArray())
     }
 
+    // ---- building blocks (DESIGN.md: 8 px grid, 48 px touch targets, radius 12) ----
+
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    private fun button(label: String, onClick: () -> Unit) = Button(this).apply {
+    private fun rounded(fill: Int, stroke: Int? = null) = GradientDrawable().apply {
+        cornerRadius = dp(12).toFloat()
+        setColor(fill)
+        if (stroke != null) setStroke(dp(1), stroke)
+    }
+
+    private fun button(label: String, primary: Boolean = false, onClick: () -> Unit) = Button(this).apply {
         text = label
         isAllCaps = false
+        textSize = 14f
+        minHeight = dp(48)
+        minimumHeight = dp(48)
+        stateListAnimator = null
+        setPadding(dp(8), 0, dp(8), 0)
+        setTextColor(if (primary) GROUND else TEXT)
+        if (primary) setTypeface(typeface, Typeface.BOLD)
+        background = if (primary) rounded(ACCENT) else rounded(CARD, BORDER)
         setOnClickListener { onClick() }
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+            setMargins(dp(4), dp(4), dp(4), dp(4))
+        }
     }
 
     private fun row(vararg v: View) = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
+        isBaselineAligned = false // buttons with 1 and 2 lines stay level
         v.forEach { addView(it) }
     }
 
-    private fun status(): TextView = TextView(this).apply { textSize = 14f }
+    private fun label(text: String, size: Float = 14f, color: Int = MUTED, bold: Boolean = false) = TextView(this).apply {
+        this.text = text
+        textSize = size
+        setTextColor(color)
+        setLineSpacing(0f, 1.3f)
+        if (bold) setTypeface(typeface, Typeface.BOLD)
+    }
+
+    private fun section(title: String) = label(title, 14f, MUTED, bold = true).apply { setPadding(dp(4), dp(16), 0, dp(4)) }
+
+    private fun field(value: String, hintText: String, password: Boolean) = EditText(this).apply {
+        setText(value)
+        hint = hintText
+        textSize = 16f
+        setTextColor(TEXT)
+        setHintTextColor(MUTED)
+        backgroundTintList = ColorStateList.valueOf(BORDER)
+        setSingleLine() // before inputType: it resets the transformation and would show the token in clear
+        inputType = if (password) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        if (password) transformationMethod = android.text.method.PasswordTransformationMethod.getInstance()
+        typeface = Typeface.DEFAULT // password fields default to monospace
+    }
+
+    private fun switch(text: String, on: Boolean, onChange: (Boolean) -> Unit) = Switch(this).apply {
+        this.text = text
+        textSize = 16f
+        setTextColor(TEXT)
+        isChecked = on
+        minHeight = dp(48)
+        thumbTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(ACCENT, MUTED))
+        trackTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(0x664DF0FF, BORDER))
+        setOnCheckedChangeListener { _, v -> onChange(v) }
+    }
 
     private fun buildUi() {
+        window.decorView.setBackgroundColor(GROUND)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(24), dp(16), dp(16))
+            setPadding(dp(16), dp(8), dp(16), dp(16))
         }
-        root.addView(TextView(this).apply { text = "Physics Lens"; textSize = 22f; setTypeface(typeface, Typeface.BOLD) })
+        root.addView(label("Physics Lens", 20f, TEXT, bold = true).apply { setPadding(dp(4), 0, 0, dp(4)) })
 
-        urlField = EditText(this).apply {
-            setText(Prefs.bridge(context))
-            hint = "Bridge URL"
-            inputType = InputType.TYPE_TEXT_VARIATION_URI
-            setSingleLine()
-        }
-        root.addView(urlField)
-
-        tokenField = EditText(this).apply {
-            setText(Prefs.bridgeToken(context))
-            hint = "Bridge token (blank = none)"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            setSingleLine()
-        }
-        root.addView(tokenField)
-
-        mockSwitch = Switch(this).apply {
-            text = "Mock glasses (no hardware)"
-            isChecked = Prefs.mock(context)
-            setOnCheckedChangeListener { _, on ->
-                Prefs.setMock(context, on)
-                updateMockVisibility()
-                if (on) requestRuntimePermissions()
-                if (!on && !LensApp.wearablesReady) log("Restart the app to use real glasses")
-            }
+        mockSwitch = switch("Mock glasses (no hardware)", Prefs.mock(this)) { on ->
+            Prefs.setMock(this, on)
+            updateMockVisibility()
+            if (on) requestRuntimePermissions()
+            if (!on && !LensApp.wearablesReady) log("Restart the app to use real glasses")
         }
         root.addView(mockSwitch)
+        fixtureSwitch = switch("Demo data (no bridge)", Prefs.fixture(this)) { on ->
+            Prefs.setFixture(this, on)
+            controller.useFixture = on
+            log(if (on) "Demo data: ball, guitar, not sure (no camera, no bridge)" else "Demo data off: camera + bridge")
+        }
+        root.addView(fixtureSwitch)
 
         root.addView(row(
             button("Connect") { connect() },
-            button("Explain what I see") { controller.trigger() },
+            button("Explain what I see", primary = true) { controller.trigger() }.apply {
+                (layoutParams as LinearLayout.LayoutParams).weight = 1.6f
+            },
             button("Disconnect") { disconnect() },
         ))
 
-        mockRow = row(
-            button("Pinch") { rig.pinch() },
-            button("Take off / put on") { rig.toggleDon() },
-            button("Battery low") { rig.batteryLow() },
-        )
-        root.addView(mockRow)
+        // The phone's state card (DESIGN.md states table, phone column). Hidden when all is well.
+        stateTitle = label("", 20f, HOT, bold = true)
+        stateBody = label("", 16f, TEXT)
+        stateAction = button("", primary = true) { onStateAction() }.apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(8)
+            }
+            setPadding(dp(24), 0, dp(24), 0)
+        }
+        stateCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(16), dp(16), dp(16))
+            background = rounded(CARD, BORDER)
+            addView(stateTitle); addView(stateBody); addView(stateAction)
+            visibility = View.GONE
+        }
+        root.addView(stateCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(8)
+        })
 
-        regView = status(); sessionView = status(); displayView = status(); batteryView = status(); donView = status()
-        listOf(regView, sessionView, displayView, batteryView, donView).forEach { root.addView(it) }
+        // Mock rig: the glasses display preview plus the inputs and device states the kit can drive.
+        mockSection = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val side = minOf(resources.displayMetrics.widthPixels - dp(32), dp(320))
+        previewBox = FrameLayout(this).apply { setBackgroundColor(0xFF000000.toInt()) }
+        mockSection.addView(previewBox, LinearLayout.LayoutParams(side, side).apply {
+            topMargin = dp(8); gravity = Gravity.CENTER_HORIZONTAL
+        })
+        mockSection.addView(section("Glasses input (mock)"))
+        mockSection.addView(row(
+            button("Pinch", primary = false) { rig.pinch() },
+            button("Back") { controller.onBack() },
+        ))
+        mockSection.addView(row(
+            button("Left") { controller.onNav(NavDirection.LEFT) },
+            button("Up") { controller.onNav(NavDirection.UP) },
+            button("Down") { controller.onNav(NavDirection.DOWN) },
+            button("Right") { controller.onNav(NavDirection.RIGHT) },
+        ))
+        mockSection.addView(section("Device states (mock)"))
+        donBtn = button("Take off") { rig.toggleDon(); relabel() }
+        foldBtn = button("Fold") { rig.toggleFold(); relabel() }
+        batteryBtn = button("Battery low") { rig.toggleBattery(); relabel() }
+        heatBtn = button("Overheat") { rig.toggleHeat(); relabel() }
+        powerBtn = button("Bluetooth drop") { rig.togglePower(); relabel() }
+        cameraBtn = button("Deny camera") { rig.toggleCameraPermission(); relabel() }
+        takeOverBtn = button("Simulate: other app takes over") {
+            controller.simulateTakeOver(!controller.takenOver)
+        }
+        mockSection.addView(row(donBtn, foldBtn, batteryBtn))
+        mockSection.addView(row(heatBtn, powerBtn, cameraBtn))
+        mockSection.addView(row(takeOverBtn))
+        root.addView(mockSection)
 
-        previewBox = FrameLayout(this)
-        root.addView(previewBox, LinearLayout.LayoutParams(dp(300), dp(300)).apply { topMargin = dp(8) })
+        // Set once, so below the controls used during a demo.
+        root.addView(section("Bridge"))
+        urlField = field(Prefs.bridge(this), "Bridge URL", password = false)
+        root.addView(urlField)
+        tokenField = field(Prefs.bridgeToken(this), "Bridge token (blank = none)", password = true)
+        root.addView(tokenField)
 
-        photoLabel = TextView(this).apply { text = "Last photo sent: none yet"; textSize = 12f }
+        root.addView(section("Status"))
+        regView = label(""); sessionView = label(""); displayView = label(""); batteryView = label(""); deviceView = label("")
+        listOf(regView, sessionView, displayView, batteryView, deviceView).forEach { root.addView(it) }
+
+        photoLabel = label("Last photo sent: none yet", 14f).apply { setPadding(0, dp(8), 0, 0) }
         root.addView(photoLabel)
-        photoView = android.widget.ImageView(this).apply { adjustViewBounds = true; setBackgroundColor(0xFFDDDDDD.toInt()) }
+        photoView = android.widget.ImageView(this).apply { adjustViewBounds = true; visibility = View.GONE }
         root.addView(photoView, LinearLayout.LayoutParams(dp(135), dp(240)).apply { topMargin = dp(4) })
 
-        logView = TextView(this).apply { typeface = Typeface.MONOSPACE; textSize = 11f }
-        logScroll = ScrollView(this).apply { addView(logView) }
+        logView = TextView(this).apply { typeface = Typeface.MONOSPACE; textSize = 11f; setTextColor(MUTED) }
+        logScroll = ScrollView(this).apply { addView(logView); background = rounded(CARD, BORDER); setPadding(dp(8), dp(8), dp(8), dp(8)) }
         root.addView(logScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)).apply { topMargin = dp(8) })
 
-        setContentView(ScrollView(this).apply { addView(root) })
+        val scroller = ScrollView(this).apply { addView(root); setBackgroundColor(GROUND) }
+        // Android 15 draws edge to edge: keep the content out from under the status and navigation bars.
+        scroller.setOnApplyWindowInsetsListener { v, insets ->
+            val bars = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        setContentView(scroller)
         updateMockVisibility()
+        relabel()
+    }
+
+    private fun relabel() {
+        donBtn.text = if (rig.donned) "Take off" else "Put on"
+        foldBtn.text = if (rig.folded) "Unfold" else "Fold"
+        batteryBtn.text = if (rig.batteryLow) "Battery full" else "Battery low"
+        heatBtn.text = if (rig.hot) "Cool down" else "Overheat"
+        powerBtn.text = if (rig.poweredOff) "Bluetooth back" else "Bluetooth drop"
+        cameraBtn.text = if (rig.cameraDenied) "Allow camera" else "Deny camera"
+        takeOverBtn.text = if (controller.takenOver) "Simulate: other app leaves" else "Simulate: other app takes over"
     }
 
     private fun updateMockVisibility() {
-        val on = mockSwitch.isChecked
-        mockRow.visibility = if (on) View.VISIBLE else View.GONE
-        previewBox.visibility = if (on) View.VISIBLE else View.GONE
+        mockSection.visibility = if (mockSwitch.isChecked) View.VISIBLE else View.GONE
+    }
+
+    private fun showState(a: DeviceAlert?) {
+        if (a == null) { stateCard.visibility = View.GONE; return }
+        val t = DeviceStates.text(a, controller.batteryLevel)
+        stateTitle.text = t.title
+        stateBody.text = t.body
+        stateAction.tag = t.action
+        stateAction.visibility = if (t.action == null) View.GONE else View.VISIBLE
+        stateAction.text = when (t.action) {
+            PhoneAction.CONNECT -> "Connect"
+            PhoneAction.TRY_AGAIN -> Cards.t(Lang.TRY_AGAIN)
+            null -> ""
+        }
+        stateCard.visibility = View.VISIBLE
+    }
+
+    private fun onStateAction() {
+        when (stateAction.tag as? PhoneAction) {
+            PhoneAction.CONNECT -> connect()
+            PhoneAction.TRY_AGAIN -> controller.trigger()
+            null -> Unit
+        }
     }
 
     private fun observe() {
@@ -223,7 +376,8 @@ class MainActivity : ComponentActivity() {
                 launch { controller.sessionStatus.collect { sessionView.text = "Session: $it" } }
                 launch { controller.displayStatus.collect { displayView.text = "Display: $it" } }
                 launch { controller.battery.collect { batteryView.text = "Battery: $it" } }
-                launch { controller.don.collect { donView.text = "Worn: $it" } }
+                launch { controller.device.collect { deviceView.text = it } }
+                launch { controller.alert.collect { showState(it); relabel() } }
             }
         }
     }
@@ -242,6 +396,7 @@ class MainActivity : ComponentActivity() {
                 if (err != null) { log(err); return@launch }
                 if (previewBox.childCount == 0) rig.previewView()?.let { previewBox.addView(it) }
                 LensApp.wearablesReady = true
+                relabel()
             }
             controller.connect(this@MainActivity, mock)
         }
@@ -253,14 +408,27 @@ class MainActivity : ComponentActivity() {
             previewBox.removeAllViews()
             rig.stop()
         }
+        relabel()
     }
 
     private fun log(msg: String) {
+        android.util.Log.i("PhysicsLens", msg)
         runOnUiThread {
             logLines.addLast("${timeFmt.format(Date())} $msg")
             while (logLines.size > 40) logLines.removeFirst()
             logView.text = logLines.joinToString("\n")
             logScroll.post { logScroll.fullScroll(View.FOCUS_DOWN) }
         }
+    }
+
+    private companion object {
+        // DESIGN.md "Phone page and Android".
+        const val GROUND = 0xFF0B0D10.toInt()
+        const val CARD = 0xFF14181D.toInt()
+        const val BORDER = 0xFF2A3038.toInt()
+        const val TEXT = 0xFFEEF1F5.toInt()
+        const val MUTED = 0xFF9AA3AD.toInt()
+        const val ACCENT = 0xFF4DF0FF.toInt()
+        const val HOT = 0xFFFF8A4D.toInt()
     }
 }
