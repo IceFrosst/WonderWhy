@@ -22,10 +22,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/lensAssets"))
     kotlin {
         compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
     }
 }
+
+// Bundle the shared library JSON for offline cards; no duplicate copy lives in git.
+val copyLensAssets by tasks.registering(Copy::class) {
+    from(rootProject.layout.projectDirectory.file("../shared/objects.json"))
+    into(layout.buildDirectory.dir("generated/lensAssets"))
+}
+tasks.named("preBuild") { dependsOn(copyLensAssets) }
 
 dependencies {
     val mwdat = "1.0.1"
@@ -38,4 +46,5 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
