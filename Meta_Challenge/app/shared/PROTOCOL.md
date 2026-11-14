@@ -151,5 +151,19 @@ The library has 6 objects. For anything else the bridge can ask the model for a 
 | `nav` | New action `demo` starts the hands-free demo |
 | `state` | May carry `demo: true` while the hands-free demo is active |
 
+### Translated text inside the drawings (`specText`), and small `/ask` rules (14 Nov, 06:30 UTC)
+| What | Rule |
+|---|---|
+| Why | With `lang=fi` the captions were Finnish but labels drawn inside the scenes (flow nodes, number rows, curve axes) stayed English |
+| `shared/i18n/<lang>.json` | A chapter may carry `spec`: the translated strings of that lens's drawing data, in the same structure as the English `spec` but holding only text (arrays keep the same length and order), and `knobs`: one translated label or `null` per step. An object may carry `tagline` and `short` |
+| `show.lenses[]` when `lang` is not `en` | Adds `specText` (that translated `spec` text) and `knobLabels` when the translation file has them. The English `spec` itself is still never sent |
+| Glasses Web App | Merges `specText` over a copy of the library chapter's `spec` before building the scene, and uses `knobLabels` in the hint. Missing pieces stay English |
+| `/objects?lang=` | Merges `tagline`, `short`, and each chapter's translated `spec` text and knob labels into the library it returns |
+| Stills | `manifest.json` lenses may carry `langs: { "fi": { "stills": [...], "clean": [...] } }` with files under `<kind>/<lang>/`. Absent when not exported |
+| `/ask` with no match | When neither the model nor word matching finds a step, the `show` has no `lensHint`, `answer` is the object's one-line `summary`, and `noMatch: true` |
+| `/ask` errors | Every 4xx and 5xx body carries `error`, a plain `message`, and `reqId` |
+| `/ask` answer length | A model's answer is one sentence of at most 14 words. A word-match answer is the matched step's caption |
+| `lenses[].lead` | Omitted when the lens has none (never an empty string) |
+
 ## Latency log
 The bridge appends every completed request as one JSON line to `bridge/latency.jsonl` (git-ignored) and serves a summary at `GET /latency` (count, p50, p90 per stage).

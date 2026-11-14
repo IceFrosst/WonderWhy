@@ -16,7 +16,7 @@
           "title": "Standing waves",
           "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
-            "Pressing a fret shortens the string. Half the length gives double the frequency: f = v / 2L.",
+            "Pressing a fret shortens the string. Half the length gives double the frequency, so the note is one octave higher.",
             "A string also vibrates in whole-number patterns: harmonics n = 1, 2, 3 at f, 2f, 3f.",
             "Wave speed depends on tension T and mass per length: f = (1/2L) sqrt(T/mu). Tighter = higher."
           ],
@@ -378,7 +378,7 @@
           "captions": [
             "Gravity pulls the ball down all the time, so its path curves into a parabola.",
             "Without air, sideways speed never changes. Only the up-and-down speed does, because gravity acts down.",
-            "Air drag slows the ball, so the best angle drops below 45 degrees. Grey = no air."
+            "Air drag slows the ball, so the best angle drops below 45 degrees. The faint path shows the same throw without air."
           ],
           "knobs": [
             {
@@ -402,7 +402,7 @@
           "lead": "Each bounce keeps only part of the energy.",
           "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
-            "Each bounce is lower because the ball keeps only part of its energy: the height ratio is e squared.",
+            "Each bounce is lower than the last, because the ball keeps only part of its energy every time it hits the floor.",
             "Falling turns height energy into movement; the squash stores it like a spring; some is lost as heat and sound every bounce.",
             "Bounciness depends on the material: a super ball springs back almost fully, clay absorbs the energy as heat and barely bounces."
           ],
@@ -721,8 +721,8 @@
           "lead": "A 10 m/s throw at 45 degrees lands about 10 metres away.",
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
-            "Range is speed squared divided by g at 45 degrees: 100 divided by 9.81 is about 10 metres. Air is ignored.",
-            "The ball stays up for 1.4 seconds and peaks at 2.5 metres. Ten metres per second is 36 km/h.",
+            "Thrown at 10 metres per second and 45 degrees, a ball lands about 10 metres away, if air is ignored.",
+            "It stays up for 1.4 seconds and peaks at 2.5 metres. Range is speed squared divided by g: 100 over 9.81.",
             "The Moon pulls six times more weakly, so the same throw flies six times as far: about 62 metres."
           ],
           "knobs": [
@@ -793,8 +793,8 @@
           "title": "Gear ratio",
           "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
-            "The chain links two gears. Gear ratio = front teeth / rear teeth.",
-            "Each pedal turn pulls the chain by the front teeth count, so the wheel turns by the ratio.",
+            "The chain links a big front gear to a small rear gear, so one pedal turn spins the wheel more than once.",
+            "Gear ratio is front teeth divided by rear teeth. Each pedal turn pulls that many teeth of chain past the rear gear.",
             "Energy is conserved: a higher ratio gives more speed per pedal turn but less push at the wheel."
           ],
           "knobs": [
@@ -1168,7 +1168,7 @@
           "lead": "One pedal turn in a high gear carries you over 6 metres.",
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
-            "48 teeth divided by 16 is a ratio of 3. The wheel turns three times per pedal turn: 3 times 2.1 metres.",
+            "The front gear has three times the teeth of the rear, so the wheel turns three times per pedal turn: 6.3 metres.",
             "At 80 pedal turns a minute that is 30 km/h. The price: the tyre pushes with only 17 percent of your pedal force.",
             "A low gear swaps it round. Three times the push for climbing, but only 2.1 metres per turn."
           ],
@@ -1647,8 +1647,8 @@
           "title": "Swing time",
           "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
-            "For small swings, one swing takes T = 2 pi sqrt(L/g). A longer string swings more slowly.",
-            "The angle follows a smooth sine wave. Four times the length gives double the period.",
+            "For small swings, the time of one swing depends only on the length. A longer string swings more slowly.",
+            "The angle follows a smooth sine wave with T = 2 pi sqrt(L/g). Four times the length gives double the period.",
             "Mass cancels out: two bobs of different mass on equal strings swing together."
           ],
           "knobs": [
@@ -1984,8 +1984,8 @@
           "lead": "Keys on a 25 cm lanyard swing back and forth every second.",
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
-            "Swing time is 2 pi times the square root of length over g. For 25 centimetres that is one second.",
-            "Four times the length doubles the time: two seconds for one metre. The weight of the keys changes nothing.",
+            "Keys on a 25 centimetre lanyard swing there and back in about one second.",
+            "Swing time is 2 pi times the square root of length over g. Four times the length doubles it. Weight changes nothing.",
             "Weaker gravity pulls back more gently. On the Moon the same lanyard needs two and a half seconds."
           ],
           "knobs": [
