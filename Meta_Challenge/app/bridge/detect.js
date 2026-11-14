@@ -30,7 +30,7 @@ export function buildPrompt(objects, question, hasFocus = false, lang = 'en') {
   const list = objects.map((o) => `- ${o.id}: ${o.detect_hint}`).join('\n');
   const q = question
     ? `The wearer asked: "${question}". Put a reply in "answer": at most 2 short sentences, high-school level.`
-    : `If objectId is "unknown", "answer" is a 2-sentence plain explanation of the object in the photo and the physics in it. Otherwise "answer" may be an empty string.`;
+    : `If objectId is "unknown", "answer" names the object and the physics in it in at most 2 short sentences, 25 words in all, with no description of the surroundings. Otherwise "answer" may be an empty string.`;
   const aim = hasFocus
     ? `You get two images from smart glasses. Image 1 is the full view. Image 2 is a zoom on the middle of image 1: that is where the wearer is looking.
 Classify the main object in image 2. Use image 1 only to understand what that object is. Ignore objects that are only in image 1, even if they are bigger or in the list.`
