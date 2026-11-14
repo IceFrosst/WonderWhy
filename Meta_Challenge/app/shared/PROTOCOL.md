@@ -12,11 +12,13 @@ Later the real Android toolkit app replaces the phone stand-in and calls the sam
 
 ## Phone → bridge: `POST /detect` (JSON)
 ```json
-{ "reqId": "uuid", "imageBase64": "<jpeg, no data: prefix> | null", "question": "optional text",
+{ "reqId": "uuid", "imageBase64": "<jpeg, no data: prefix> | null", "question": "optional text", "focusBase64": "<jpeg> | omitted",
   "forceObjectId": "optional id from objects.json (skips the model)", "t_capture": 1731500000000,
   "preUploadMs": 820 }
 ```
 Response: the same `show` message the glasses get (below), plus `timings`.
+
+**Aim (optional `focusBase64`):** a JPEG of the centre of the photo (the Android app sends the middle 50% of each side). When present, the model gets both images and classifies what is in the centre crop, using the full photo only for context. Tested 14 Nov: with a small kettle in the centre and a big guitar at the edge, one image gives "guitar" 3 of 3 times and two images give "kettle" 3 of 3. A prompt telling the model to prefer the centre is not enough by itself. Senders that omit the field behave as before.
 
 `t_*` are `Date.now()` ms epoch from the sender's clock. Clocks on the phone, server and glasses differ, so **latency is never computed across clocks**: the phone sends `preUploadMs` (capture → request sent, on its own clock, e.g. the glasses → phone Bluetooth photo transfer), and the server times `detectMs` and detected → `rendered` ack arrival on its own clock.
 

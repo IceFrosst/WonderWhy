@@ -74,8 +74,17 @@ class MainActivity : ComponentActivity() {
             log = ::log,
             onPhoto = { jpeg ->
                 runOnUiThread {
-                    photoView.setImageBitmap(android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size))
-                    photoLabel.text = "Last photo sent (${jpeg.size / 1024} KB, not saved)"
+                    val bmp = android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
+                        .copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+                    // Draw the aim box on the thumbnail only; the photo that was sent has no box.
+                    val f = GlassesController.AIM_FRACTION
+                    val paint = android.graphics.Paint().apply {
+                        style = android.graphics.Paint.Style.STROKE; strokeWidth = bmp.width / 90f; color = 0xFF00E5FF.toInt()
+                    }
+                    android.graphics.Canvas(bmp).drawRect(
+                        bmp.width * (1 - f) / 2, bmp.height * (1 - f) / 2, bmp.width * (1 + f) / 2, bmp.height * (1 + f) / 2, paint)
+                    photoView.setImageBitmap(bmp)
+                    photoLabel.text = "Last photo sent (${jpeg.size / 1024} KB, not saved). Blue box = what you are aiming at"
                 }
             },
             requestCameraPermission = {

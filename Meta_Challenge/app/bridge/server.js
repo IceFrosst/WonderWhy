@@ -73,7 +73,7 @@ export function start({ port = Number(process.env.PORT) || 8787, latencyLog = pr
     const preUploadMs = Number.isFinite(Number(body.preUploadMs)) ? Math.max(0, Number(body.preUploadMs)) : null;
     both({ type: 'detecting', reqId, t_sent: Date.now() });
     try {
-      const r = await detect({ imageBase64: body.imageBase64, question: body.question, forceObjectId: body.forceObjectId, objects });
+      const r = await detect({ imageBase64: body.imageBase64, focusBase64: body.focusBase64, question: body.question, forceObjectId: body.forceObjectId, objects });
       if (r.provider !== 'forced') lastProvider = { provider: r.provider, model: r.model };
       const t_detected = Date.now();
       const obj = byId[r.objectId];

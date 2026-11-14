@@ -43,10 +43,12 @@ class BridgeClient(var baseUrl: String) {
         }
     }
 
-    suspend fun detect(jpeg: ByteArray, tCapture: Long): Detection = withContext(Dispatchers.IO) {
+    /** [focus] is the centre of [jpeg], zoomed: where the wearer is looking. The bridge classifies that. */
+    suspend fun detect(jpeg: ByteArray, focus: ByteArray?, tCapture: Long): Detection = withContext(Dispatchers.IO) {
         val body = JSONObject()
             .put("reqId", UUID.randomUUID().toString())
             .put("imageBase64", Base64.encodeToString(jpeg, Base64.NO_WRAP))
+            .put("focusBase64", focus?.let { Base64.encodeToString(it, Base64.NO_WRAP) } ?: JSONObject.NULL)
             .put("question", JSONObject.NULL)
             .put("t_capture", tCapture)
             .put("preUploadMs", System.currentTimeMillis() - tCapture)
@@ -57,7 +59,7 @@ class BridgeClient(var baseUrl: String) {
             c.requestMethod = "POST"
             c.doOutput = true
             c.connectTimeout = 5000
-            c.readTimeout = 12000 // bridge detection can take up to 8 s
+            c.readTimeout = 28000 // API providers answer in a few seconds; the dev-only pi provider needs up to 25 s
             c.setRequestProperty("Content-Type", "application/json")
             c.outputStream.use { it.write(body.toByteArray()) }
             val code = c.responseCode

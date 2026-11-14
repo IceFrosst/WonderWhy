@@ -258,10 +258,10 @@ class GlassesController(
         try {
             show(Cards.looking())
             val tCapture = System.currentTimeMillis()
-            val jpeg = withTimeout(30_000) { takePhotoJpeg() }
-            log("Photo ${jpeg.size / 1024} KB, sending")
+            val (jpeg, focus) = withTimeout(30_000) { takePhotoJpeg() }
+            log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
             onPhoto(jpeg)
-            val det = bridge.detect(jpeg, tCapture)
+            val det = bridge.detect(jpeg, focus, tCapture)
             log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}")
             if (det.objectId == "unknown" || det.confidence < 0.5) {
                 show(Cards.result("Not sure what this is", null, det.answer, ::trigger, ::done))
@@ -292,7 +292,7 @@ class GlassesController(
 
     private fun done() { scope.launch { showIdle() } }
 
-    private suspend fun takePhotoJpeg(): ByteArray {
+    private suspend fun takePhotoJpeg(): Pair<ByteArray, ByteArray> {
         val sess = session ?: throw CaptureFailure("Session stopped", "Connect again")
         if (sess.state.value != DeviceSessionState.STARTED) throw CaptureFailure("Glasses not ready", sess.state.value.name)
 
@@ -335,7 +335,8 @@ class GlassesController(
         }
     }
 
-    private fun encode(photo: PhotoData): ByteArray {
+    /** Returns the whole photo and its centre (AIM_FRACTION of each side): the wearer aims by looking. */
+    private fun encode(photo: PhotoData): Pair<ByteArray, ByteArray> {
         val bmp: Bitmap = when (photo) {
             is PhotoData.Bitmap -> photo.bitmap
             is PhotoData.HEIC -> {
@@ -353,6 +354,15 @@ class GlassesController(
         val out = if (scale < 1f) {
             Bitmap.createScaledBitmap(upright, (upright.width * scale).toInt(), (upright.height * scale).toInt(), true)
         } else upright
-        return ByteArrayOutputStream().also { out.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
+        val fw = (out.width * AIM_FRACTION).toInt()
+        val fh = (out.height * AIM_FRACTION).toInt()
+        val focus = Bitmap.createBitmap(out, (out.width - fw) / 2, (out.height - fh) / 2, fw, fh)
+        fun jpeg(b: Bitmap) = ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
+        return jpeg(out) to jpeg(focus)
+    }
+
+    companion object {
+        /** Share of the photo's width and height that counts as "what the wearer is looking at". */
+        const val AIM_FRACTION = 0.5f
     }
 }
