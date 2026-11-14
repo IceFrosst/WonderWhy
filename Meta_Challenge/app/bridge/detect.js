@@ -58,7 +58,10 @@ export function parseModelJson(text, objects) {
   let confidence = Number(j.confidence);
   if (!Number.isFinite(confidence)) confidence = 0;
   confidence = Math.max(0, Math.min(1, confidence));
-  return { objectId, confidence, answer: typeof j.answer === 'string' ? j.answer : '' };
+  const answer = typeof j.answer === 'string'
+    ? j.answer.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)
+    : '';
+  return { objectId, confidence, answer };
 }
 
 function codeErr(code, message) {
@@ -111,17 +114,24 @@ async function callGemini({ imageBase64, focusBase64, prompt, env, timeoutMs, ma
  */
 function callPi({ imageBase64, focusBase64, prompt, env, timeoutMs, purpose }) {
   const model = env.PI_DETECT_MODEL || 'anthropic/claude-haiku-4-5';
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
+  let dir;
+  const cleanup = () => { if (dir) try { rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ } };
   const files = [];
-  if (imageBase64) {
-    const file = path.join(dir, 'photo.jpg');
-    writeFileSync(file, Buffer.from(imageBase64, 'base64'));
-    files.push(`@${file}`);
-  }
-  if (focusBase64) {
-    const focus = path.join(dir, 'focus.jpg');
-    writeFileSync(focus, Buffer.from(focusBase64, 'base64'));
-    files.push(`@${focus}`);
+  try {
+    dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
+    if (imageBase64) {
+      const file = path.join(dir, 'photo.jpg');
+      writeFileSync(file, Buffer.from(imageBase64, 'base64'));
+      files.push(`@${file}`);
+    }
+    if (focusBase64) {
+      const focus = path.join(dir, 'focus.jpg');
+      writeFileSync(focus, Buffer.from(focusBase64, 'base64'));
+      files.push(`@${focus}`);
+    }
+  } catch (error) {
+    cleanup();
+    return Promise.reject(codeErr('detect_failed', `pi setup failed: ${error.message}`));
   }
   const systemPrompt = purpose === 'sketch' ? 'You explain photographed objects with validated JSON only.'
     : purpose === 'ask' ? 'You answer questions from supplied text. Output JSON only.'
@@ -129,12 +139,15 @@ function callPi({ imageBase64, focusBase64, prompt, env, timeoutMs, purpose }) {
   const args = ['-p', '--no-session', '--no-tools', '--no-skills', '--no-context-files', '--no-prompt-templates', '--no-mcp',
     '--thinking', 'off', '--system-prompt', systemPrompt, '--model', model, ...files, prompt];
   return new Promise((resolve, reject) => {
-    const child = spawn(env.PI_BIN || 'pi', args, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
+    let child;
+    try { child = spawn(env.PI_BIN || 'pi', args, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] }); }
+    catch (error) { cleanup(); reject(codeErr('detect_failed', `pi not runnable: ${error.message}`)); return; }
     let out = '', err = '';
     const timer = setTimeout(() => { child.kill('SIGKILL'); }, timeoutMs);
     child.stdout.on('data', (d) => { out += d; });
     child.stderr.on('data', (d) => { err += d; });
-    const done = (fn) => { clearTimeout(timer); rmSync(dir, { recursive: true, force: true }); fn(); };
+    let settled = false;
+    const done = (fn) => { if (settled) return; settled = true; clearTimeout(timer); cleanup(); fn(); };
     child.on('error', (e) => done(() => reject(codeErr('detect_failed', `pi not runnable: ${e.message}`))));
     child.on('close', (code, signal) => done(() => {
       if (signal === 'SIGKILL') return reject(codeErr('detect_timeout', `Detection timed out after ${timeoutMs} ms`));
@@ -166,7 +179,7 @@ function callClaudeCli({ imageBase64, focusBase64, prompt, env, timeoutMs, purpo
     ? `${role} Read ${focusBase64 ? 'photo.jpg (image 1) and focus.jpg (image 2)' : 'photo.jpg'} in the current folder with the Read tool, then reply with the JSON only.\n\n${prompt}`
     : `${role} Reply with the JSON only.\n\n${prompt}`;
   // No argument contains a space: on Windows the command is a .cmd shim and needs a shell.
-  const args = ['-p', '--model', model, '--tools', 'Read', '--allowedTools', 'Read', '--strict-mcp-config', '--output-format', 'text'];
+  const args = ['-p', '--model', model, '--tools', 'Read', '--allowedTools', 'Read(./*.jpg)', '--strict-mcp-config', '--output-format', 'text'];
   const win = process.platform === 'win32';
   return new Promise((resolve, reject) => {
     const child = spawn(env.CLAUDE_BIN || 'claude', args, { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'], shell: win });
@@ -208,7 +221,7 @@ export async function detect({ imageBase64, focusBase64, question, forceObjectId
   if (prov === 'gemini' && !env.GEMINI_API_KEY) throw codeErr('detect_failed', 'GEMINI_API_KEY not set');
   const prompt = buildPrompt(objects, question, Boolean(focusBase64), lang);
   const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : prov === 'claude' ? callClaudeCli : callGemini;
-  const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs });
+  const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs, maxTokens: 300 });
   const parsed = parseModelJson(text, objects);
   return { ...parsed, model, provider: prov, detectMs: Date.now() - t0 };
 }

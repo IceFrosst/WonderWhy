@@ -28,7 +28,7 @@ iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:6px;ba
 <div class="row"><input type="text" id="q" placeholder="Optional question (stands in for speech)"></div>
 <div class="row"><label>Simulated glasses&rarr;phone delay <b id="dl">0</b> ms</label><input type="range" id="delay" min="0" max="3000" step="50" value="0"></div>
 <div id="status">Starting...</div></section>
-<section><h2>Ask about what is on the glasses</h2><div class="row"><input type="text" id="askq" maxlength="200" placeholder="Ask a follow-up question"><button id="ask" title="Ask about the library object currently shown" disabled>Ask</button></div><div id="askhint">Waiting for the glasses state.</div></section>
+<section><h2>Ask about what is on the glasses</h2><div class="row"><input type="text" id="askq" maxlength="300" placeholder="Ask a follow-up question"><button id="ask" title="Ask about the library object currently shown" disabled>Ask</button></div><div id="askhint">Waiting for the glasses state.</div></section>
 <section><h2>Force object (skips model)</h2><div class="row" id="objs"></div></section>
 <section><h2>States</h2>
 <h3>Device</h3><div class="state-grid" id="dev"></div>
@@ -46,8 +46,9 @@ iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:6px;ba
 </div></main>
 <script>
 const $=id=>document.getElementById(id);
-const pageUrl=new URL(location.href);let tokenFromUrl=pageUrl.searchParams.get('k');
-if(tokenFromUrl!==null){localStorage.setItem('lens.token',tokenFromUrl);pageUrl.searchParams.delete('k');history.replaceState(null,'',pageUrl.pathname+pageUrl.search+pageUrl.hash);}
+const pageUrl=new URL(location.href);const fragmentParams=new URLSearchParams(pageUrl.hash.slice(1));
+const fragmentToken=fragmentParams.get('k');const queryToken=pageUrl.searchParams.get('k');const tokenFromUrl=fragmentToken!==null?fragmentToken:queryToken;
+if(tokenFromUrl!==null){localStorage.setItem('lens.token',tokenFromUrl);fragmentParams.delete('k');pageUrl.searchParams.delete('k');pageUrl.hash=fragmentParams.toString()?`#${fragmentParams}`:'';history.replaceState(null,'',pageUrl.pathname+pageUrl.search+pageUrl.hash);}
 const lensToken=localStorage.getItem('lens.token')||'';
 const savedLang=localStorage.getItem('lens.lang');
 if(['en','fi','sv','de','es','fr'].includes(savedLang))$('lang').value=savedLang;
@@ -55,6 +56,7 @@ $('lang').onchange=()=>localStorage.setItem('lens.lang',$('lang').value);
 const authHeaders=h=>lensToken?{...h,'X-Lens-Token':lensToken}:h;
 const wsUrl=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
 let ws,locked=false,lastState=null,latestAskText='';const rows=[];
+function setStatus(value,kind=''){$('status').textContent=String(value);$('status').className=kind;}
 function updateAsk(){const id=lastState&&lastState.objectId;const unavailable=!id||id==='unknown'||id==='sketch';$('ask').disabled=unavailable;$('askhint').textContent=!id?'Waiting for the glasses state.':unavailable?'Follow-up questions need a library object.':'Ready to ask about '+id+'.';}
 function showSketch(sketch){if(!sketch)return;const titles=(sketch.chapters||[]).map(c=>c.title).join(', ');$('status').textContent=sketch.label+(titles?' - '+titles:'');}
 function connect(){ws=new WebSocket(wsUrl);
@@ -63,7 +65,7 @@ function connect(){ws=new WebSocket(wsUrl);
   if(m.type==='latency'){const r=rows.find(x=>x.reqId===m.reqId);if(r)Object.assign(r,m);else rows.push(m);render();refreshSummary();}
   if(m.type==='state'){lastState=m;updateAsk();if(!latestAskText)$('status').textContent='Glasses at '+m.objectId+' step '+m.step;}
   if(m.type==='sketch'&&m.sketch)showSketch(m.sketch);};
- ws.onclose=e=>{if(e.code===4401){locked=true;$('status').innerHTML='<span class="bad">Bridge locked: open this page with ?k=&lt;token&gt;</span>';return;}if(!locked)setTimeout(connect,1000);};}
+ ws.onclose=e=>{if(e.code===4401){locked=true;setStatus('Bridge locked: open this page with #k=<token>','bad');return;}if(!locked)setTimeout(connect,1000);};}
 const send=m=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify(m));else $('status').textContent='WebSocket not connected';};
 connect();
 function mkBtns(el,list,fn){list.forEach(([label,val,title])=>{const b=document.createElement('button');b.textContent=label;b.title=title||'Send '+label;b.onclick=()=>fn(val);$(el).appendChild(b);});}
@@ -91,7 +93,7 @@ mkBtns('demo',[
 fetch('/objects').then(r=>r.json()).then(j=>mkBtns('objs',[...j.objects.map(o=>[o.id,o.id]),['unknown','unknown']],id=>capture(id)));
 $('delay').oninput=()=>$('dl').textContent=$('delay').value;
 let stream;
-navigator.mediaDevices?.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}}}).then(s=>{stream=s;$('v').srcObject=s;$('status').textContent='Camera ready';}).catch(e=>{$('status').innerHTML='<span class="bad">Camera unavailable: '+e.message+'. Forced buttons still work.</span>';});
+navigator.mediaDevices?.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}}}).then(s=>{stream=s;$('v').srcObject=s;setStatus('Camera ready');}).catch(e=>setStatus('Camera unavailable: '+e.message+'. Forced buttons still work.','bad'));
 function grab(){const v=$('v');if(!v.videoWidth)return null;const [w,h]=$('size').value.split('x').map(Number);
  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
  const s=Math.max(w/v.videoWidth,h/v.videoHeight),dw=v.videoWidth*s,dh=v.videoHeight*s;
@@ -102,38 +104,38 @@ async function capture(force){
  latestAskText='';
  const t_capture=Date.now();const reqId=crypto.randomUUID();
  const img=force?null:grab();
- if(!force&&!img){$('status').innerHTML='<span class="bad">No camera frame</span>';busy=false;return;}
+ if(!force&&!img){setStatus('No camera frame','bad');busy=false;return;}
  const d=Number($('delay').value);if(d)await new Promise(r=>setTimeout(r,d));
  $('status').textContent='Sending\u2026';
  try{const r=await fetch('/detect',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,lang:$('lang').value,waitSketch:$('wait').checked,t_capture,preUploadMs:Date.now()-t_capture})});
   const j=await r.json();
-  if(!r.ok){$('status').innerHTML='<span class="bad">'+(j.error||r.status)+': '+(j.message||'')+'</span>';}
-  else{$('status').innerHTML='<span class="ok">'+j.objectId+' ('+Math.round(j.confidence*100)+'%) via '+j.timings.model+'</span>'+(j.answer?' - '+j.answer:'');if(j.sketch)showSketch(j.sketch);
+  if(!r.ok){setStatus((j.error||r.status)+': '+(j.message||''),'bad');}
+  else{setStatus(j.objectId+' ('+Math.round(j.confidence*100)+'%) via '+j.timings.model+(j.answer?' - '+j.answer:''),'ok');if(j.sketch)showSketch(j.sketch);
    $('prov').textContent='model: '+j.timings.model;
    rows.push({reqId,objectId:j.objectId,captureToReceivedMs:j.timings.preUploadMs,detectMs:j.timings.detectMs,detectedToRenderedMs:null,totalMs:null});render();}
- }catch(e){$('status').innerHTML='<span class="bad">'+e.message+'</span>';}
+ }catch(e){setStatus(e.message,'bad');}
  busy=false;}
 $('cap').onclick=()=>capture();
 $('ask').onclick=async()=>{
  const question=$('askq').value.trim();const id=lastState&&lastState.objectId;
- if(!question){$('status').innerHTML='<span class="bad">Enter a follow-up question</span>';return;}
+ if(!question){setStatus('Enter a follow-up question','bad');return;}
  if(!id||id==='unknown'||id==='sketch'){updateAsk();return;}
  $('ask').disabled=true;$('status').textContent='Asking\u2026';
  try{const r=await fetch('/ask',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId:crypto.randomUUID(),question,aboutObjectId:id,lang:$('lang').value})});
   const j=await r.json();
-  if(!r.ok){latestAskText='';$('status').innerHTML='<span class="bad">'+(j.error||r.status)+': '+(j.message||'')+'</span>';}
+  if(!r.ok){latestAskText='';setStatus((j.error||r.status)+': '+(j.message||''),'bad');}
   else{const hint=j.lensHint?' - '+j.lensHint.id+' step '+j.lensHint.step:'';latestAskText=j.answer+hint;$('status').textContent=latestAskText;}
- }catch(e){latestAskText='';$('status').innerHTML='<span class="bad">'+e.message+'</span>';}
+ }catch(e){latestAskText='';setStatus(e.message,'bad');}
  updateAsk();};
 addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();capture();}});
 const f=v=>v==null?'\u2026':Math.round(v);
-function render(){$('rows').innerHTML=rows.slice(-10).reverse().map(r=>`<tr><td>${r.reqId.slice(0,6)}</td><td>${r.objectId}</td><td>${f(r.captureToReceivedMs)}</td><td>${f(r.detectMs)}</td><td>${f(r.detectedToRenderedMs)}</td><td>${f(r.totalMs)}</td></tr>`).join('');}
+function render(){const body=$('rows');body.replaceChildren();rows.slice(-10).reverse().forEach(r=>{const tr=document.createElement('tr');[r.reqId.slice(0,6),r.objectId,f(r.captureToReceivedMs),f(r.detectMs),f(r.detectedToRenderedMs),f(r.totalMs)].forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td);});body.appendChild(tr);});}
 async function refreshSummary(){try{const s=await (await fetch('/latency',{headers:authHeaders({})})).json();
  const p=k=>`${k.replace('Ms','')}: p50 ${f(s[k].p50)} / p90 ${f(s[k].p90)}`;
  $('sum').textContent=`n=${s.count} | `+['captureToReceivedMs','detectMs','detectedToRenderedMs','totalMs'].map(p).join(' | ');
  if(s.provider)$('prov').textContent='model: '+s.provider.model;}catch{}}
 refreshSummary();
-function mirrorUrl(){const u=new URL($('murl').value,location.href);if(lensToken)u.searchParams.set('k',lensToken);return u.href;}
+function mirrorUrl(){const u=new URL($('murl').value,location.href);u.searchParams.delete('k');if(lensToken){const hash=new URLSearchParams(u.hash.slice(1));hash.set('k',lensToken);u.hash=hash.toString();}return u.href;}
 $('mgo').onclick=()=>$('mirror').src=mirrorUrl();
 $('mirror').src=mirrorUrl();
 </script></body></html>

@@ -22,6 +22,8 @@ Response: the same `show` message the glasses get (below), plus `timings`.
 
 `t_*` are `Date.now()` ms epoch from the sender's clock. Clocks on the phone, server and glasses differ, so **latency is never computed across clocks**: the phone sends `preUploadMs` (capture → request sent, on its own clock, e.g. the glasses → phone Bluetooth photo transfer), and the server times `detectMs` and detected → `rendered` ack arrival on its own clock.
 
+When `preUploadMs` is absent, `captureToReceivedMs` is `null` and `totalMs` covers server receive through paint only.
+
 ## Bridge → glasses (WebSocket `/ws`, JSON text frames)
 | type | fields | glasses does |
 |---|---|---|
@@ -51,7 +53,7 @@ Response: the same `show` message the glasses get (below), plus `timings`.
 | Protected HTTP | `POST /detect`, `GET /last`, `GET /latency`: header `X-Lens-Token: <token>`. Wrong or missing gives `401 {"error":"unauthorized"}` |
 | Open HTTP | `GET /health`, `GET /objects`, `GET /phone` (the page only; its calls need the token), the static glasses app, `/media/*` |
 | WebSocket | `hello` carries `token`. Wrong or missing: the bridge sends `{type:"error",code:"unauthorized"}` and closes with code `4401`. A socket with no valid `hello` within 5 s is closed. Nothing is relayed before `hello` |
-| Glasses Web App and phone page | Read the token once from `?k=<token>`, keep it in `localStorage` (`lens.token`), strip `k` from the address bar. On `4401` they show "Bridge locked: open the link with the key" and stop reconnecting |
+| Glasses Web App and phone page | Prefer the token from `#k=<token>`, with legacy `?k=<token>` as fallback; keep it in `localStorage` (`lens.token`) and strip `k` from the address bar. On `4401` they show "Bridge locked: open the link with the key" and stop reconnecting |
 | Android | "Bridge token" in settings, sent as the header |
 | CORS | No token set: `*` (dev). Token set: only the bridge's own origin plus the comma list in `LENS_ALLOWED_ORIGINS`. Allowed headers: `content-type, x-lens-token` |
 | Never | The token in git, in a QR image in git, in logs, or in a status file |
@@ -80,6 +82,14 @@ Source of truth for `summary`, `steps` and `lenses` is `shared/objects.json` (`t
 | Web App | No frame for 25 s means the link is dead: it reconnects |
 | `detecting` | Now carries `timeoutMs` (the bridge's detect timeout plus 2 000). The bridge always follows `detecting` with a `show` or an `error` for the same `reqId`. If neither arrives in `timeoutMs` (12 000 when absent), the Web App leaves "Looking…" by itself with a "Took too long" card |
 | `error` | Now carries `reqId` when it belongs to a detect request. Codes: `detect_timeout`, `detect_failed`, `bad_image`, `unauthorized` |
+
+### Limits
+| Resource | Limit |
+|---|---|
+| HTTP request body | 2 MB |
+| Model calls | 4 at once by default, then `429 {"error":"busy"}` |
+| WebSocket clients | 50 by default |
+| Question | 300 characters |
 
 ### Lenses on the glasses (nav and state)
 | What | Rule |
@@ -119,7 +129,7 @@ The library has 6 objects. For anything else the bridge can ask the model for a 
 
 | What | Rule |
 |---|---|
-| Request | `POST /ask` (protected like `/detect`): `{ "reqId"?, "question": "text, 200 chars at most", "aboutObjectId": "<library id>", "lang"? }`. No image |
+| Request | `POST /ask` (protected like `/detect`): `{ "reqId"?, "question": "text, 300 chars at most", "aboutObjectId": "<library id>", "lang"? }`. No image |
 | What the bridge does | Picks the lens and step of that object whose text best answers the question, and writes a short answer (2 sentences at most, from the library text plus the model's own words when a model is configured) |
 | Without a model (`mock`) | Still works: the step is chosen by word overlap between the question and the captions, and the answer is that step's caption. Good enough for the offline demo |
 | Response and frames | `detecting` first, then a normal `show` for `aboutObjectId` with `question`, `answer`, and `lensHint: { "id": "kettle.cutaway", "step": 3 }` (step is 1-based; `lensHint` is absent when nothing fits). `standIn` and `lang` as for `/detect`. Errors as for `/detect` (`error` frame with `reqId`) |

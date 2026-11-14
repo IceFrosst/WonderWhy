@@ -1,5 +1,6 @@
 import http from 'node:http';
-import { readFileSync, appendFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
+import { appendFile } from 'node:fs/promises';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -9,26 +10,72 @@ import { pickStep } from './ask.js';
 import { validateSketch } from './sketch.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const BODY_LIMIT = 5 * 1024 * 1024;
+const BODY_LIMIT = 2 * 1024 * 1024;
+const WS_PAYLOAD_LIMIT = 64 * 1024;
+const LATENCY_LOG_LIMIT = 20 * 1024 * 1024;
+const QUESTION_LIMIT = 300;
+const REQUEST_ID = /^[\w-]{1,64}$/;
 const STAGES = ['captureToReceivedMs', 'detectMs', 'detectedToRenderedMs', 'totalMs'];
 const GLASSES_DIST = path.resolve(here, '..', 'glasses', 'dist');
 const MEDIA_EXTS = new Set(['.png', '.jpg', '.mp4', '.json', '.webp']);
 const LANGUAGES = new Set(['en', 'fi', 'sv', 'de', 'es', 'fr']);
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 
-function serveFile(root, rel, res, headers, cache, allowedExts) {
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+};
+
+const PHONE_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss:; frame-src 'self' http://localhost:* http://127.0.0.1:*; base-uri 'none'; form-action 'none'";
+
+function serveFile(root, rel, req, res, headers, cache, allowedExts, readFile = readFileSync) {
   let decoded;
   try { decoded = decodeURIComponent(rel).replace(/^[/\\]+/, ''); } catch { return false; }
   const file = path.resolve(root, decoded);
   if (!file.startsWith(root + path.sep) || (allowedExts && !allowedExts.has(path.extname(file).toLowerCase())) || !existsSync(file) || !statSync(file).isFile()) return false;
-  res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'cache-control': cache, ...headers });
-  res.end(readFileSync(file));
+  let data;
+  try { data = readFile(file); }
+  catch {
+    res.writeHead(500, { 'content-type': 'application/json', ...headers });
+    res.end(JSON.stringify({ error: 'server_error' }));
+    return true;
+  }
+  const ext = path.extname(file).toLowerCase();
+  const responseHeaders = { 'content-type': MIME[ext] || 'application/octet-stream', 'cache-control': cache, ...headers };
+  if (ext === '.mp4') responseHeaders['accept-ranges'] = 'bytes';
+  const range = ext === '.mp4' ? req.headers.range : null;
+  if (range) {
+    const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+    let start; let end;
+    if (match && (match[1] || match[2])) {
+      if (match[1]) {
+        start = Number(match[1]);
+        end = match[2] ? Number(match[2]) : data.length - 1;
+      } else {
+        const suffix = Number(match[2]);
+        start = Math.max(0, data.length - suffix);
+        end = data.length - 1;
+      }
+    }
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || start >= data.length) {
+      res.writeHead(416, { ...responseHeaders, 'content-range': `bytes */${data.length}` });
+      res.end();
+      return true;
+    }
+    end = Math.min(end, data.length - 1);
+    const part = data.subarray(start, end + 1);
+    res.writeHead(206, { ...responseHeaders, 'content-range': `bytes ${start}-${end}/${data.length}`, 'content-length': part.length });
+    res.end(part);
+    return true;
+  }
+  res.writeHead(200, { ...responseHeaders, 'content-length': data.length });
+  res.end(data);
   return true;
 }
 
-function serveGlasses(pathname, res, headers) {
+function serveGlasses(pathname, req, res, headers, readFile) {
   const rel = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
-  return serveFile(GLASSES_DIST, rel, res, headers, rel.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
+  return serveFile(GLASSES_DIST, rel, req, res, headers, rel.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache', undefined, readFile);
 }
 
 function pct(arr, p) {
@@ -78,14 +125,23 @@ export function start({
   detectFn = detect,
   askFn = answerQuestion,
   provider = pickProvider(),
+  allowOpen = process.env.LENS_ALLOW_OPEN === '1',
+  maxInflight = positive(process.env.MAX_INFLIGHT, 4),
+  maxSockets = positive(process.env.MAX_SOCKETS, 50),
   detectTimeoutMs = detectTimeout(process.env, provider),
   sketchProvider = process.env.SKETCH_PROVIDER || '',
   sketchFn = generateSketch,
   sketchTimeoutMs,
   mediaRoot = path.join(here, 'media'),
   i18nRoot = path.join(here, '..', 'shared', 'i18n'),
+  readFileFn = readFileSync,
 } = {}) {
-  const byId = Object.fromEntries(objects.map((o) => [o.id, o]));
+  if ((provider === 'anthropic' || provider === 'gemini') && !token && !allowOpen) {
+    throw new Error('LENS_TOKEN is required when using a paid model provider; set LENS_ALLOW_OPEN=1 only for an intentional open deployment');
+  }
+  maxInflight = Math.max(1, Math.floor(maxInflight));
+  maxSockets = Math.max(1, Math.floor(maxSockets));
+  const byId = new Map(objects.map((o) => [o.id, o]));
   const mediaBase = path.resolve(mediaRoot);
   const i18nBase = path.resolve(i18nRoot);
   const translations = new Map();
@@ -96,6 +152,9 @@ export function start({
   const glasses = new Set(); const phones = new Set();
   const pending = new Map(); const records = []; const requests = []; const timers = new Set();
   let lastProvider = null; let lastShow = null; let lastShowAt = 0; let closing = false;
+  let requestSequence = 0; let latestFinishedSequence = 0; let clearGeneration = 0; let inflight = 0;
+  let latencyBytes = 0; let latencyWarning = false; let latencyWrites = Promise.resolve();
+  try { latencyBytes = statSync(latencyLog).size; } catch { /* new log */ }
 
   const timer = (fn, ms, interval = false) => {
     const t = interval ? setInterval(fn, ms) : setTimeout(() => { timers.delete(t); fn(); }, ms);
@@ -105,6 +164,28 @@ export function start({
   const sendOne = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
   const send = (set, msg) => { const text = JSON.stringify(msg); for (const ws of set) if (ws.readyState === 1) ws.send(text); };
   const both = (msg) => { send(glasses, msg); send(phones, msg); };
+
+  const requestContext = () => ({ sequence: ++requestSequence, clearGeneration });
+  const currentResult = (context) => context.clearGeneration === clearGeneration && context.sequence >= latestFinishedSequence;
+  const finishSequence = (context) => { latestFinishedSequence = Math.max(latestFinishedSequence, context.sequence); };
+  const withModelSlot = async (counts, fn) => {
+    if (!counts) return fn();
+    if (inflight >= maxInflight) { const error = new Error('Model capacity is busy'); error.code = 'busy'; throw error; }
+    inflight += 1;
+    try { return await fn(); } finally { inflight -= 1; }
+  };
+
+  function queueLatency(line) {
+    const bytes = Buffer.byteLength(line);
+    latencyWrites = latencyWrites.then(async () => {
+      if (latencyBytes + bytes > LATENCY_LOG_LIMIT) {
+        if (!latencyWarning) { latencyWarning = true; console.warn('latency log limit reached; further records are not written'); }
+        return;
+      }
+      try { await appendFile(latencyLog, line); latencyBytes += bytes; }
+      catch (e) { console.error('latency log failed', e.message); }
+    });
+  }
 
   function runSketch(args) {
     let timeout;
@@ -121,7 +202,7 @@ export function start({
           resolve({ sketch: fixture, model: 'fixture', ms: 300 });
         } catch (error) { reject(error); }
       }, 300))
-      : Promise.resolve().then(() => sketchFn(args));
+      : withModelSlot(provider !== 'mock', () => Promise.resolve().then(() => sketchFn(args)));
     return Promise.race([work, deadline]).then((result) => {
       const cleaned = validateSketch(result?.sketch ?? result);
       if (!cleaned) { const error = new Error('Invalid sketch'); error.code = 'sketch_failed'; throw error; }
@@ -129,8 +210,9 @@ export function start({
     }).finally(() => clearTimer(timeout));
   }
 
-  function finishSketch(reqId, args) {
+  function finishSketch(reqId, args, context) {
     return runSketch(args).then(({ sketch }) => {
+      if (!currentResult(context)) return { sketch, stale: true };
       if (lastShow?.reqId === reqId) {
         const { sketchPending: _pending, sketchError: _error, ...remembered } = lastShow;
         lastShow = { ...remembered, sketch };
@@ -138,6 +220,7 @@ export function start({
       both({ type: 'sketch', reqId, sketch, ...(sketchMode === 'auto' && STAND_INS.has(provider) ? { standIn: true } : {}) });
       return { sketch };
     }, () => {
+      if (!currentResult(context)) return { error: 'sketch_failed', stale: true };
       if (lastShow?.reqId === reqId) {
         const { sketchPending: _pending, ...remembered } = lastShow;
         lastShow = remembered;
@@ -148,7 +231,7 @@ export function start({
   }
 
   function cors(req) {
-    const headers = { 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type, x-lens-token', vary: 'Origin' };
+    const headers = { ...SECURITY_HEADERS, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type, x-lens-token', vary: 'Origin' };
     if (!token) headers['access-control-allow-origin'] = '*';
     else {
       const origin = req.headers.origin;
@@ -158,7 +241,7 @@ export function start({
     }
     return headers;
   }
-  const json = (req, res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', ...cors(req) }); res.end(JSON.stringify(obj)); };
+  const json = (req, res, code, obj, extra = {}) => { res.writeHead(code, { 'content-type': 'application/json', ...cors(req), ...extra }); res.end(JSON.stringify(obj)); };
   const authorized = (req) => !token || sameToken(req.headers['x-lens-token'], token);
 
   function loadTranslation(lang) {
@@ -260,17 +343,17 @@ export function start({
     const show = pending.get(reqId); if (!show) return null;
     pending.delete(reqId);
     const timing = show.timings; const t_ack = Date.now();
-    const pre = timing.preUploadMs ?? Math.max(0, timing.t_received - timing.t_capture);
+    const pre = typeof timing.preUploadMs === 'number' ? timing.preUploadMs : null;
     const serverRenderMs = Math.max(0, t_ack - timing.t_detected);
     const renderedMs = typeof renderMs === 'number' && Number.isFinite(renderMs) && renderMs >= 0 ? renderMs : serverRenderMs;
     const latency = {
       reqId, objectId: show.objectId, model: timing.model,
       captureToReceivedMs: pre, detectMs: timing.detectMs,
       detectedToRenderedMs: renderedMs,
-      totalMs: pre + Math.max(0, timing.t_detected - timing.t_received) + renderedMs, at: t_ack,
+      totalMs: (pre ?? 0) + Math.max(0, timing.t_detected - timing.t_received) + renderedMs, at: t_ack,
     };
-    records.push(latency);
-    try { appendFileSync(latencyLog, JSON.stringify(latency) + '\n'); } catch (e) { console.error('latency log failed', e.message); }
+    records.push(latency); if (records.length > 500) records.shift();
+    queueLatency(JSON.stringify(latency) + '\n');
     send(phones, { type: 'latency', ...latency });
     return latency;
   }
@@ -312,7 +395,7 @@ export function start({
   }
 
   function libraryPresentation(objectId, lang) {
-    const object = byId[objectId];
+    const object = byId.get(objectId);
     const translation = loadTranslation(lang);
     const translated = object ? translationFor(translation, object.id) : null;
     const libraryObject = translated ? mergeObject(object, translated) : object;
@@ -343,25 +426,46 @@ export function start({
   function runDetect(args) {
     let timeout;
     const deadline = new Promise((_, reject) => { timeout = timer(() => { const e = new Error(`Detection timed out after ${detectTimeoutMs} ms`); e.code = 'detect_timeout'; reject(e); }, detectTimeoutMs); });
-    return Promise.race([Promise.resolve().then(() => detectFn(args)), deadline]).finally(() => clearTimer(timeout));
+    const work = withModelSlot(!args.forceObjectId && provider !== 'mock', () => Promise.resolve().then(() => detectFn(args)));
+    return Promise.race([work, deadline]).finally(() => clearTimer(timeout));
   }
 
   function runAsk(args) {
     let timeout;
     const deadline = new Promise((_, reject) => { timeout = timer(() => { const e = new Error(`Detection timed out after ${detectTimeoutMs} ms`); e.code = 'detect_timeout'; reject(e); }, detectTimeoutMs); });
-    return Promise.race([Promise.resolve().then(() => askFn(args)), deadline]).finally(() => clearTimer(timeout));
+    const work = withModelSlot(provider !== 'mock', () => Promise.resolve().then(() => askFn(args)));
+    return Promise.race([work, deadline]).finally(() => clearTimer(timeout));
+  }
+
+  function requestId(value) {
+    return typeof value === 'string' && REQUEST_ID.test(value) ? value : randomUUID();
+  }
+
+  async function bodyObject(req, res) {
+    let body;
+    try { body = JSON.parse(await readBody(req) || '{}'); }
+    catch (e) { json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); return null; }
+    if (!record(body)) { json(req, res, 400, { error: 'bad_json' }); return null; }
+    return body;
   }
 
   async function handleDetect(req, res) {
-    let body;
-    try { body = JSON.parse(await readBody(req) || '{}'); }
-    catch (e) { return json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
-    const reqId = body.reqId || randomUUID();
+    const context = requestContext();
+    const body = await bodyObject(req, res); if (!body) { finishSequence(context); return; }
+    const reqId = requestId(body.reqId);
     const lang = normalizeLang(body.lang);
+    if (body.question !== undefined && typeof body.question !== 'string') { finishSequence(context); return json(req, res, 400, { error: 'bad_request' }); }
+    const question = typeof body.question === 'string' ? body.question.trim().slice(0, QUESTION_LIMIT) : '';
+    const forceObjectId = typeof body.forceObjectId === 'string' ? body.forceObjectId : null;
+    if (body.forceObjectId !== undefined && (!forceObjectId || (forceObjectId !== 'unknown' && !byId.has(forceObjectId)))) {
+      finishSequence(context);
+      return json(req, res, 400, { error: 'bad_request' });
+    }
     const t_received = Date.now(); const t_capture = Number(body.t_capture) || t_received;
-    const preUploadMs = Number.isFinite(Number(body.preUploadMs)) ? Math.max(0, Number(body.preUploadMs)) : null;
+    const preUploadMs = typeof body.preUploadMs === 'number' && Number.isFinite(body.preUploadMs) && body.preUploadMs >= 0 ? body.preUploadMs : null;
     both({ type: 'detecting', reqId, timeoutMs: detectTimeoutMs + 2000, t_sent: Date.now() });
-    if (!body.forceObjectId && provider !== 'mock' && !validJpegBase64(body.imageBase64)) {
+    if (!forceObjectId && provider !== 'mock' && !validJpegBase64(body.imageBase64)) {
+      finishSequence(context);
       finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'bad_image' });
       both({ type: 'error', code: 'bad_image', message: 'A valid JPEG image is required', reqId });
       return json(req, res, 400, { error: 'bad_image' });
@@ -369,25 +473,26 @@ export function start({
     try {
       // Optional centre crop ("aim"): the model classifies what is in it. A broken crop is dropped, not fatal.
       const focusBase64 = validJpegBase64(body.focusBase64) ? body.focusBase64 : undefined;
-      const result = await runDetect({ imageBase64: body.imageBase64, focusBase64, question: body.question, forceObjectId: body.forceObjectId, lang, objects, provider, timeoutMs: detectTimeoutMs });
+      const result = await runDetect({ imageBase64: body.imageBase64, focusBase64, question, forceObjectId, lang, objects, provider, timeoutMs: detectTimeoutMs });
       if (result.provider !== 'forced') lastProvider = { provider: result.provider, model: result.model };
       const t_detected = Date.now(); const presentation = libraryPresentation(result.objectId, lang);
       const obj = presentation.object;
       const show = {
         type: 'show', reqId, objectId: result.objectId,
         ...presentation.fields, confidence: result.confidence,
-        ...(body.question ? { question: body.question } : {}),
+        ...(question ? { question } : {}),
         ...(result.answer ? { answer: result.answer } : {}),
-        ...(!body.forceObjectId && result.provider !== 'forced' && result.objectId !== 'unknown' && obj && result.confidence < minConfidence ? { lowConfidence: true } : {}),
+        ...(!forceObjectId && result.provider !== 'forced' && result.objectId !== 'unknown' && obj && result.confidence < minConfidence ? { lowConfidence: true } : {}),
         ...(STAND_INS.has(result.provider) ? { standIn: true } : {}),
         timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: result.detectMs, model: result.model },
         t_sent: Date.now(),
       };
-      const shouldSketch = sketchMode !== 'off' && result.objectId === 'unknown' && !body.forceObjectId && validJpegBase64(body.imageBase64);
+      const shouldSketch = sketchMode !== 'off' && result.objectId === 'unknown' && !forceObjectId && validJpegBase64(body.imageBase64);
       if (shouldSketch) show.sketchPending = true;
       pending.set(reqId, show); if (pending.size > 200) pending.delete(pending.keys().next().value);
-      lastShow = show; lastShowAt = Date.now();
-      both(show);
+      const fresh = currentResult(context);
+      finishSequence(context);
+      if (fresh) { lastShow = show; lastShowAt = Date.now(); both(show); }
       finishRequest('detect', {
         reqId, objectId: result.objectId, confidence: result.confidence, detectMs: result.detectMs,
         requestProvider: result.provider, model: result.model,
@@ -396,7 +501,7 @@ export function start({
       const outcome = finishSketch(reqId, {
         imageBase64: body.imageBase64, focusBase64, hint: result.answer || '', lang,
         objects, env: process.env, provider, timeoutMs: sketchDeadlineMs,
-      });
+      }, context);
       if (!body.waitSketch) return json(req, res, 200, show);
       const settled = await outcome;
       const { sketchPending: _pending, ...responseShow } = show;
@@ -404,6 +509,12 @@ export function start({
       else responseShow.sketchError = 'sketch_failed';
       return json(req, res, 200, responseShow);
     } catch (e) {
+      finishSequence(context);
+      if (e.code === 'busy') {
+        finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'busy' });
+        both({ type: 'error', code: 'busy', message: 'Model capacity is busy', reqId });
+        return json(req, res, 429, { error: 'busy' }, { 'retry-after': '2' });
+      }
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
       finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: code });
       both({ type: 'error', code, message: e.message, reqId });
@@ -412,18 +523,17 @@ export function start({
   }
 
   async function handleAsk(req, res) {
-    let body;
-    try { body = JSON.parse(await readBody(req) || '{}'); }
-    catch (e) { return json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
-    if (!record(body)) body = {};
-    const reqId = body.reqId || randomUUID();
+    const context = requestContext();
+    const body = await bodyObject(req, res); if (!body) { finishSequence(context); return; }
+    const reqId = requestId(body.reqId);
     const lang = normalizeLang(body.lang);
     const question = typeof body.question === 'string' ? body.question.trim() : '';
-    const object = typeof body.aboutObjectId === 'string' ? byId[body.aboutObjectId] : null;
+    const object = typeof body.aboutObjectId === 'string' ? byId.get(body.aboutObjectId) : null;
     const t_received = Date.now();
     both({ type: 'detecting', reqId, timeoutMs: detectTimeoutMs + 2000, t_sent: Date.now() });
-    if (!question || question.length > 200 || !object) {
-      const message = !object ? 'A library aboutObjectId is required' : 'Question must be 1 to 200 characters';
+    if (!question || question.length > QUESTION_LIMIT || !object) {
+      finishSequence(context);
+      const message = !object ? 'A library aboutObjectId is required' : `Question must be 1 to ${QUESTION_LIMIT} characters`;
       finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'bad_request' });
       both({ type: 'error', code: 'bad_request', message, reqId });
       return json(req, res, 400, { error: 'bad_request' });
@@ -457,14 +567,21 @@ export function start({
         t_sent: Date.now(),
       };
       pending.set(reqId, show); if (pending.size > 200) pending.delete(pending.keys().next().value);
-      lastShow = show; lastShowAt = Date.now();
-      both(show);
+      const fresh = currentResult(context);
+      finishSequence(context);
+      if (fresh) { lastShow = show; lastShowAt = Date.now(); both(show); }
       finishRequest('ask', {
         reqId, objectId: object.id, confidence: 1, detectMs,
         requestProvider: result?.provider || provider, model,
       });
       return json(req, res, 200, show);
     } catch (e) {
+      finishSequence(context);
+      if (e.code === 'busy') {
+        finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'busy' });
+        both({ type: 'error', code: 'busy', message: 'Model capacity is busy', reqId });
+        return json(req, res, 429, { error: 'busy' }, { 'retry-after': '2' });
+      }
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
       finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: code });
       both({ type: 'error', code, message: e.message, reqId });
@@ -473,22 +590,28 @@ export function start({
   }
 
   async function handleRendered(req, res) {
-    let body;
-    try { body = JSON.parse(await readBody(req) || '{}'); }
-    catch (e) { return json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
-    if (!record(body)) body = {};
+    const body = await bodyObject(req, res); if (!body) return;
     const latency = finishLatency(body.reqId, body.renderMs);
     if (!latency) return json(req, res, 404, { error: 'unknown_request' });
     return json(req, res, 200, { ok: true, ...latency });
   }
 
   const server = http.createServer(async (req, res) => {
-    const url = new URL(req.url, 'http://x'); const headers = cors(req);
-    if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
     try {
+      let url;
+      try { url = new URL(req.url, 'http://x'); }
+      catch { return json(req, res, 400, { error: 'bad_request' }); }
+      const headers = cors(req);
+      if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
       const protectedRoute = (req.method === 'POST' && ['/detect', '/ask', '/rendered'].includes(url.pathname)) || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
       if (protectedRoute && !authorized(req)) return json(req, res, 401, { error: 'unauthorized' });
-      if (req.method === 'GET' && url.pathname === '/phone') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...headers }); return res.end(readFileSync(path.join(here, 'public', 'phone.html'))); }
+      if (req.method === 'GET' && url.pathname === '/phone') {
+        let page;
+        try { page = readFileFn(path.join(here, 'public', 'phone.html')); }
+        catch { return json(req, res, 500, { error: 'server_error' }); }
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': PHONE_CSP, ...headers });
+        return res.end(page);
+      }
       if (req.method === 'GET' && url.pathname === '/objects') {
         if (!url.searchParams.has('lang')) return json(req, res, 200, { objects });
         const lang = normalizeLang(url.searchParams.get('lang'));
@@ -498,43 +621,54 @@ export function start({
       }
       if (req.method === 'GET' && url.pathname === '/last') return json(req, res, 200, currentLast());
       if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
-      if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, sketch: sketchMode, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
+      if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), ...(!token ? { open: true } : {}), provider, sketch: sketchMode, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
       if (req.method === 'POST' && url.pathname === '/ask') return await handleAsk(req, res);
       if (req.method === 'POST' && url.pathname === '/rendered') return await handleRendered(req, res);
-      if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), res, headers, 'public, max-age=300', MEDIA_EXTS)) return;
-      if (req.method === 'GET' && serveGlasses(url.pathname, res, headers)) return;
+      if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), req, res, headers, 'public, max-age=300', MEDIA_EXTS, readFileFn)) return;
+      if (req.method === 'GET' && serveGlasses(url.pathname, req, res, headers, readFileFn)) return;
       json(req, res, 404, { error: 'not_found' });
-    } catch (e) { json(req, res, 500, { error: 'server_error', message: e.message }); }
+    } catch (e) {
+      if (!res.headersSent) json(req, res, 500, { error: 'server_error' });
+      else res.destroy();
+    }
   });
+  server.requestTimeout = 30000;
+  server.headersTimeout = 10000;
+  server.keepAliveTimeout = 5000;
 
-  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: BODY_LIMIT });
+  const wss = new WebSocketServer({ server, path: '/ws', maxPayload: WS_PAYLOAD_LIMIT });
   wss.on('connection', (ws) => {
+    ws.on('error', () => {});
+    if (wss.clients.size > maxSockets) { ws.close(1013, 'Try again later'); return; }
     let role = null; let authenticated = false; let missedBeats = 0;
     const failAuth = () => { sendOne(ws, { type: 'error', code: 'unauthorized', message: 'Bridge locked' }); ws.close(4401, 'Bridge locked'); };
     const helloTimer = timer(failAuth, helloTimeoutMs);
     ws.on('pong', () => { missedBeats = 0; });
     ws.on('close', () => { clearTimer(helloTimer); glasses.delete(ws); phones.delete(ws); });
     ws.on('message', (data) => {
-      let message; try { message = JSON.parse(data.toString()); } catch { return; }
-      if (message.type === 'hello') {
-        if (!sameToken(message.token, token)) return failAuth();
-        const nextRole = message.client === 'glasses' ? 'glasses' : message.client === 'phone' ? 'phone' : null;
-        if (!nextRole) return;
-        glasses.delete(ws); phones.delete(ws); role = nextRole; authenticated = true; clearTimer(helloTimer);
-        if (role === 'glasses') {
-          glasses.add(ws); const last = currentLast();
-          if (last.show) sendOne(ws, { ...last.show, replay: true, ageMs: last.ageMs });
-        } else phones.add(ws);
-        return;
-      }
-      if (!authenticated) return;
-      if (role === 'phone' && message.type === 'clear') { lastShow = null; lastShowAt = 0; return send(glasses, message); }
-      if (role === 'phone' && ['nav', 'device', 'error'].includes(message.type)) return send(glasses, message);
-      if (role === 'glasses' && message.type === 'state') return send(phones, message);
-      if (role === 'glasses' && message.type === 'rendered') {
-        finishLatency(message.reqId);
-      }
+      try {
+        let message; try { message = JSON.parse(data.toString()); } catch { return; }
+        if (!record(message)) return;
+        if (message.type === 'hello') {
+          if (!sameToken(message.token, token)) return failAuth();
+          const nextRole = message.client === 'glasses' ? 'glasses' : message.client === 'phone' ? 'phone' : null;
+          if (!nextRole) return;
+          glasses.delete(ws); phones.delete(ws); role = nextRole; authenticated = true; clearTimer(helloTimer);
+          if (role === 'glasses') {
+            glasses.add(ws); const last = currentLast();
+            if (last.show) sendOne(ws, { ...last.show, replay: true, ageMs: last.ageMs });
+          } else phones.add(ws);
+          return;
+        }
+        if (!authenticated) return;
+        if (role === 'phone' && message.type === 'clear') {
+          clearGeneration += 1; lastShow = null; lastShowAt = 0; return send(glasses, message);
+        }
+        if (role === 'phone' && ['nav', 'device', 'error'].includes(message.type)) return send(glasses, message);
+        if (role === 'glasses' && message.type === 'state') return send(phones, message);
+        if (role === 'glasses' && message.type === 'rendered') finishLatency(message.reqId);
+      } catch { /* ignore malformed or hostile frames */ }
     });
     ws.beat = () => {
       if (!authenticated || ws.readyState !== 1) return;
@@ -551,12 +685,15 @@ export function start({
         if (closing) return done(); closing = true;
         for (const t of timers) { clearTimeout(t); clearInterval(t); } timers.clear();
         for (const ws of wss.clients) ws.terminate();
-        wss.close(); server.close(() => done()); server.closeAllConnections();
+        wss.close(); server.close(() => latencyWrites.finally(done)); server.closeAllConnections();
       }),
     }));
   });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  start().then(({ port }) => console.log(`bridge on http://localhost:${port}  (phone: /phone, ws: /ws, provider: ${pickProvider()})`));
+  process.on('unhandledRejection', () => console.error('unhandled rejection'));
+  process.on('uncaughtException', () => console.error('uncaught exception'));
+  start().then(({ port }) => console.log(`bridge on http://localhost:${port}  (phone: /phone, ws: /ws, provider: ${pickProvider()})`))
+    .catch((error) => { console.error(error.message); process.exitCode = 1; });
 }

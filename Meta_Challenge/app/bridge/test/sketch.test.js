@@ -40,8 +40,36 @@ test('validateSketch cleans text, forces unverified, and drops unknown fields', 
   const clean = validateSketch(value);
   assert.equal(clean.label.length, 40); assert.equal(clean.answer.length, 120); assert.equal(clean.verified, false);
   assert.equal(clean.chapters[0].title.length, 40); assert.equal(clean.chapters[0].captions[0].length, 200);
-  assert.deepEqual(clean.chapters[0].knobs[0], { axis: 'x', label: 'K'.repeat(24) });
+  assert.deepEqual(clean.chapters[0].knobs[0], { axis: 'x', label: 'K'.repeat(23) + '\u2026' });
   assert.equal('extra' in clean, false);
+});
+
+test('validateSketch bounds curve numbers, cleans text, caps words, and requires unique lenses', () => {
+  const value = librarySketch(); const curve = value.chapters[2];
+  value.answer = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen';
+  curve.title = '  Curve\u0000\n  title  ';
+  curve.captions[0] = Array.from({ length: 30 }, (_, index) => `word${index}`).join(' ');
+  curve.spec.x.min = -1e12; curve.spec.x.max = 1e12; curve.spec.x.step = 1e12; curve.spec.x.value = 2e12;
+  curve.spec.series[0].points = [[-2e9, -3e9], [0, 0], [2e9, 3e9]];
+  curve.spec.marks = [{ x: 4e9, label: '  high\u0007   mark  ' }];
+  const clean = validateSketch(value);
+  assert.ok(clean); assert.equal(clean.answer.split(/\s+/).length, 12); assert.match(clean.answer, /\u2026$/);
+  const cleanCurve = clean.chapters[2];
+  assert.equal(cleanCurve.title, 'Curve title'); assert.equal(cleanCurve.captions[0].split(/\s+/).length, 24); assert.match(cleanCurve.captions[0], /\u2026$/);
+  assert.deepEqual(cleanCurve.spec.x, { label: curve.spec.x.label, unit: curve.spec.x.unit, min: -1e9, max: 1e9, step: 1e9, value: 1e9, decimals: 0 });
+  assert.deepEqual(cleanCurve.spec.series[0].points, [[-1e9, -1e9], [0, 0], [1e9, 1e9]]);
+  assert.deepEqual(cleanCurve.spec.marks, [{ x: 1e9, label: 'high mark' }]);
+
+  const duplicate = clone(fixture); duplicate.chapters[1] = clone(duplicate.chapters[0]);
+  assert.equal(validateSketch(duplicate), null);
+});
+
+test('validateSketch caps collection work before iterating untrusted arrays', () => {
+  const value = clone(fixture);
+  value.chapters[0].spec.nodes.push(...Array(1000).fill({ id: 'ignored', label: 'ignored' }));
+  value.chapters[0].spec.losses.push(...Array(1000).fill({ at: value.chapters[0].spec.nodes[0].id, label: 'ignored', share: 1 }));
+  const clean = validateSketch(value);
+  assert.ok(clean); assert.equal(clean.chapters[0].spec.nodes.length, 6); assert.equal(clean.chapters[0].spec.losses.length, 3);
 });
 
 test('validateSketch rejects malformed sketches without throwing', () => {
@@ -228,7 +256,7 @@ test('forced, library, and mock detections never start auto sketches', async (t)
   assert.equal((await (await fetch(mock.base + '/health')).json()).sketch, 'off'); assert.equal(calls, 0);
 });
 
-test('an older sketch frame cannot overwrite a newer remembered show', async (t) => {
+test('an older sketch frame is suppressed and cannot overwrite a newer remembered show', async (t) => {
   let release; const gate = new Promise((resolve) => { release = resolve; }); let count = 0;
   const { base, port } = await bridge(t, {
     sketchProvider: 'auto',
@@ -238,7 +266,8 @@ test('an older sketch frame cannot overwrite a newer remembered show', async (t)
   const glasses = await socket(port);
   await post(base, { reqId: 'older', imageBase64: jpeg });
   await post(base, { reqId: 'newer', imageBase64: jpeg }); release();
-  assert.equal((await nextMessage(glasses, (item) => item.type === 'sketch' && item.reqId === 'older')).sketch.label, 'Desk stapler');
+  await sleep(50);
+  assert.equal(glasses.messages.some((item) => item.type === 'sketch' && item.reqId === 'older'), false);
   const last = await (await fetch(base + '/last')).json(); assert.equal(last.show.reqId, 'newer'); assert.equal(last.show.sketch, undefined);
   glasses.ws.close();
 });

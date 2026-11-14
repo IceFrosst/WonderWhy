@@ -157,20 +157,20 @@ test('lowConfidence is absent at the threshold and for unknown', async (t) => {
 
 test('bad image is 400 and provider failures and timeouts relay reqId errors', async (t) => {
   let calls = 0;
-  const bad = await bridge(t, { provider: 'gemini', detectFn: async () => { calls += 1; } });
+  const bad = await bridge(t, { provider: 'gemini', allowOpen: true, detectFn: async () => { calls += 1; } });
   const badGlasses = await socket(bad.port, { client: 'glasses' });
   const badResponse = await post(bad.base, { reqId: 'bad', imageBase64: 'AAAA' });
   assert.equal(badResponse.status, 400); assert.deepEqual(await badResponse.json(), { error: 'bad_image' }); assert.equal(calls, 0);
   assert.deepEqual(await nextMessage(badGlasses, (m) => m.type === 'error'), { type: 'error', code: 'bad_image', message: 'A valid JPEG image is required', reqId: 'bad' });
   badGlasses.ws.close();
 
-  const failed = await bridge(t, { provider: 'gemini', detectFn: async () => { throw new Error('provider down'); } });
+  const failed = await bridge(t, { provider: 'gemini', allowOpen: true, detectFn: async () => { throw new Error('provider down'); } });
   const failedGlasses = await socket(failed.port, { client: 'glasses' });
   const failedResponse = await post(failed.base, { reqId: 'fail', imageBase64: jpeg });
   assert.equal(failedResponse.status, 502); assert.equal((await failedResponse.json()).error, 'detect_failed');
   assert.equal((await nextMessage(failedGlasses, (m) => m.type === 'error')).reqId, 'fail'); failedGlasses.ws.close();
 
-  const timed = await bridge(t, { provider: 'gemini', detectTimeoutMs: 25, detectFn: () => new Promise(() => {}) });
+  const timed = await bridge(t, { provider: 'gemini', allowOpen: true, detectTimeoutMs: 25, detectFn: () => new Promise(() => {}) });
   const timedGlasses = await socket(timed.port, { client: 'glasses' });
   const timedResponse = await post(timed.base, { reqId: 'slow', imageBase64: jpeg });
   assert.equal(timedResponse.status, 502); assert.equal((await timedResponse.json()).error, 'detect_timeout');
@@ -193,7 +193,7 @@ test('bad JSON and oversized bodies return 400 and 413', async (t) => {
   const { base } = await bridge(t, { provider: 'mock' });
   const badJson = await fetch(base + '/detect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
   assert.equal(badJson.status, 400); assert.deepEqual(await badJson.json(), { error: 'bad_json' });
-  const huge = await fetch(base + '/detect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'x'.repeat(5 * 1024 * 1024 + 1) });
+  const huge = await fetch(base + '/detect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'x'.repeat(2 * 1024 * 1024 + 1) });
   assert.equal(huge.status, 413); assert.deepEqual(await huge.json(), { error: 'too_large' });
 });
 

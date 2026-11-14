@@ -151,7 +151,7 @@ test('/ask validates questions and library object ids', async (t) => {
   for (const body of [
     { aboutObjectId: 'kettle' },
     { question: ' ', aboutObjectId: 'kettle' },
-    { question: 'x'.repeat(201), aboutObjectId: 'kettle' },
+    { question: 'x'.repeat(301), aboutObjectId: 'kettle' },
     { question: 'Why?', aboutObjectId: 'missing' },
     { question: 'Why?', aboutObjectId: 'unknown' },
   ]) {
