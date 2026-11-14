@@ -1,6 +1,6 @@
 # Physics Lens: simulator test rig
 
-Look at an object, pinch, see the physics inside it. 6 objects are **prerendered** (content and scenes ship in the app), so the demo works even if the model or Wi-Fi is slow. Each object has several **lenses** (Motion, Inside, Compare, Flow, The number, ...): swipe left/right changes lens, pinch goes deeper, up/down changes the one thing that step lets you vary.
+Look at an object, pinch, see the physics inside it. 7 objects are **prerendered** (content and scenes ship in the app), so the demo works even if the model or Wi-Fi is slow. Each object has several **lenses** (Motion, Inside, Cutaway, Zoom, What if, Compare, Flow, The number): swipe left/right changes lens, pinch goes deeper, up/down changes the one thing that step lets you vary.
 
 | Where things live | |
 |---|---|
@@ -45,9 +45,9 @@ cd ../bridge && npm install && npm start
 | All 5 scenes | 30 fps |
 | Ball trajectory while changing angle/speed live, and with air drag | 30 fps |
 | Bridge identified → scene painted on glasses | ~50 ms |
-| First load | ~182 KB gzipped, 4 requests (limit 300 KB, 15) |
+| First load (14 Nov, 7 objects, 8 lens kinds) | 212 KB gzipped (194 JS + 18 CSS), 5 requests (limit 300 KB, 15) |
 | Meta test gate | Passes |
-| Detection accuracy, dev stand-in (14 Nov, desktop) | **14 of 14** photos right (2 each of guitar, bicycle, keys, phone; 1 kettle, 1 ball; 4 unrelated objects answered "unknown"). Provider `claude` stand-in (Claude Haiku through the local command line), longest side 896 px, 1 run each. Freely licensed test photos from Wikimedia Commons, not in git |
-| Detection time, dev stand-in | p50 6.9 s, p90 8.4 s. This is the stand-in's process start, **not** the demo provider's speed |
+| Detection accuracy, dev stand-in (14 Nov 01:50 UTC, desktop, 7-object library) | **18 of 18** photos right: 2 each of guitar, ball, bicycle, kettle, keys, phone, spoon, and 4 unrelated objects answered "unknown". Provider `claude` stand-in (Claude Haiku through the local command line), longest side 896 px, 1 run each. Freely licensed test photos from Wikimedia Commons, not in git (`bridge/samples/SOURCES.md` on the test machine lists them) |
+| Detection time, dev stand-in | p50 5.8 s, p90 7.8 s. This is the stand-in's process start, **not** the demo provider's speed |
 | Detection time and accuracy on Gemini | Not measured yet (no `GEMINI_API_KEY` on a test machine). Run `npm run bench` in bridge/ with the key set |
 | Photo glasses → phone over Bluetooth | Can't be simulated; use the delay slider, measure on real glasses |
