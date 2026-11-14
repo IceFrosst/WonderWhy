@@ -94,7 +94,7 @@ export function start({
   const sketchMode = requestedSketchMode === 'auto' && provider === 'mock' ? 'off' : requestedSketchMode;
   const sketchDeadlineMs = positive(sketchTimeoutMs ?? process.env.SKETCH_TIMEOUT_MS, STAND_INS.has(provider) ? 60000 : 20000);
   const glasses = new Set(); const phones = new Set();
-  const pending = new Map(); const records = []; const timers = new Set();
+  const pending = new Map(); const records = []; const requests = []; const timers = new Set();
   let lastProvider = null; let lastShow = null; let lastShowAt = 0; let closing = false;
 
   const timer = (fn, ms, interval = false) => {
@@ -225,7 +225,54 @@ export function start({
       out[stage] = { p50: pct(values, 50), p90: pct(values, 90) };
     }
     out.recent = records.slice(-10);
+    const requestDetectMs = requests.map((item) => item.detectMs).filter((value) => typeof value === 'number');
+    out.requests = {
+      count: requests.length,
+      detectMs: { p50: pct(requestDetectMs, 50), p90: pct(requestDetectMs, 90) },
+      byProvider: requests.reduce((counts, item) => {
+        if (item.provider) counts[item.provider] = (counts[item.provider] || 0) + 1;
+        return counts;
+      }, {}),
+      byObject: requests.reduce((counts, item) => {
+        if (item.objectId) counts[item.objectId] = (counts[item.objectId] || 0) + 1;
+        return counts;
+      }, {}),
+    };
     return out;
+  }
+
+  function logValue(value) {
+    return String(value ?? '-').replace(/[^A-Za-z0-9._:-]/g, '_');
+  }
+
+  function finishRequest(kind, { reqId, objectId, confidence, detectMs, requestProvider, model, error }) {
+    const item = {
+      reqId, kind, objectId: objectId || null, provider: requestProvider || null,
+      detectMs: Number.isFinite(detectMs) ? Math.max(0, detectMs) : null,
+      error: error || null, at: Date.now(),
+    };
+    requests.push(item); if (requests.length > 500) requests.shift();
+    if (error) console.log(`error ${logValue(reqId).slice(0, 8)} ${logValue(error)} ${logValue(item.detectMs)}ms ${logValue(model || requestProvider)}`);
+    else console.log(`${kind} ${logValue(reqId).slice(0, 8)} ${logValue(objectId)} ${logValue(confidence)} ${logValue(item.detectMs)}ms ${logValue(model || requestProvider)}`);
+  }
+
+  function finishLatency(reqId, renderMs) {
+    const show = pending.get(reqId); if (!show) return null;
+    pending.delete(reqId);
+    const timing = show.timings; const t_ack = Date.now();
+    const pre = timing.preUploadMs ?? Math.max(0, timing.t_received - timing.t_capture);
+    const serverRenderMs = Math.max(0, t_ack - timing.t_detected);
+    const renderedMs = typeof renderMs === 'number' && Number.isFinite(renderMs) && renderMs >= 0 ? renderMs : serverRenderMs;
+    const latency = {
+      reqId, objectId: show.objectId, model: timing.model,
+      captureToReceivedMs: pre, detectMs: timing.detectMs,
+      detectedToRenderedMs: renderedMs,
+      totalMs: pre + Math.max(0, timing.t_detected - timing.t_received) + renderedMs, at: t_ack,
+    };
+    records.push(latency);
+    try { appendFileSync(latencyLog, JSON.stringify(latency) + '\n'); } catch (e) { console.error('latency log failed', e.message); }
+    send(phones, { type: 'latency', ...latency });
+    return latency;
   }
 
   function readBody(req) {
@@ -315,6 +362,7 @@ export function start({
     const preUploadMs = Number.isFinite(Number(body.preUploadMs)) ? Math.max(0, Number(body.preUploadMs)) : null;
     both({ type: 'detecting', reqId, timeoutMs: detectTimeoutMs + 2000, t_sent: Date.now() });
     if (!body.forceObjectId && provider !== 'mock' && !validJpegBase64(body.imageBase64)) {
+      finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'bad_image' });
       both({ type: 'error', code: 'bad_image', message: 'A valid JPEG image is required', reqId });
       return json(req, res, 400, { error: 'bad_image' });
     }
@@ -340,6 +388,10 @@ export function start({
       pending.set(reqId, show); if (pending.size > 200) pending.delete(pending.keys().next().value);
       lastShow = show; lastShowAt = Date.now();
       both(show);
+      finishRequest('detect', {
+        reqId, objectId: result.objectId, confidence: result.confidence, detectMs: result.detectMs,
+        requestProvider: result.provider, model: result.model,
+      });
       if (!shouldSketch) return json(req, res, 200, show);
       const outcome = finishSketch(reqId, {
         imageBase64: body.imageBase64, focusBase64, hint: result.answer || '', lang,
@@ -353,6 +405,7 @@ export function start({
       return json(req, res, 200, responseShow);
     } catch (e) {
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
+      finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: code });
       both({ type: 'error', code, message: e.message, reqId });
       json(req, res, 502, { error: code, message: e.message, reqId });
     }
@@ -371,6 +424,7 @@ export function start({
     both({ type: 'detecting', reqId, timeoutMs: detectTimeoutMs + 2000, t_sent: Date.now() });
     if (!question || question.length > 200 || !object) {
       const message = !object ? 'A library aboutObjectId is required' : 'Question must be 1 to 200 characters';
+      finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'bad_request' });
       both({ type: 'error', code: 'bad_request', message, reqId });
       return json(req, res, 400, { error: 'bad_request' });
     }
@@ -405,19 +459,34 @@ export function start({
       pending.set(reqId, show); if (pending.size > 200) pending.delete(pending.keys().next().value);
       lastShow = show; lastShowAt = Date.now();
       both(show);
+      finishRequest('ask', {
+        reqId, objectId: object.id, confidence: 1, detectMs,
+        requestProvider: result?.provider || provider, model,
+      });
       return json(req, res, 200, show);
     } catch (e) {
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
+      finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: code });
       both({ type: 'error', code, message: e.message, reqId });
       return json(req, res, 502, { error: code, message: e.message, reqId });
     }
+  }
+
+  async function handleRendered(req, res) {
+    let body;
+    try { body = JSON.parse(await readBody(req) || '{}'); }
+    catch (e) { return json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
+    if (!record(body)) body = {};
+    const latency = finishLatency(body.reqId, body.renderMs);
+    if (!latency) return json(req, res, 404, { error: 'unknown_request' });
+    return json(req, res, 200, { ok: true, ...latency });
   }
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x'); const headers = cors(req);
     if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
     try {
-      const protectedRoute = (req.method === 'POST' && ['/detect', '/ask'].includes(url.pathname)) || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
+      const protectedRoute = (req.method === 'POST' && ['/detect', '/ask', '/rendered'].includes(url.pathname)) || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
       if (protectedRoute && !authorized(req)) return json(req, res, 401, { error: 'unauthorized' });
       if (req.method === 'GET' && url.pathname === '/phone') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...headers }); return res.end(readFileSync(path.join(here, 'public', 'phone.html'))); }
       if (req.method === 'GET' && url.pathname === '/objects') {
@@ -432,6 +501,7 @@ export function start({
       if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, sketch: sketchMode, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
       if (req.method === 'POST' && url.pathname === '/ask') return await handleAsk(req, res);
+      if (req.method === 'POST' && url.pathname === '/rendered') return await handleRendered(req, res);
       if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), res, headers, 'public, max-age=300', MEDIA_EXTS)) return;
       if (req.method === 'GET' && serveGlasses(url.pathname, res, headers)) return;
       json(req, res, 404, { error: 'not_found' });
@@ -463,18 +533,7 @@ export function start({
       if (role === 'phone' && ['nav', 'device', 'error'].includes(message.type)) return send(glasses, message);
       if (role === 'glasses' && message.type === 'state') return send(phones, message);
       if (role === 'glasses' && message.type === 'rendered') {
-        const show = pending.get(message.reqId); if (!show) return; pending.delete(message.reqId);
-        const timing = show.timings; const t_ack = Date.now();
-        const pre = timing.preUploadMs ?? Math.max(0, timing.t_received - timing.t_capture);
-        const record = {
-          reqId: message.reqId, objectId: show.objectId, model: timing.model,
-          captureToReceivedMs: pre, detectMs: timing.detectMs,
-          detectedToRenderedMs: t_ack - timing.t_detected,
-          totalMs: pre + (t_ack - timing.t_received), at: t_ack,
-        };
-        records.push(record);
-        try { appendFileSync(latencyLog, JSON.stringify(record) + '\n'); } catch (e) { console.error('latency log failed', e.message); }
-        send(phones, { type: 'latency', ...record });
+        finishLatency(message.reqId);
       }
     });
     ws.beat = () => {

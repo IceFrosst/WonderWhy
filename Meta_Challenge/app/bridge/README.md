@@ -33,7 +33,9 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 
 Open: `GET /health`, `GET /objects`, `GET /phone`, the glasses app at `/`, and exported files under `GET /media/*`.
 
-Protected when `LENS_TOKEN` is set: `POST /detect`, `POST /ask`, `GET /last`, and `GET /latency`. Send the key in `X-Lens-Token`. WebSocket `/ws` clients send it as `token` in their first `hello` frame.
+Protected when `LENS_TOKEN` is set: `POST /detect`, `POST /ask`, `POST /rendered`, `GET /last`, and `GET /latency`. Send the key in `X-Lens-Token`. WebSocket `/ws` clients send it as `token` in their first `hello` frame.
+
+`POST /rendered` accepts `{ "reqId": "...", "renderMs"?: number }` so a phone-only client can complete the same latency record as the glasses `rendered` frame. A valid `renderMs` is the phone's own response-to-paint duration; unknown or already completed request ids return `404 unknown_request`.
 
 `GET /last` returns the most recent `show` while it is inside `LAST_TTL_MS`. A late glasses connection receives the same show with `replay: true` and `ageMs`; a phone `clear` removes it.
 
@@ -58,6 +60,6 @@ curl -X POST localhost:8787/ask -H "Content-Type: application/json" -d '{"questi
 Set `LENS_TOKEN` to a private random value and open the phone stand-in once as `http://localhost:8787/phone?k=<token>`. The page stores the key locally, removes it from the address bar, authenticates its API and WebSocket traffic, and passes it to the embedded glasses preview. Add any separate browser origins to `LENS_ALLOWED_ORIGINS` as a comma-separated list. Never commit the key or put it in a checked-in QR code.
 
 ## Reading latency
-`curl localhost:8787/latency` returns `{count, provider, captureToReceivedMs, detectMs, detectedToRenderedMs, totalMs}` with `p50`/`p90` each, plus the last 10 `recent` records. Every completed request (after the glasses send `rendered`) is also a line in `latency.jsonl`. `captureToReceivedMs` includes the phone page's simulated Bluetooth delay slider.
+`curl localhost:8787/latency` returns `{count, provider, captureToReceivedMs, detectMs, detectedToRenderedMs, totalMs}` with `p50`/`p90` each, plus the last 10 `recent` records. Those existing fields cover requests with a glasses or phone paint acknowledgement. The `requests` field covers the last 500 finished detect and ask requests whether acknowledged or not, including detect-time percentiles and counts by provider and object. Every acknowledged request is also a line in `latency.jsonl`. `captureToReceivedMs` includes the phone page's simulated Bluetooth delay slider.
 The summary is in memory and resets on restart; the JSONL file persists.
 Detection timeout is 8 s (`detect_timeout`); any other model failure is `detect_failed`, with a 502 to the caller.

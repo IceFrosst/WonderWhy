@@ -127,5 +127,19 @@ The library has 6 objects. For anything else the bridge can ask the model for a 
 | `/last` | The remembered `show` is this one, so a late Web App lands on the answer |
 | Unknown object | `aboutObjectId: "unknown"` is refused with 400 `bad_request` for now (sketches cannot be asked about yet) |
 
+### Phone-only latency (`POST /rendered`)
+| Item | Rule |
+|---|---|
+| Request | Protected like `/detect`: `{ "reqId": "...", "renderMs"?: number }`. `renderMs`, when finite and at least 0, is measured on the phone from receiving the HTTP response until its card is displayed |
+| Result | Completes the same latency record as a glasses `rendered` frame, appends the JSONL line, and sends the `latency` frame to phone WebSocket clients. Unknown or already completed ids return `404 {"error":"unknown_request"}` |
+| Summary | `GET /latency` also includes `requests` for the last 500 finished detect and ask requests: count, detect-time p50/p90, and counts by provider and object. These requests do not need a paint acknowledgement |
+
+### More states and actions
+| Frame | Addition |
+|---|---|
+| `device` | New state `first_run` shows the consent card |
+| `nav` | New action `demo` starts the hands-free demo |
+| `state` | May carry `demo: true` while the hands-free demo is active |
+
 ## Latency log
 The bridge appends every completed request as one JSON line to `bridge/latency.jsonl` (git-ignored) and serves a summary at `GET /latency` (count, p50, p90 per stage).
