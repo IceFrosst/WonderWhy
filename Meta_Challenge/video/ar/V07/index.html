@@ -1,0 +1,217 @@
+<!doctype html>
+<!-- V07 "Wait, how did these block all that?": earbud hologram lifts out of his real earbud (grass clip), turns to show
+     mic + speaker, then the noise wave (cyan) and its flipped copy (amber) meet and flatten into a green line.
+     window.renderFrame(t) is a pure function of t. All screen positions live in config.json. -->
+<html><head><meta charset="utf-8"><title>V07 earbuds anti-noise</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { earbud } from './earbud.js';
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const h = await earbud({ scale: 2 });
+const W = K.W, H = K.H, E = K.ease, P = K.prog;
+const CY = '#4df0ff', AM = '#ffc247', GR = '#6dff9c', GOLD = '#ffcf7a';
+const plateBuf = K.layer(), pg = plateBuf.getContext('2d');
+
+// eased interpolation between keyframes (every key is a gentle stop; keys are where the PC retunes)
+const key = (a, t) => {
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? E.inOut(K.clamp((t - p.t) / (q.t - p.t))) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, K.lerp(p[k], q[k] ?? p[k], u)]));
+};
+
+const lin = (a, t) => { // linear between keys: for tracked points (the real earbud)
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? K.clamp((t - p.t) / (q.t - p.t)) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, K.lerp(p[k], q[k] ?? p[k], u)]));
+};
+
+// the hall's noise: an irregular wave, exactly the same shape everywhere it appears (grey squiggles, cyan line)
+const noise = s => 0.55 * Math.sin(6.2832 * s) + 0.3 * Math.sin(6.2832 * 2.3 * s + 1.1) + 0.15 * Math.sin(6.2832 * 5.1 * s + 0.4);
+
+// ---- timeline (s) --------------------------------------------------------------------------------------
+const T = { q0: 0.3, q1: 2.6, rise0: 1.5, rise1: 2.9, lab0: 3.0, lab1: 5.4, cy0: 4.1, cy1: 4.9, am0: 4.7, am1: 5.5,
+            m0: 5.5, m1: 6.5, ans: 6.4 };
+
+function plate(t, warm) {
+  const f = cfg.footage.plate, pk = key(cfg.plate, t);
+  const jit = 1 - P(t, 1.6, 3.6);                  // early hand-held jitter, settles as the hologram arrives
+  const jx = K.noise(t * 11, 3) * 5 * jit, jy = K.noise(t * 13, 7) * 4 * jit;
+  return { f, pk, jx, jy, warm };
+}
+
+async function drawPlate(t) {
+  const { f, pk, jx, jy, warm } = plate(t, E.inOut(P(t, 1.6, 6.4)));
+  const im = await K.footageFrame('plate', t - f.start);
+  ctx.save(); ctx.translate(jx, jy);
+  if (im) {
+    ctx.filter = `grayscale(${(1 - warm) * 0.92}) contrast(${1.1 - 0.06 * warm}) brightness(${0.8 + 0.16 * warm}) saturate(${1 - 0.1 * warm})`;
+    K.cover(ctx, im, pk.zoom * 1.02, pk.fx, pk.fy); ctx.filter = 'none';
+  } else {
+    // placeholder: cold grey version cross-fading to the warm one, plus the earbud we track (config.ear)
+    pg.clearRect(0, 0, W, H);
+    K.placeholder(ctx, f.label, f.sub, { top: '#2b2f35', bottom: '#111317', ink: '#aeb8c8', zoom: pk.zoom, y: 120 });
+    K.placeholder(pg, f.label, f.sub, { zoom: pk.zoom, y: 120 });
+    ctx.globalAlpha = warm; ctx.drawImage(plateBuf, 0, 0); ctx.globalAlpha = 1;
+    const e = lin(cfg.ear, t);
+    ctx.strokeStyle = 'rgba(220,210,190,0.45)'; ctx.lineWidth = 2; ctx.setLineDash([8, 7]);
+    ctx.beginPath(); ctx.arc(e.x, e.y, 26, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(220,210,190,0.5)'; ctx.font = '500 20px Archivo'; ctx.textAlign = 'center';
+    ctx.fillText('earbud in his ear (config.ear)', e.x, e.y + 56);
+  }
+  ctx.restore();
+  // grade: cold blue-grey early, gold late
+  ctx.save(); ctx.globalCompositeOperation = 'soft-light';
+  ctx.fillStyle = `rgba(80,110,160,${0.45 * (1 - warm)})`; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = K.rgba(GOLD, 0.32 * warm); ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  ctx.fillStyle = `rgba(10,12,16,${0.22 * (1 - warm)})`; ctx.fillRect(0, 0, W, H);
+}
+
+// soft dark pool under the light work so thin lines read on bright grass (no bloom needed)
+function scrim(x, y, rx, ry, al) {
+  if (al <= 0.005) return;
+  ctx.save(); ctx.translate(x, y); ctx.scale(rx, ry);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  g.addColorStop(0, `rgba(6,10,14,${al})`); g.addColorStop(0.55, `rgba(6,10,14,${al * 0.6})`); g.addColorStop(1, 'rgba(6,10,14,0)');
+  ctx.fillStyle = g; ctx.fillRect(-1, -1, 2, 2); ctx.restore();
+}
+
+function view(a) { return { yaw: a.yaw, pitch: 0, explode: a.explode }; }
+
+function drawHolo(t) {
+  if (t < T.rise0 - 0.05) return null;
+  const a = key(cfg.anchor, t), e = lin(cfg.ear, t);
+  const b = t < T.lab0 - 0.4 ? 0 : 1, tb = b === 0 ? t : t - (T.lab0 - 0.4);
+  const img = h.draw(b, tb, view(a));
+  const fade = E.out2(P(t, T.rise0, T.rise0 + 0.35));
+  scrim(a.x, a.y - a.w * 0.04, a.w * 0.6, a.w * 0.5, 0.55 * fade);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = fade;
+  ctx.translate(a.x, a.y); ctx.rotate(a.rot * Math.PI / 180);
+  ctx.drawImage(img, -a.w / 2, -a.w / 2, a.w, a.w);
+  ctx.globalAlpha = 0.5 * fade; ctx.drawImage(img, -a.w / 2, -a.w / 2, a.w, a.w);   // second screen pass: brighter lines, no extra bloom
+  ctx.restore();
+  // lift-off: a thin ring opens around the real earbud, and a faint trail joins it to the hologram for a moment
+  const rk = P(t, T.rise0 - 0.15, T.rise0 + 0.75), ring = Math.sin(Math.PI * rk);
+  if (ring > 0.01) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.shadowColor = CY; ctx.shadowBlur = 12;
+    ctx.strokeStyle = K.rgba(CY, 0.7 * ring); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(e.x, e.y, 14 + 46 * E.out3(rk), 0, 7); ctx.stroke();
+    ctx.strokeStyle = K.rgba(CY, 0.35 * ring); ctx.lineWidth = 1.5; ctx.setLineDash([3, 7]);
+    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.quadraticCurveTo(e.x - 40, (e.y + a.y) / 2 - 40, a.x, a.y + a.w * 0.2); ctx.stroke();
+    ctx.restore();
+  }
+  return { a, b, tb };
+}
+
+function label(x, y, side, text, col, k, ax, aw) {   // dot on the part, short leader, text out to the side
+  if (k <= 0) return;
+  const dir = side === 'l' ? -1 : 1, X = ax + dir * 0.3 * aw, lx = K.lerp(x, X, E.out3(k));
+  ctx.save(); ctx.globalAlpha = Math.min(1, k * 1.6);
+  ctx.strokeStyle = K.rgba(col, 0.85); ctx.fillStyle = col; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(lx, y); ctx.stroke();
+  ctx.font = '600 semi-condensed 34px Archivo'; ctx.textBaseline = 'middle'; ctx.textAlign = dir > 0 ? 'left' : 'right';
+  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 10; ctx.fillStyle = '#f2f6fa';
+  ctx.fillText(text, lx + dir * 14, y);
+  ctx.restore();
+}
+
+function drawLabels(t, hs) {
+  if (!hs || hs.b !== 1) return;
+  const k0 = P(t, T.lab0, T.lab0 + 0.45), out = 1 - P(t, T.lab1, T.lab1 + 0.4);
+  if (k0 <= 0 || out <= 0) return;
+  const { a } = hs, L = h.labels(1, hs.tb), s = a.w / 600;
+  L.forEach((l, i) => {
+    const x = a.x + (l.x - 300) * s, y = a.y + (l.y - 300) * s;
+    const side = l.text === 'Speaker' ? 'r' : 'l';
+    const k = P(t, T.lab0 + i * 0.3, T.lab0 + i * 0.3 + 0.45) * out;
+    label(x, y, side, l.text, '#ffffff', k, a.x, a.w);
+  });
+}
+
+// ---- the trick: noise (cyan) + flipped copy (amber) meet and flatten into green -----------------------------
+function drawWaves(t) {
+  if (t < T.cy0) return;
+  const w = key(cfg.wave, t), N = 96, gap = w.gap;
+  scrim(w.x + w.w / 2, w.y, w.w * 0.72, (gap + w.amp) * 2.1, 0.45 * P(t, T.cy0 - 0.2, T.cy0 + 0.4));
+  const cyIn = E.inOut(P(t, T.cy0, T.cy1)), amIn = E.inOut(P(t, T.am0, T.am1));
+  const front = K.lerp(-0.25, 1.25, E.inOut(P(t, T.m0, T.m1)));     // where the two have met (sweeps left to right)
+  const env = u => K.clamp(u / 0.08) * K.clamp((1 - u) / 0.08);
+  const sAt = u => u * 2.4 - t * 0.55;
+  const mx = u => K.clamp((front - u) / 0.22);
+  ctx.save(); ctx.lineJoin = ctx.lineCap = 'round';
+  const line = (col, sign, dy, show, alphaF, ampF, width, glow) => {
+    for (let i = 0; i < N; i++) {
+      const u0 = i / N, u1 = (i + 1) / N; if (u0 > show) break;
+      const al = alphaF((u0 + u1) / 2); if (al <= 0.01) continue;
+      ctx.strokeStyle = K.rgba(col, al); ctx.lineWidth = width; ctx.shadowColor = col; ctx.shadowBlur = glow;
+      ctx.beginPath();
+      for (let j = 0; j <= 4; j++) {
+        const u = Math.min(show, K.lerp(u0, u1, j / 4)), m = mx(u);
+        const y = w.y + dy(m) + sign * w.amp * ampF(m) * env(u) * noise(sAt(u));
+        j ? ctx.lineTo(w.x + u * w.w, y) : ctx.moveTo(w.x + u * w.w, y);
+      }
+      ctx.stroke();
+    }
+  };
+  // cyan noise above, amber flipped copy below; they slide together and fade where they have met
+  line(CY, 1, m => -gap * (1 - E.inOut(m)), cyIn, u => 0.95 * (1 - mx(u)), () => 1, 3.2, 8);
+  line(AM, -1, m => gap * (1 - E.inOut(m)), amIn, u => 0.95 * (1 - mx(u)), () => 1, 3.2, 8);
+  // green: the sum. Its wiggle is what is left before they line up; once met it is flat
+  const calm = P(t, T.m1, T.m1 + 1);
+  line(GR, 1, () => 0, 1, u => mx(u) * (0.9 + 0.1 * Math.sin(t * 2.2)), m => 0.25 * (1 - E.inOut(m)) * (1 - E.inOut(m)), 3.4 + 0.8 * calm, 10 + 4 * calm);
+  ctx.restore();
+  // labels on the left end of each line
+  const tag = (txt, col, x, y, k, align = 'left') => {
+    if (k <= 0) return; ctx.save(); ctx.globalAlpha = k; ctx.fillStyle = col; ctx.font = '600 semi-condensed 30px Archivo';
+    ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 8;
+    ctx.fillText(txt, x, y); ctx.restore();
+  };
+  const tx = cfg.text, metL = K.clamp((front - 0.75) / 0.3);  // labels go as the merge reaches the right end
+  tag(tx.noise, CY, w.x + w.w, w.y - gap - w.amp - 14, P(t, T.cy0 + 0.3, T.cy0 + 0.7) * (1 - metL), 'right');
+  tag(tx.anti, AM, w.x + w.w, w.y + gap + w.amp + 40, P(t, T.am0 + 0.3, T.am0 + 0.7) * (1 - metL), 'right');
+  tag(tx.sum, GR, w.x + w.w, w.y - 34, P(t, T.m1 - 0.3, T.m1 + 0.3), 'right');
+}
+
+function caption(t) {
+  const tx = cfg.text;
+  const qa = P(t, T.q0, T.q0 + 0.3) * (1 - P(t, T.q1, T.q1 + 0.3));
+  ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  if (qa > 0) {
+    ctx.globalAlpha = qa; ctx.font = '500 italic semi-condensed 52px Archivo'; ctx.fillStyle = '#eef1f5';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 14; ctx.fillText(tx.question, W / 2, 990 - 6 * E.out3(P(t, T.q0, T.q0 + 0.4)));
+  }
+  const aa = P(t, T.ans, T.ans + 0.4);
+  if (aa > 0) {
+    ctx.globalAlpha = aa; ctx.font = '500 semi-condensed 40px Archivo'; ctx.fillStyle = '#fff6e4';
+    ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 12; ctx.fillText(tx.answer, W / 2, 990);
+  }
+  const ha = 0.55 * P(t, T.rise0 + 0.3, T.rise0 + 0.8);
+  if (ha > 0) {
+    ctx.globalAlpha = ha; ctx.shadowBlur = 0; ctx.font = '400 20px Archivo'; ctx.textAlign = 'right'; ctx.fillStyle = '#ffffff';
+    ctx.fillText(tx.honest, W - 48, H - 36);
+  }
+  ctx.restore();
+}
+
+window.renderFrame = async t => {
+  ctx.save(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+  await drawPlate(t);
+  const hs = drawHolo(t);
+  drawLabels(t, hs);
+  drawWaves(t);
+  const warm = E.inOut(P(t, 1.6, 6.4));
+  K.vignette(ctx, 0.42 - 0.14 * warm);
+  K.grain(ctx, t, 0.13 - 0.08 * warm);
+  caption(t);
+  ctx.restore();
+};
+window.ready = true;
+</script></body></html>

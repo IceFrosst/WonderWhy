@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- V09 "Through the glasses": grey POV at the Prusa seen through the right lens (frame edge, nose side, warm tint),
+     a pinch, then the fixed 600x600 display panel right of centre playing the printer3d chapter (real captions,
+     one beat per pinch). A faint world-locked outline of the printer hints at the feel. window.renderFrame(t). -->
+<html><head><meta charset="utf-8"><title>V09 Through the glasses</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { hologram } from '../lib/holo.js';
+const W = 1920, H = 1080;
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const hp = await hologram('printer3d', { scale: 2 });    // in the panel
+const hg = await hologram('printer3d', { scale: 1.5 });  // faint world ghost
+const captions = hp.captions, NB = hp.beats.length;
+
+const key = (a, t) => { // linear between keyframes
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? K.clamp((t - p.t) / (q.t - p.t)) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, K.lerp(p[k], q[k], u)]));
+};
+const E = K.ease, P = K.prog;
+const FONT = 'Archivo', WHITE = '#ffffff', SOFT = '#c9d4ff';
+
+// ---- lens: the right lens seen from behind, built once (head-locked, so static) -------------------------------
+const lensPath = () => {
+  const p = new Path2D();
+  p.moveTo(250, 22);
+  p.bezierCurveTo(800, 6, 1400, 4, 1700, 14);          // top rim, almost straight
+  p.quadraticCurveTo(1912, 24, 1914, 230);              // outer top corner
+  p.lineTo(1908, 760);
+  p.bezierCurveTo(1902, 1010, 1720, 1072, 1450, 1076);  // outer bottom curve
+  p.lineTo(560, 1078);
+  p.bezierCurveTo(330, 1074, 150, 960, 70, 760);        // nose side, slanting up-left
+  p.lineTo(26, 300);
+  p.quadraticCurveTo(22, 40, 250, 22);
+  p.closePath();
+  return p;
+};
+const lens = K.layer(), LP = lensPath();
+{
+  const g = lens.getContext('2d');
+  g.fillStyle = `rgba(7,6,5,${cfg.lens.edge})`; g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'destination-out'; g.filter = 'blur(44px)'; g.fill(LP);
+  g.globalCompositeOperation = 'source-over'; g.filter = 'blur(26px)';
+  // nose pad: a soft out-of-focus bump low on the nose side
+  g.globalAlpha = 0.55 * cfg.lens.nose; g.fillStyle = '#0a0806';
+  g.beginPath(); g.ellipse(70, 1010, 150, 120, -0.6, 0, Math.PI * 2); g.fill();
+  // bevel glint along the lens edge
+  g.globalAlpha = 1; g.filter = 'blur(2.5px)'; g.strokeStyle = 'rgba(255,236,214,0.06)'; g.lineWidth = 2.5; g.stroke(LP);
+  g.filter = 'none';
+  // faint coating sheen across the upper right of the lens
+  const s = g.createLinearGradient(1100, 0, 1900, 520);
+  s.addColorStop(0, 'rgba(255,255,255,0)'); s.addColorStop(0.5, 'rgba(210,225,255,0.035)'); s.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = s; g.fillRect(0, 0, W, H);
+}
+
+// ---- panel content: the 600x600 display, drawn at 2x like the glasses app (shared/MODEL3D.md layout) ----------
+const pc = K.layer(1200, 1200), pg = pc.getContext('2d');
+const wrap = (g, text, max) => {
+  const out = []; let line = '';
+  for (const w of String(text).split(/\s+/).filter(Boolean)) {
+    const c = line ? `${line} ${w}` : w;
+    if (line && g.measureText(c).width > max) { out.push(line); line = w; } else line = c;
+  }
+  if (line) out.push(line); return out;
+};
+const spread = (items, top, bottom, gap = 26) => {
+  items.sort((a, b) => a.y - b.y);
+  for (let i = 0; i < items.length; i++) { items[i].ty = K.clamp(items[i].y, top, bottom); if (i && items[i].ty - items[i - 1].ty < gap) items[i].ty = items[i - 1].ty + gap; }
+  for (let i = items.length - 1; i >= 0; i--) { if (items[i].ty > bottom) items[i].ty = bottom; if (i < items.length - 1 && items[i + 1].ty - items[i].ty < gap) items[i].ty = items[i + 1].ty - gap; }
+};
+function drawPanel(b, tIn, since) {
+  const g = pg; g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = '#000'; g.fillRect(0, 0, 1200, 1200);
+  g.drawImage(hp.draw(b, tIn), 0, 0, 1200, 1200);
+  g.setTransform(2, 0, 0, 2, 0, 0);
+  // top line: object name + one dot per beat
+  g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `400 18px ${FONT}`; g.fillStyle = SOFT;
+  g.fillText(hp.object.label, 24, 22);
+  for (let i = 0; i < NB; i++) {
+    const x = 600 - 24 - 4 - (NB - 1 - i) * 14; g.beginPath(); g.arc(x, 22, 4, 0, Math.PI * 2);
+    if (i === b) { g.fillStyle = WHITE; g.fill(); } else if (i < b) { g.fillStyle = SOFT; g.fill(); }
+    else { g.strokeStyle = SOFT; g.lineWidth = 1.5; g.stroke(); }
+  }
+  // caption at the bottom (fades in 250 ms after each pinch, like .xp-caption)
+  g.font = `400 20px ${FONT}`;
+  const lines = wrap(g, captions[b] || '', 552).slice(0, 2), lh = 26, top = 600 - 18 - lines.length * lh;
+  g.globalAlpha = E.out2(P(since, 0, 0.25)); g.fillStyle = WHITE; g.textBaseline = 'top';
+  lines.forEach((l, i) => g.fillText(l, 24, top + i * lh));
+  // part labels in two margin columns with thin leaders, once the beat's camera has arrived
+  const mv = hp.beats[b].move || 0;
+  g.globalAlpha = E.out2(P(tIn, mv - 0.25, mv + 0.15));
+  if (g.globalAlpha > 0) {
+    const labs = hp.labels(b, tIn).slice(0, 4);
+    for (const side of ['l', 'r']) {
+      const items = labs.filter(l => l.side === side).map(l => ({ ...l }));
+      spread(items, 56, top - 16);
+      g.font = `400 18px ${FONT}`; g.textBaseline = 'middle'; g.textAlign = side === 'l' ? 'left' : 'right';
+      for (const it of items) {
+        const w = g.measureText(it.text).width, tx = side === 'l' ? 24 : 576, sx = side === 'l' ? 24 + w + 8 : 576 - w - 8;
+        g.fillStyle = it.kind === 'callout' ? WHITE : SOFT; g.fillText(it.text, tx, it.ty);
+        g.strokeStyle = 'rgba(201,212,255,0.75)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sx, it.ty); g.lineTo(it.x, it.y); g.stroke();
+        if (it.kind === 'callout') {
+          const a = Math.atan2(it.y - it.ty, it.x - sx); g.beginPath();
+          for (const k of [-0.5, 0.5]) { g.moveTo(it.x, it.y); g.lineTo(it.x - 6 * Math.cos(a + k), it.y - 6 * Math.sin(a + k)); }
+          g.stroke();
+        } else { g.fillStyle = SOFT; g.beginPath(); g.arc(it.x, it.y, 2.5, 0, Math.PI * 2); g.fill(); }
+      }
+    }
+  }
+  g.globalAlpha = 1; g.textAlign = 'left'; g.setTransform(1, 0, 0, 1, 0, 0);
+  return pc;
+}
+const rrect = (g, x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, r); };
+
+// ---- ghost: the hot end (config.ghostBeat at rest, its heat fx still running), soft-masked to a round spot -----
+const gc = K.layer(hg.size, hg.size), gx = gc.getContext('2d');
+function ghost(t, A) {
+  const S = hg.size, tIn = cfg.ghostBeatT + Math.max(0, t - cfg.ghostOn);
+  gx.globalCompositeOperation = 'source-over'; gx.clearRect(0, 0, S, S);
+  gx.drawImage(hg.draw(cfg.ghostBeat, tIn, { yaw: A.yaw, pitch: A.pitch }), 0, 0);
+  const m = gx.createRadialGradient(S / 2, S / 2, S * 0.12, S / 2, S / 2, S * 0.48);
+  m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+  gx.globalCompositeOperation = 'destination-in'; gx.fillStyle = m; gx.fillRect(0, 0, S, S);
+  return gc;
+}
+
+// ---- frame ------------------------------------------------------------------------------------------------------
+window.renderFrame = async t => {
+  const f = cfg.footage.plate, im = await K.footageFrame('plate', t - f.start);
+  const push = key(cfg.push, t), gr = key(cfg.grade, t);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+
+  // world (plate coords; the slow POV push moves the plate and the ghost together)
+  ctx.save();
+  const px = push.fx * W, py = push.fy * H;
+  ctx.translate(px, py); ctx.scale(push.zoom, push.zoom); ctx.translate(-px, -py);
+  ctx.filter = `saturate(${gr.sat}) brightness(${gr.bright}) contrast(1.04)`;
+  if (im) ctx.drawImage(im, 0, 0, W, H);
+  else K.placeholder(ctx, f.label, f.sub);
+  ctx.filter = 'none';
+  const A = key(cfg.anchor, t);
+  if (!im) { // stand-in marker where the real printer should be
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.strokeStyle = '#f4e6c8'; ctx.lineWidth = 2; ctx.setLineDash([10, 10]);
+    ctx.strokeRect(A.x - A.w * 0.32, A.y - A.w * 0.42, A.w * 0.64, A.w * 0.84);
+    ctx.setLineDash([]); ctx.fillStyle = '#f4e6c8'; ctx.font = '600 semi-condensed 24px Archivo'; ctx.textAlign = 'center';
+    ctx.fillText('Prusa Core One here (tune config.anchor)', A.x, A.y + A.w * 0.42 + 34); ctx.restore();
+  }
+  // ghost: the assembled printer outline, world-locked, faint; a small lift on each pinch
+  const gOn = E.inOut(P(t, cfg.ghostOn, cfg.ghostOn + 0.9));
+  if (gOn > 0) {
+    let lift = 0; for (const p of cfg.pinches.slice(1)) lift = Math.max(lift, Math.exp(-Math.max(0, t - p) * 5) * (t >= p ? 1 : 0));
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = K.clamp(A.a * gOn * (1 + 0.6 * lift));
+    ctx.translate(A.x, A.y); ctx.rotate(A.rot * Math.PI / 180);
+    ctx.drawImage(ghost(t, A), -A.w / 2, -A.w / 2, A.w, A.w);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // warm lens tint (multiply): the world through tinted glass
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = cfg.lens.warm; ctx.fillRect(0, 0, W, H); ctx.restore();
+
+  // the display panel: head-locked, right of centre, black = see-through (screen blend)
+  const on = E.out3(P(t, cfg.panelOn, cfg.panelOn + 0.32));
+  if (on > 0) {
+    const Pn = key(cfg.panel, t), s = Pn.w * (0.965 + 0.035 * on), r = s * 0.05, x0 = Pn.x - s / 2, y0 = Pn.y - s / 2;
+    const bi = cfg.beats.reduce((k, bt, i) => (t >= bt.from ? i : k), 0), bt = cfg.beats[bi];
+    const since = t - bt.from, tIn = since + (bt.lead || 0);
+    let flash = 0; for (const p of cfg.pinches.slice(1)) if (t >= p) flash = Math.max(flash, Math.exp(-(t - p) * 9));
+    ctx.save(); rrect(ctx, x0, y0, s, s, r); ctx.clip();
+    // waveguide plate: barely there, a cool tint with a hint of the coupler rainbow at one edge
+    ctx.globalAlpha = on;
+    ctx.fillStyle = 'rgba(10,14,22,0.28)'; ctx.fillRect(x0, y0, s, s);
+    const wg = ctx.createLinearGradient(x0, y0, x0 + s, y0 + s);
+    wg.addColorStop(0, 'rgba(120,175,255,0.07)'); wg.addColorStop(0.55, 'rgba(120,175,255,0.015)'); wg.addColorStop(1, 'rgba(255,190,140,0.045)');
+    ctx.fillStyle = wg; ctx.fillRect(x0, y0, s, s);
+    ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = on * 0.97;
+    ctx.drawImage(drawPanel(bt.beat, tIn, since), x0, y0, s, s);
+    // switch-on sweep: one thin line of light runs down the plate
+    const sw = P(t, cfg.panelOn, cfg.panelOn + 0.4);
+    if (sw > 0 && sw < 1) {
+      const yy = y0 + s * E.out2(sw), lg = ctx.createLinearGradient(0, yy - 40, 0, yy + 6);
+      lg.addColorStop(0, 'rgba(160,220,255,0)'); lg.addColorStop(1, `rgba(170,225,255,${0.35 * (1 - sw)})`);
+      ctx.globalAlpha = 1; ctx.fillStyle = lg; ctx.fillRect(x0, yy - 40, s, 46);
+    }
+    ctx.restore();
+    // rim of the plate, brighter for a moment on each step
+    ctx.save(); ctx.globalAlpha = on; rrect(ctx, x0 + 0.75, y0 + 0.75, s - 1.5, s - 1.5, r);
+    ctx.strokeStyle = `rgba(205,222,255,${0.15 + 0.35 * flash})`; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+  }
+
+  // lens frame + soft vignette (head-locked)
+  ctx.drawImage(lens, 0, 0);
+  K.vignette(ctx, 0.28);
+
+  // pinch tick (film annotation, bottom left): two dots meet, a ring opens, "pinch"
+  const T = cfg.pinchTick;
+  for (const p of cfg.pinches) {
+    const u = t - p; if (u < -0.06 || u > 0.8) continue;
+    const a = P(u, -0.06, 0.02) * (1 - P(u, 0.55, 0.8)), close = E.out3(P(u, -0.06, 0.1)), sep = K.lerp(15, 4.5, close);
+    ctx.save(); ctx.globalAlpha = a * 0.9; ctx.fillStyle = WHITE;
+    ctx.beginPath(); ctx.arc(T.x, T.y - sep, 5, 0, Math.PI * 2); ctx.arc(T.x, T.y + sep, 5, 0, Math.PI * 2); ctx.fill();
+    const rr = P(u, 0.06, 0.55);
+    if (rr > 0) { ctx.globalAlpha = a * 0.7 * (1 - rr); ctx.strokeStyle = WHITE; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(T.x, T.y, 8 + 26 * E.out3(rr), 0, Math.PI * 2); ctx.stroke(); }
+    ctx.globalAlpha = a * 0.85; ctx.font = '600 semi-condensed 24px Archivo'; ctx.letterSpacing = '2px';
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText('pinch', T.x + 30, T.y + 1);
+    ctx.restore();
+  }
+
+  // honesty small print, once the ghost is up
+  const sp = P(t, cfg.ghostOn + 0.4, cfg.ghostOn + 1.0);
+  if (sp > 0) {
+    ctx.save(); ctx.globalAlpha = 0.55 * sp; ctx.fillStyle = '#e8e2d8'; ctx.font = '500 semi-condensed 19px Archivo';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic'; ctx.fillText(cfg.smallPrint, 1800, 1000); ctx.restore();
+  }
+  K.grain(ctx, t, 0.05);
+  ctx.restore();
+};
+window.ready = true;
+</script></body></html>

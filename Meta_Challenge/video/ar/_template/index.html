@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- AR template: footage slot + printer3d hologram Screen-blended at a keyframed anchor. window.renderFrame(t). -->
+<html><head><meta charset="utf-8"><title>AR template</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { hologram } from '../lib/holo.js';
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const h = await hologram('printer3d', { scale: 2 });
+const key = (a, t) => { // linear between anchor keyframes
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? K.clamp((t - p.t) / (q.t - p.t)) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, K.lerp(p[k], q[k], u)]));
+};
+window.renderFrame = async t => {
+  const f = cfg.footage.plate, im = await K.footageFrame('plate', t - f.start);
+  if (im) K.cover(ctx, im); else K.placeholder(ctx, f.label, f.sub);
+  const a = key(cfg.anchor, t), b = 0;
+  ctx.save(); ctx.globalCompositeOperation = 'screen';
+  ctx.translate(a.x, a.y); ctx.rotate(a.rot * Math.PI / 180);
+  ctx.drawImage(h.draw(b, t), -a.w / 2, -a.w / 2, a.w, a.w); ctx.restore();
+};
+window.ready = true;
+</script></body></html>

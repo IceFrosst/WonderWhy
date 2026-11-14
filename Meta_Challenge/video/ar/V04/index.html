@@ -1,0 +1,216 @@
+<!doctype html>
+<!-- V04 "Wait, how do these even work?": the glasses hologram rises out of the real pair, explodes into
+     frame / projector / waveguide / Neural Band with the light path in cyan, then folds back onto the face.
+     window.renderFrame(t) is a pure function of t. All positions and timings live in config.json. -->
+<html><head><meta charset="utf-8"><title>V04 glasses explain themselves</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { hologram } from '../lib/holo.js';
+const W = 1920, H = 1080;
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const HC = cfg.holo, T = cfg.times;
+const h = await hologram('glasses', { scale: HC.scale });
+const ex = h.explore, V3 = ex.camera.position.constructor;
+
+// ---- our own beats on the real glasses parts (no hand / eye; band moved up so the model stays compact) ----
+const DROP = new Set(['eye', 'iris', 'palm', 'index', 'thumb', 'middle', 'ring', 'little']);
+const BAND = new Set(['band', 'pad0', 'pad1', 'pad2', 'pad3', 'pad4']);
+const spec = structuredClone(h.chapter.spec);
+spec.parts = spec.parts.filter(p => !DROP.has(p.id)).map(p => BAND.has(p.id) ? { ...p, pos: [p.pos[0], p.pos[1] + HC.bandLift, p.pos[2]] } : p);
+const EXP = { lens: [0, 0, -2], wg: [0, 0, 1.7], proj: [2, 2.5, 0] };
+const wgZ = z => z + EXP.wg[2];
+const beam = [ // projector -> in-grating -> zig-zag inside the (exploded) waveguide -> out-grating -> towards the eye
+  [6 + EXP.proj[0], 1 + EXP.proj[1], 1.1], [5.25, 0.65, wgZ(0.16)], [4.9, 1.2, wgZ(0.21)], [4.5, -1.2, wgZ(0.1)],
+  [4.1, 1.2, wgZ(0.21)], [3.7, -1.2, wgZ(0.1)], [3.3, 1.2, wgZ(0.21)], [2.85, 0, wgZ(0.16)], [2.85, 0, wgZ(1.6)],
+];
+const camera = { yaw: HC.yaw, pitch: HC.pitch, zoom: HC.zoom, target: HC.target };
+const FOCUS = ['rim_left', 'rim_right', 'bridge', 'waveguide', 'in_grating', 'out_grating', 'projector', ...BAND];
+spec.beats = [
+  { camera, dur: 16, move: 0.5 },
+  { camera, dur: 16, move: HC.explodeMove, explode: 1, stagger: HC.stagger, focus: FOCUS },
+  { camera, dur: 16, move: HC.beamMove, explode: 1, focus: FOCUS, fx: [{ type: 'beam', path: beam, role: 'actor', width: 2 }] },
+];
+ex.load(spec);
+const P2 = ex.beats[2].dur, RATE = Math.max(1, Math.round(0.5 * P2)) / P2, PERIOD = 1 / RATE;
+
+// ---- helpers ----
+const sm = K.ease.inOut, prog = K.prog;
+const key = (a, t) => { // eased between anchor keyframes
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? sm(K.clamp((t - p.t) / (q.t - p.t))) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, K.lerp(p[k], q[k], u)]));
+};
+// which beat and clip time to render at shot time t
+function phase(t) {
+  const mE = HC.explodeMove, mB = HC.beamMove;
+  if (t < T.explode[0]) return { b: 0, tau: 1 };
+  if (t < T.explode[1]) return { b: 1, tau: mE * prog(t, ...T.explode) };
+  if (t < T.beam[0]) return { b: 1, tau: mE };
+  if (t < T.beam[1]) return { b: 2, tau: mB * prog(t, ...T.beam) };
+  if (t < T.beamOff[0]) { // hold: pulse phase stretched so it is back to 0 exactly when the beam starts to fade
+    const L = T.beamOff[0] - T.beam[1], k = Math.max(1, Math.round(L / PERIOD));
+    return { b: 2, tau: mB + (t - T.beam[1]) * (k * PERIOD / L) };
+  }
+  if (t < T.beamOff[1]) return { b: 2, tau: mB * (1 - prog(t, ...T.beamOff)) };
+  if (t < T.fold[0]) return { b: 1, tau: mE };
+  if (t < T.fold[1]) return { b: 1, tau: mE * (1 - prog(t, ...T.fold)) };
+  return { b: 0, tau: 1 };
+}
+const warmAt = t => sm(prog(t, ...T.warm));
+const bandAt = t => t < T.fold[0] ? sm(prog(t, T.explode[0] + 0.45, T.explode[1])) : 1 - sm(prog(t, T.fold[0], T.fold[0] + 0.35));
+const holoAlpha = t => prog(t, T.appear[0], T.appear[1] - 0.15) * (1 - sm(prog(t, ...T.out)));
+
+// canvas (600-unit) point -> screen px through the anchor transform
+const toScreen = (a, px, py) => {
+  const s = a.w / 600, r = a.rot * Math.PI / 180, x = (px - 300) * s, y = (py - 300) * s;
+  return [a.x + x * Math.cos(r) - y * Math.sin(r), a.y + x * Math.sin(r) + y * Math.cos(r)];
+};
+const project = v => { const p = v.clone().project(ex.camera); return [(p.x + 1) * 300, (1 - p.y) * 300]; };
+
+const plate = K.layer(), pg = plate.getContext('2d');
+const hc = K.layer(h.size, h.size), hg = hc.getContext('2d');
+
+window.renderFrame = async t => {
+  const f = cfg.footage.plate, w = warmAt(t), a = key(cfg.anchor, t), al = holoAlpha(t);
+  // ---- plate: grey and cool at the start, warm once the glasses explain themselves ----
+  const im = await K.footageFrame('plate', t - f.start);
+  pg.clearRect(0, 0, W, H);
+  const z = key(cfg.plateZoom, t).z;
+  if (im) K.cover(pg, im, z); else K.placeholder(pg, f.label, f.sub, { zoom: z });
+  ctx.save();
+  ctx.filter = `saturate(${K.lerp(0.22, 1.08, w)}) brightness(${K.lerp(0.78, 1.0, w)}) contrast(${K.lerp(1.12, 1.02, w)})`;
+  ctx.drawImage(plate, 0, 0); ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = 'soft-light';
+  ctx.fillStyle = `rgba(70,100,150,${0.32 * (1 - w)})`; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = `rgba(255,172,86,${0.2 * w})`; ctx.fillRect(0, 0, W, H); ctx.restore();
+
+  // ---- hologram ----
+  const ph = phase(t);
+  if (al > 0.001) {
+    h.draw(ph.b, ph.tau, { yaw: a.yaw, pitch: a.pitch });
+    const S = h.size / 600;
+    hg.save(); hg.clearRect(0, 0, h.size, h.size);
+    hg.filter = `grayscale(${0.85 * (1 - w)}) sepia(${0.22 * w})`; hg.drawImage(h.canvas, 0, 0); hg.filter = 'none';
+    // band only shows once the parts have flown apart: erase everything below the glasses until then
+    const bandK = bandAt(t);
+    if (bandK < 0.999) {
+      const yb = -8 + HC.bandLift, cut = project(new V3(0, (yb + 1.3 - 2.2) / 2, 2))[1] * S;
+      const g = hg.createLinearGradient(0, cut - 20 * S, 0, cut + 20 * S);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${1 - bandK})`);
+      hg.globalCompositeOperation = 'destination-out'; hg.fillStyle = g; hg.fillRect(0, cut - 20 * S, h.size, h.size);
+    }
+    // scan reveal, left to right, as it lifts out of the real pair
+    const sw = prog(t, ...T.appear);
+    if (sw < 1) {
+      const wx = K.lerp(-0.08, 1.08, sm(sw)) * h.size, soft = 40 * S;
+      const g = hg.createLinearGradient(wx - soft, 0, wx + soft, 0);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)');
+      hg.globalCompositeOperation = 'destination-out'; hg.fillStyle = g; hg.fillRect(wx - soft, 0, h.size, h.size);
+    }
+    hg.restore();
+
+    // soft dark pool behind the model so thin lines read over the bright table and hands
+    ctx.save(); ctx.globalAlpha = 0.34 * al * prog(t, T.appear[1], T.explode[0] + 0.4) * (1 - prog(t, T.fold[0], T.out[0]));
+    const g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.w * 0.5);
+    g.addColorStop(0, 'rgba(4,8,14,1)'); g.addColorStop(1, 'rgba(4,8,14,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = al;
+    ctx.translate(a.x, a.y); ctx.rotate(a.rot * Math.PI / 180);
+    ctx.drawImage(hc, -a.w / 2, -a.w / 2, a.w, a.w);
+    if (sw > 0 && sw < 1) { // the scan line itself, full height of the model canvas
+      const lx = (K.lerp(-0.08, 1.08, sm(sw)) - 0.5) * a.w, gl = ctx.createLinearGradient(lx - 26, 0, lx + 26, 0);
+      gl.addColorStop(0, 'rgba(77,240,255,0)'); gl.addColorStop(0.5, `rgba(77,240,255,${0.35 * Math.sin(Math.PI * sw)})`); gl.addColorStop(1, 'rgba(77,240,255,0)');
+      ctx.fillStyle = gl; ctx.fillRect(lx - 26, -H, 52, 2 * H);
+      ctx.fillStyle = `rgba(200,250,255,${0.7 * Math.sin(Math.PI * sw)})`; ctx.fillRect(lx - 1, -H, 2, 2 * H);
+    }
+    ctx.restore();
+
+    // ---- light path, redrawn on top in screen space so it reads at film size ----
+    const bw = ph.b === 2 ? K.ease.inOut3(K.clamp(ph.tau / HC.beamMove)) * al : 0;
+    if (bw > 0.01) {
+      const pts = beam.map(p => toScreen(a, ...project(new V3(...p))));
+      const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const at = d => { let i = 1; while (i < pts.length - 1 && len[i] < d) i++; const u = (d - len[i - 1]) / Math.max(1e-6, len[i] - len[i - 1]); return [K.lerp(pts[i - 1][0], pts[i][0], u), K.lerp(pts[i - 1][1], pts[i][1], u)]; };
+      const total = len[len.length - 1], grow = K.clamp(bw * 1.4) * total;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      const path = () => { ctx.beginPath(); ctx.moveTo(...pts[0]); for (let i = 1; i < pts.length && len[i - 1] < grow; i++) ctx.lineTo(...(len[i] <= grow ? pts[i] : at(grow))); };
+      path(); ctx.strokeStyle = `rgba(77,240,255,${0.16 * bw})`; ctx.lineWidth = 10; ctx.stroke();
+      path(); ctx.strokeStyle = `rgba(150,248,255,${0.85 * bw})`; ctx.lineWidth = 2.6; ctx.stroke();
+      for (let k = 0; k < 3; k++) { // photons running projector -> eye
+        const u = ((t - T.beam[0]) * 0.55 + k / 3) % 1, d = u * total;
+        if (d > grow) continue;
+        const [qx, qy] = at(d), r = ctx.createRadialGradient(qx, qy, 0, qx, qy, 16);
+        r.addColorStop(0, `rgba(225,255,255,${0.95 * bw})`); r.addColorStop(1, 'rgba(77,240,255,0)');
+        ctx.fillStyle = r; ctx.fillRect(qx - 16, qy - 16, 32, 32);
+      }
+      ctx.restore();
+    }
+
+    // ---- labels on the exploded parts ----
+    const worlds = ex.frameState(ph.b, ph.tau, false).worlds;
+    const lo = 1 - sm(prog(t, ...T.labelsOut));
+    for (const L of cfg.labels) {
+      const k = sm(prog(t, L.at, L.at + 0.35)) * lo * al;
+      if (k <= 0.002) continue;
+      const c = ex.partCenter(L.part, worlds).add(new V3(...L.offset));
+      const [sx, sy] = toScreen(a, ...project(c));
+      drawLabel(sx, sy, L, k);
+    }
+  }
+
+  // landing ring where the hologram meets the real glasses on the face
+  const lr = prog(t, T.land - 0.05, T.land + 0.55);
+  if (lr > 0 && lr < 1) {
+    const e = K.ease.out3(lr);
+    ctx.save(); ctx.strokeStyle = `rgba(150,245,255,${0.55 * (1 - lr)})`; ctx.lineWidth = 2.5 * (1 - lr) + 0.5;
+    ctx.beginPath(); ctx.ellipse(a.x + cfg.ring.dx, a.y + cfg.ring.dy, 120 + 260 * e, 50 + 110 * e, a.rot * Math.PI / 180, 0, 7); ctx.stroke(); ctx.restore();
+  }
+
+  // ---- caption: the friend's line, word by word ----
+  const C = cfg.caption, words = C.text.split(' '), co = 1 - prog(t, C.out - 0.25, C.out);
+  if (t >= C.in && co > 0) {
+    ctx.save(); ctx.font = '600 46px Archivo'; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    const full = ctx.measureText(C.text).width; let x = (W - full) / 2;
+    ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2;
+    words.forEach((wd, i) => {
+      const k = prog(t, C.in + i * C.wordStep, C.in + i * C.wordStep + 0.12) * co;
+      if (k > 0) { ctx.globalAlpha = k; ctx.fillStyle = '#ffffff'; ctx.fillText(wd, x, C.y + 6 * (1 - k)); }
+      x += ctx.measureText(wd + ' ').width;
+    });
+    ctx.restore();
+  }
+  // honesty small print
+  const sp = cfg.smallprint, sk = prog(t, sp.in, sp.in + 0.3) * (1 - prog(t, sp.out - 0.3, sp.out));
+  if (sk > 0) {
+    ctx.save(); ctx.globalAlpha = 0.6 * sk; ctx.font = '500 21px Archivo'; ctx.textAlign = 'right'; ctx.fillStyle = '#e8eef5';
+    ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 8; ctx.fillText(sp.text, W - 48, H - 40); ctx.restore();
+  }
+  K.vignette(ctx, 0.32); K.grain(ctx, t, 0.05);
+};
+
+function drawLabel(px, py, L, k) {
+  const right = L.dx >= 0, ex2 = px + L.dx * (0.85 + 0.15 * k), ey = py + L.dy;
+  ctx.save(); ctx.globalAlpha = k;
+  ctx.font = '700 semi-condensed 32px Archivo'; const tw = ctx.measureText(L.text).width;
+  ctx.font = '500 22px Archivo'; const sw = ctx.measureText(L.sub).width, bw = Math.max(tw, sw);
+  // keep the text block inside the frame
+  let tx = right ? ex2 + 12 : ex2 - 12 - bw; tx = K.clamp(tx, 48, W - 48 - bw);
+  const ty = K.clamp(ey, 70, H - 120);
+  ctx.strokeStyle = K.rgba(L.color, 0.85); ctx.lineWidth = 1.6; ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 6;
+  ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(K.lerp(px, ex2, k), K.lerp(py, ty, k)); ctx.lineTo(right ? tx - 8 : tx + bw + 8, ty); ctx.stroke();
+  ctx.fillStyle = L.color; ctx.beginPath(); ctx.arc(px, py, 5, 0, 7); ctx.fill();
+  ctx.shadowBlur = 12; ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.fillStyle = '#ffffff'; ctx.font = '700 semi-condensed 32px Archivo'; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.fillText(L.text, tx, ty + 10);
+  ctx.globalAlpha = 0.82 * k; ctx.fillStyle = K.mix('#ffffff', L.color, 0.35); ctx.font = '500 22px Archivo';
+  ctx.fillText(L.sub, tx, ty + 40);
+  ctx.restore();
+}
+window.ready = true;
+</script></body></html>

@@ -1,0 +1,41 @@
+{
+  "version": "_template",
+  "title": "Template: printer3d hologram over a footage slot",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration": 4.0,
+  "footage": {
+    "plate": {
+      "raw": "PXL_20261114_153800338.mp4",
+      "in": 0,
+      "speed": 1,
+      "start": 0,
+      "duration": 4.0,
+      "label": "FOOTAGE: POV at the Prusa printer",
+      "sub": "REAL \u00b7 raw/icefrost/PXL_20261114_153800338.mp4"
+    }
+  },
+  "anchor": [
+    {
+      "t": 0,
+      "x": 1180,
+      "y": 520,
+      "w": 760,
+      "rot": 0
+    },
+    {
+      "t": 4,
+      "x": 1160,
+      "y": 530,
+      "w": 820,
+      "rot": 0
+    }
+  ],
+  "sheet": [
+    0.5,
+    1.5,
+    2.5,
+    3.5
+  ]
+}

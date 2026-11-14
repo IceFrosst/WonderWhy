@@ -1,0 +1,226 @@
+{
+  "version": "V09",
+  "title": "Through the glasses: lens edge, the fixed display panel right of centre, a faint world ghost",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration": 8.0,
+  "footage": {
+    "plate": {
+      "raw": "printer_1_core_one.mp4",
+      "in": 0.8,
+      "speed": 0.9,
+      "start": 0,
+      "duration": 8.0,
+      "vf": "crop=iw:iw*9/16:0:ih*0.17",
+      "label": "FOOTAGE: POV pans past the Bambu, settles on the Prusa Core One printing",
+      "sub": "REAL · printer_1_core_one.mp4 · in 0.8 s at 0.9x · settles ~2.2 s (clip 2.8 s) · head + orange part at 40-65% width"
+    }
+  },
+  "push": [
+    {
+      "t": 0,
+      "zoom": 1.0,
+      "fx": 0.7,
+      "fy": 0.45
+    },
+    {
+      "t": 8,
+      "zoom": 1.08,
+      "fx": 0.7,
+      "fy": 0.45
+    }
+  ],
+  "grade": [
+    {
+      "t": 0,
+      "sat": 0.1,
+      "bright": 0.9
+    },
+    {
+      "t": 2.2,
+      "sat": 0.1,
+      "bright": 0.9
+    },
+    {
+      "t": 3.6,
+      "sat": 0.18,
+      "bright": 0.93
+    },
+    {
+      "t": 8,
+      "sat": 0.2,
+      "bright": 0.94
+    }
+  ],
+  "lens": {
+    "warm": "#fff0de",
+    "edge": 0.9,
+    "nose": 1.0
+  },
+  "pinches": [
+    2.2,
+    3.8,
+    5.2,
+    6.6
+  ],
+  "pinchTick": {
+    "x": 150,
+    "y": 930
+  },
+  "panelOn": 2.32,
+  "panel": [
+    {
+      "t": 0,
+      "x": 1420,
+      "y": 590,
+      "w": 580
+    },
+    {
+      "t": 8,
+      "x": 1420,
+      "y": 590,
+      "w": 580
+    }
+  ],
+  "beats": [
+    {
+      "from": 2.32,
+      "beat": 0,
+      "lead": 1.0
+    },
+    {
+      "from": 3.8,
+      "beat": 1,
+      "lead": 1.4
+    },
+    {
+      "from": 5.2,
+      "beat": 2,
+      "lead": 0.2
+    },
+    {
+      "from": 6.6,
+      "beat": 3,
+      "lead": 0.2
+    }
+  ],
+  "ghostOn": 2.9,
+  "ghostBeatT": 1.2,
+  "anchor": [
+    {
+      "t": 2.9,
+      "x": 1175,
+      "y": 330,
+      "w": 420,
+      "rot": 0,
+      "yaw": 0,
+      "pitch": 0,
+      "a": 0.45
+    },
+    {
+      "t": 3.4,
+      "x": 1171,
+      "y": 293,
+      "w": 450,
+      "rot": 0,
+      "yaw": 0,
+      "pitch": 0,
+      "a": 0.45
+    },
+    {
+      "t": 4.9,
+      "x": 1126,
+      "y": 290,
+      "w": 470,
+      "rot": 0,
+      "yaw": 0,
+      "pitch": 0,
+      "a": 0.45
+    },
+    {
+      "t": 6.0,
+      "x": 1142,
+      "y": 283,
+      "w": 475,
+      "rot": 0,
+      "yaw": 0,
+      "pitch": 0,
+      "a": 0.45
+    },
+    {
+      "t": 7.6,
+      "x": 1064,
+      "y": 323,
+      "w": 480,
+      "rot": 0,
+      "yaw": 0,
+      "pitch": 0,
+      "a": 0.45
+    },
+    {
+      "t": 8.0,
+      "x": 1060,
+      "y": 325,
+      "w": 482,
+      "rot": 0,
+      "yaw": 0,
+      "pitch": 0,
+      "a": 0.45
+    }
+  ],
+  "smallPrint": "Glow on the nozzle: visualised. The glasses show the panel.",
+  "cues": [
+    {
+      "t": 0.0,
+      "sound": "printer hum + room tone (footage audio, low)",
+      "note": "POV pans past the Bambu"
+    },
+    {
+      "t": 0.4,
+      "sound": "VO: \"How does it build this?\"",
+      "note": "Act 4 shot 11"
+    },
+    {
+      "t": 2.2,
+      "sound": "soft band click (pinch)",
+      "note": "pinch 1, view has settled"
+    },
+    {
+      "t": 2.32,
+      "sound": "quiet glassy display-on tone, 0.3 s",
+      "note": "panel turns on"
+    },
+    {
+      "t": 3.8,
+      "sound": "click (step)",
+      "note": "pinch 2: print head apart"
+    },
+    {
+      "t": 5.2,
+      "sound": "click (step)",
+      "note": "pinch 3: drive gear"
+    },
+    {
+      "t": 6.6,
+      "sound": "click (step)",
+      "note": "pinch 4: 210 C"
+    },
+    {
+      "t": 8.0,
+      "sound": "hum carries into the next cut",
+      "note": "no sting"
+    }
+  ],
+  "sheet": [
+    1.0,
+    2.25,
+    2.5,
+    3.4,
+    4.9,
+    6.0,
+    7.0,
+    7.9
+  ],
+  "ghostBeat": 3
+}

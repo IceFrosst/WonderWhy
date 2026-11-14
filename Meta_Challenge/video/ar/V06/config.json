@@ -1,0 +1,212 @@
+{
+  "version": "V06",
+  "title": "Colour comes back where the lines have been",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration": 6.8,
+  "footage": {
+    "plate": {
+      "raw": "printer_2_side_by_side.mp4",
+      "in": 1.2,
+      "speed": 1,
+      "start": 0,
+      "duration": 6.8,
+      "vf": "transpose=1",
+      "vf_note": "Lossless: stores the portrait clip rotated into a 16:9 frame; the page rotates it back and composes a portrait strip (frame.*) plus a blurred side panel. Not a crop.",
+      "label": "FOOTAGE: Prusa Core One (right) and a second printer (left), phone pulling back",
+      "sub": "REAL \u00b7 printer_2_side_by_side.mp4 from 1.2 s \u00b7 portrait strip left, blurred panel right"
+    }
+  },
+  "frame": {
+    "s": 1.05,
+    "cx": 0.847,
+    "cy": 0.47,
+    "push": [
+      1.0,
+      1.04
+    ],
+    "feather": 150,
+    "bgBlur": 36,
+    "bgBright": 0.62,
+    "note": "s = portrait width on screen / 1080 px; (cx, cy) = point of the portrait (0..1) put at screen centre. Anchors are in this pre-push screen space; change s/cx/cy and the anchors must move too.",
+    "bgZoom": 1.0
+  },
+  "holo": {
+    "object": "printer3d",
+    "beat": 0,
+    "beatTime": 1.0,
+    "scale": 2
+  },
+  "anchor_note": "x, y = screen centre of the real printer body (enclosure top to its bottom edge); h = its on-screen height in px. The hologram's bounding box is fitted to that. yaw/pitch = extra camera degrees on the model (beat 0 rest is yaw 28, pitch 16). rot = in-plane degrees.",
+  "anchor": [
+    {
+      "t": 0.0,
+      "x": 649,
+      "y": 530,
+      "h": 1028,
+      "rot": 0,
+      "yaw": -14,
+      "pitch": -2
+    },
+    {
+      "t": 0.4,
+      "x": 705,
+      "y": 556,
+      "h": 978,
+      "rot": 0,
+      "yaw": -15,
+      "pitch": -2
+    },
+    {
+      "t": 0.8,
+      "x": 738,
+      "y": 550,
+      "h": 867,
+      "rot": 0,
+      "yaw": -16,
+      "pitch": -2
+    },
+    {
+      "t": 1.2,
+      "x": 767,
+      "y": 568,
+      "h": 847,
+      "rot": 0,
+      "yaw": -17,
+      "pitch": -2
+    },
+    {
+      "t": 1.6,
+      "x": 790,
+      "y": 558,
+      "h": 826,
+      "rot": 0,
+      "yaw": -18,
+      "pitch": -2
+    },
+    {
+      "t": 2.0,
+      "x": 828,
+      "y": 578,
+      "h": 820,
+      "rot": 0,
+      "yaw": -18,
+      "pitch": -2
+    },
+    {
+      "t": 3.3,
+      "x": 862,
+      "y": 578,
+      "h": 820,
+      "rot": 0,
+      "yaw": -19,
+      "pitch": -2
+    },
+    {
+      "t": 6.8,
+      "x": 873,
+      "y": 618,
+      "h": 820,
+      "rot": 0,
+      "yaw": -19,
+      "pitch": -2
+    }
+  ],
+  "timing": {
+    "trigger": 0.45,
+    "buildIn": 1.0,
+    "buildOut": 3.8,
+    "step": 0.2,
+    "halo0": 14,
+    "haloRate": 85,
+    "haloMax": 260,
+    "gain": 3.2,
+    "echoIn": 3.9,
+    "echoOut": 5.4,
+    "echoGrow": 1.9,
+    "echoStep": 0.15,
+    "spillIn": 4.6,
+    "spillOut": 6.2,
+    "thinIn": 4.6,
+    "thinOut": 6.0,
+    "thinAlpha": 0.38
+  },
+  "grade": {
+    "grey": "grayscale(1) contrast(1.08) brightness(0.8)",
+    "cold": "rgba(70,110,170,0.45)",
+    "colour": "saturate(1.3) contrast(1.06) brightness(1.06)",
+    "warm": "rgba(255,176,90,0.2)",
+    "rim": 0.14
+  },
+  "text": {
+    "q": {
+      "t0": 0.6,
+      "t1": 2.9,
+      "x": 1236,
+      "y": 420,
+      "text": "How does a 3D printer\nbuild things?"
+    },
+    "a": {
+      "t0": 2.9,
+      "t1": 5.15,
+      "x": 1236,
+      "y": 420,
+      "text": "It draws one slice\nat a time."
+    },
+    "tag": {
+      "t0": 5.0,
+      "t1": 6.8,
+      "x": 1236,
+      "y": 250,
+      "text": "Prusa Core One",
+      "bu": 0.8,
+      "bv": 0.22
+    },
+    "honest": {
+      "t0": 4.4,
+      "t1": 6.8,
+      "text": "Visualised. On the glasses it's a panel in your view."
+    }
+  },
+  "cues": [
+    {
+      "t": 0.0,
+      "sound": "room tone + printer hum, low-passed (grey world)"
+    },
+    {
+      "t": 0.45,
+      "sound": "soft pinch click (the ask)"
+    },
+    {
+      "t": 1.0,
+      "sound": "thin rising tone starts under the scan line, rises to 3.8"
+    },
+    {
+      "t": 3.8,
+      "sound": "small high chime as the build tops out"
+    },
+    {
+      "t": 3.9,
+      "sound": "low soft whoosh with the line echo; open the low-pass on the hum"
+    },
+    {
+      "t": 4.6,
+      "sound": "warm music swell as colour fills the room"
+    },
+    {
+      "t": 6.8,
+      "sound": "cut on the beat into the next shot"
+    }
+  ],
+  "sheet": [
+    0.5,
+    1.5,
+    2.5,
+    3.5,
+    4.3,
+    5.0,
+    5.8,
+    6.6
+  ]
+}

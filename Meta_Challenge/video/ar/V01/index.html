@@ -1,0 +1,227 @@
+<!doctype html>
+<!-- V01 "The printer prints its own hologram": grey POV at the real Prusa; the printer3d hologram is printed over it
+     bottom-up in serpentine layers by an amber nozzle; colour spreads out from the printer as the layers stack;
+     ends on the finished model and one label. window.renderFrame(t) is a pure function of t. -->
+<html><head><meta charset="utf-8"><title>V01 printer prints its hologram</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { hologram } from '../lib/holo.js';
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const h = await hologram('printer3d', { scale: 2 });
+const S = h.size, REST = h.beats[0].move;            // beat 0 at its rest pose; yaw/pitch come from the anchor
+const AMBER = '#ffc247', CYAN = '#4df0ff';
+
+// ---- helpers ------------------------------------------------------------------------------------------------
+const key = (a, t) => { // linear between keyframes
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? K.clamp((t - p.t) / (q.t - p.t)) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, K.lerp(p[k], q[k], K.ease.inOut(u))]));
+};
+const plateBuf = K.layer(), colBuf = K.layer(), holoBuf = K.layer(S, S);
+const MINI = 300, mini = K.layer(MINI, MINI), mg = mini.getContext('2d', { willReadFrequently: true });
+
+// Row extents of the drawn model (canvas units), from a 4x downsample of the hologram canvas.
+function extents(hc) {
+  mg.clearRect(0, 0, MINI, MINI); mg.drawImage(hc, 0, 0, MINI, MINI);
+  const d = mg.getImageData(0, 0, MINI, MINI).data, rows = new Array(MINI).fill(null), f = S / MINI;
+  let top = MINI, bot = -1, xl = MINI, xr = -1;
+  for (let y = 0; y < MINI; y++) {
+    let a = -1, b = -1;
+    for (let x = 0; x < MINI; x++) { const i = (y * MINI + x) * 4; if (d[i] + d[i + 1] + d[i + 2] > 84) { if (a < 0) a = x; b = x; } }
+    if (a >= 0) { rows[y] = [a * f, (b + 1) * f]; top = Math.min(top, y); bot = y; xl = Math.min(xl, a); xr = Math.max(xr, b); }
+  }
+  return { rows, f, yT: top * f - 4, yB: (bot + 1) * f + 4, x0: xl * f, x1: (xr + 1) * f };
+}
+const band = (E, ya, yb) => { // x extent of the model between canvas rows ya < yb
+  let a = Infinity, b = -Infinity;
+  for (let j = Math.max(0, Math.floor(ya / E.f)); j <= Math.min(MINI - 1, Math.ceil(yb / E.f)); j++) {
+    const r = E.rows[j]; if (r) { a = Math.min(a, r[0]); b = Math.max(b, r[1]); }
+  }
+  return a < b ? [a - 6, b + 6] : [E.x0, E.x1];
+};
+
+// Print state at t: layers done (float), current band, nozzle position, all in hologram canvas units.
+function printState(t, E) {
+  const P = cfg.print, tau = K.prog(t, P.t0, P.t1), N = P.layers;
+  const L = N * Math.pow(tau, P.warp), done = tau >= 1;
+  const i = Math.min(N - 1, Math.floor(L)), u = done ? 1 : L - i, Lh = (E.yB - E.yT) / N;
+  const yLow = E.yB - i * Lh, yHigh = yLow - Lh, [xa, xb] = band(E, yHigh, yLow), dir = i % 2 ? -1 : 1;
+  const nx = dir > 0 ? K.lerp(xa, xb, u) : K.lerp(xb, xa, u);
+  return { tau, L, N, i, u, Lh, yLow, yHigh, xa, xb, dir, nx, ny: (yLow + yHigh) / 2, started: t >= P.t0, done };
+}
+
+// Hologram, printed so far, into holoBuf (transparent where not printed).
+function printedHolo(hc, E, ps, t) {
+  const g = holoBuf.getContext('2d'), cool = K.ease.out2(K.prog(t, cfg.print.t1, cfg.print.t1 + 0.8));
+  g.save(); g.globalCompositeOperation = 'copy'; g.drawImage(hc, 0, 0); g.restore();
+  // Hot plastic: the newest layers glow amber, cooling to the model's own colours a few layers down.
+  if (ps.started && cool < 1) {
+    const gr = g.createLinearGradient(0, ps.yHigh, 0, ps.yLow + 4 * ps.Lh);
+    gr.addColorStop(0, '#ffb23a'); gr.addColorStop(0.3, '#ffcf7a'); gr.addColorStop(1, '#ffffff');
+    g.save(); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 1 - cool; g.fillStyle = gr;
+    g.fillRect(0, ps.yHigh - 2, S, 5 * ps.Lh + 4); g.restore();
+  }
+  // Layer lines: thin gaps at each layer boundary, fading once the print is done.
+  const lines = 0.42 * (1 - cool);
+  if (lines > 0.01) {
+    g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = lines; g.fillStyle = '#000';
+    for (let k = 1; k <= ps.N; k++) g.fillRect(0, (ps.yLow + (ps.i - k + 1) * ps.Lh) - 1.5 + (k > ps.i ? 1e9 : 0), S, 2.2);
+    g.restore();
+  }
+  // Mask: finished layers + the current layer up to the nozzle.
+  if (!ps.done) {
+    g.save(); g.globalCompositeOperation = 'destination-in'; g.fillStyle = '#fff'; g.beginPath();
+    if (ps.started) {
+      g.rect(0, ps.yLow, S, S - ps.yLow);
+      if (ps.dir > 0) g.rect(0, ps.yHigh, ps.nx, ps.Lh + 0.5); else g.rect(ps.nx, ps.yHigh, S - ps.nx, ps.Lh + 0.5);
+    }
+    g.fill(); g.restore();
+  }
+  return holoBuf;
+}
+
+// Grade: grey cold plate everywhere, colour spreads out from the printer with the print.
+async function plate(t, A, cA) {
+  const f = cfg.footage.plate, im = await K.footageFrame('plate', t - f.start), pb = plateBuf.getContext('2d');
+  if (im) K.cover(pb, im); else K.placeholder(pb, f.label, f.sub, { y: 96 });
+  const c = key(cfg.grade, t).colour;
+  ctx.save(); ctx.filter = 'saturate(0.1) contrast(1.08) brightness(0.8)'; ctx.drawImage(plateBuf, 0, 0); ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = `rgba(70,110,170,${0.5 * (1 - c)})`; ctx.fillRect(0, 0, K.W, K.H); ctx.restore();
+  if (c > 0.001) {
+    const g = colBuf.getContext('2d');
+    g.save(); g.globalCompositeOperation = 'copy'; g.filter = 'saturate(1.12) contrast(1.04) brightness(1.03)'; g.drawImage(plateBuf, 0, 0); g.restore();
+    g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = 'rgba(255,190,110,0.32)'; g.fillRect(0, 0, K.W, K.H); g.restore();
+    const R = K.lerp(120, 2300, K.ease.inOut(c)), rg = g.createRadialGradient(cA[0], cA[1], 0, cA[0], cA[1], R);
+    rg.addColorStop(0, 'rgba(0,0,0,1)'); rg.addColorStop(0.55, 'rgba(0,0,0,1)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.save(); g.globalCompositeOperation = 'destination-in'; g.fillStyle = rg; g.fillRect(0, 0, K.W, K.H); g.restore();
+    ctx.save(); ctx.globalAlpha = K.clamp(c * 1.6); ctx.drawImage(colBuf, 0, 0); ctx.restore();
+  }
+}
+
+// ---- frame ----------------------------------------------------------------------------------------------------
+window.renderFrame = async t => {
+  const A = key(cfg.anchor, t), Z = key(cfg.push.keys, t).z, k = A.w / S, rot = A.rot * Math.PI / 180;
+  const toScreen = (cx, cy) => { // hologram canvas units -> screen px (anchor, then push)
+    const dx = (cx - S / 2) * k, dy = (cy - S / 2) * k, c = Math.cos(rot), s = Math.sin(rot);
+    const x = A.x + dx * c - dy * s, y = A.y + dx * s + dy * c;
+    return [cfg.push.cx + (x - cfg.push.cx) * Z, cfg.push.cy + (y - cfg.push.cy) * Z];
+  };
+  const hc = h.draw(0, REST, { yaw: A.yaw, pitch: A.pitch }), E = extents(hc), ps = printState(t, E);
+  const centre = toScreen(S / 2, (E.yT + E.yB) / 2);
+
+  ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.filter = 'none';
+  ctx.translate(cfg.push.cx, cfg.push.cy); ctx.scale(Z, Z); ctx.translate(-cfg.push.cx, -cfg.push.cy);
+  await plate(t, A, [A.x, (centre[1] - cfg.push.cy) / Z + cfg.push.cy]);
+  ctx.restore();
+
+  // Hologram space: anchor transform under the push, 1 unit = 1 hologram canvas px.
+  ctx.save();
+  ctx.translate(cfg.push.cx, cfg.push.cy); ctx.scale(Z, Z); ctx.translate(-cfg.push.cx, -cfg.push.cy);
+  ctx.translate(A.x, A.y); ctx.rotate(rot); ctx.scale(k, k); ctx.translate(-S / 2, -S / 2);
+  const px = 1 / (k * Z); // one screen pixel in hologram units
+
+  // Slicer preview: the whole model as a faint grey ghost before and during the print.
+  const ghost = K.prog(t, cfg.print.t0 - 0.35, cfg.print.t0 + 0.1) * (1 - K.prog(t, cfg.print.t1 - 0.6, cfg.print.t1 + 0.2));
+  if (ghost > 0) {
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.13 * ghost; ctx.filter = 'grayscale(1) brightness(0.9)';
+    ctx.drawImage(hc, 0, 0); ctx.restore();
+  }
+  // The printed hologram; a slow breath once it is finished.
+  if (ps.started) {
+    const breath = ps.done ? 0.94 + 0.06 * Math.sin((t - cfg.print.t1) * 2.4) : 1;
+    const pb = printedHolo(hc, E, ps, t);
+    // Soft dark lift under the lines so they read over the busy, bright printer interior.
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.6; ctx.filter = 'invert(1) blur(5px)'; ctx.drawImage(pb, 0, 0); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = breath; ctx.drawImage(pb, 0, 0); ctx.restore();
+  }
+
+  // Nozzle: amber tool path on the current layer, dashed preview of the next pass, hot head.
+  const park = K.prog(t, cfg.print.t1, cfg.print.t1 + 0.35);
+  if (ps.started && park < 1) {
+    const a = 1 - park, ny = ps.done ? ps.ny - 60 * K.ease.in2(park) : ps.ny, nx = ps.nx;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+    if (!ps.done) {
+      const x0 = ps.dir > 0 ? ps.xa : ps.xb, tg = ctx.createLinearGradient(x0, 0, nx, 0);
+      tg.addColorStop(0, K.rgba(AMBER, 0.0)); tg.addColorStop(1, K.rgba(AMBER, 0.95));
+      ctx.strokeStyle = tg; ctx.lineWidth = 2.6 * px; ctx.beginPath(); ctx.moveTo(x0, ny); ctx.lineTo(nx, ny); ctx.stroke();
+      if (ps.i + 1 < ps.N) { // next pass, the other way
+        const yN = ny - ps.Lh, [xa, xb] = band(E, ps.yHigh - ps.Lh, ps.yHigh);
+        ctx.setLineDash([7 * px, 9 * px]); ctx.strokeStyle = K.rgba(AMBER, 0.32); ctx.lineWidth = 1.4 * px;
+        ctx.beginPath(); ctx.moveTo(ps.dir > 0 ? xb : xa, yN); ctx.lineTo(ps.dir > 0 ? xa : xb, yN); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = K.rgba(AMBER, 0.32); ctx.lineWidth = 1.4 * px; ctx.beginPath(); // the turn at the end of the line
+        const xe = ps.dir > 0 ? ps.xb : ps.xa; ctx.moveTo(xe, ny); ctx.lineTo(ps.dir > 0 ? xb : xa, yN); ctx.stroke();
+      }
+    }
+    const gl = ctx.createRadialGradient(nx, ny, 0, nx, ny, 26 * px);
+    gl.addColorStop(0, K.rgba(AMBER, 0.75 * a)); gl.addColorStop(0.35, K.rgba(AMBER, 0.22 * a)); gl.addColorStop(1, K.rgba(AMBER, 0));
+    ctx.fillStyle = gl; ctx.fillRect(nx - 26 * px, ny - 26 * px, 52 * px, 52 * px);
+    ctx.globalAlpha = a; ctx.fillStyle = '#fff3d6'; ctx.beginPath(); ctx.arc(nx, ny, 3.2 * px, 0, 7); ctx.fill();
+    ctx.strokeStyle = K.rgba(AMBER, 0.9); ctx.lineWidth = 1.6 * px; ctx.beginPath(); // the nozzle cone above the line
+    ctx.moveTo(nx - 7 * px, ny - 16 * px); ctx.lineTo(nx, ny - 5 * px); ctx.lineTo(nx + 7 * px, ny - 16 * px); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Done: one thin cyan pass sweeps up the finished model.
+  const sw = K.prog(t, cfg.print.t1, cfg.print.t1 + 0.55);
+  if (sw > 0 && sw < 1) {
+    const y = K.lerp(E.yB, E.yT, K.ease.inOut(sw)), lg = ctx.createLinearGradient(E.x0, 0, E.x1, 0), a = Math.sin(Math.PI * sw);
+    lg.addColorStop(0, K.rgba(CYAN, 0)); lg.addColorStop(0.5, K.rgba(CYAN, 0.8 * a)); lg.addColorStop(1, K.rgba(CYAN, 0));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = lg; ctx.fillRect(E.x0 - 30, y - 1.2 * px, E.x1 - E.x0 + 60, 2.4 * px); ctx.restore();
+  }
+
+  // Trigger: pinch ring, then corner brackets close in on the model's bounds.
+  const T = cfg.trigger, ring = K.prog(t, T.t, T.t + 0.55);
+  if (ring > 0 && ring < 1) {
+    const rx = T.u * S, ry = T.v * S, r = K.lerp(8, 120, K.ease.out3(ring)) * px;
+    ctx.save(); ctx.strokeStyle = K.rgba(CYAN, 0.85 * (1 - ring)); ctx.lineWidth = 2 * px;
+    ctx.beginPath(); ctx.arc(rx, ry, r, 0, 7); ctx.stroke(); ctx.restore();
+  }
+  const br = K.prog(t, T.t + 0.05, T.t + 0.45), brOut = K.prog(t, cfg.print.t0 + 0.2, cfg.print.t0 + 0.7);
+  if (br > 0 && brOut < 1) {
+    const e = K.ease.out3(br), m = K.lerp(140, 18, e), L = 46 * px;
+    const x0 = E.x0 - m, x1 = E.x1 + m, y0 = E.yT - m, y1 = E.yB + m;
+    ctx.save(); ctx.strokeStyle = K.rgba(AMBER, 0.85 * e * (1 - brOut)); ctx.lineWidth = 2.4 * px; ctx.beginPath();
+    for (const [x, y, sx, sy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+      ctx.moveTo(x + sx * L, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * L);
+    }
+    ctx.stroke(); ctx.restore();
+  }
+  ctx.restore();
+
+  // Label: reveals left to right, leader runs to the printed part on the bed.
+  const Lb = cfg.label, la = K.prog(t, Lb.t, Lb.t + 0.45);
+  if (la > 0) {
+    const sg = ctx.createLinearGradient(0, Lb.y - 150, 0, K.H); // scrim so the label reads over the bright bed sheet
+    sg.addColorStop(0, 'rgba(8,6,4,0)'); sg.addColorStop(0.55, `rgba(8,6,4,${0.5 * la})`); sg.addColorStop(1, `rgba(8,6,4,${0.6 * la})`);
+    ctx.save(); ctx.fillStyle = sg; ctx.fillRect(0, Lb.y - 150, K.W, K.H - Lb.y + 150); ctx.restore();
+    ctx.save(); ctx.font = '600 semi-condensed 50px Archivo'; ctx.textBaseline = 'alphabetic';
+    const tw = ctx.measureText(Lb.text).width, x = K.clamp(Lb.x, 60, K.W - 60 - tw), y = Lb.y;
+    const e = K.ease.out3(la), [tx, ty] = toScreen(Lb.to[0] * S, Lb.to[1] * S);
+    ctx.save(); ctx.beginPath(); ctx.rect(x - 10, y - 70, (tw + 20) * e, 100); ctx.clip();
+    ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 18; ctx.fillStyle = '#fff6e6';
+    ctx.fillText(Lb.text, x + 24 * (1 - e), y); ctx.restore();
+    ctx.strokeStyle = K.rgba(AMBER, 0.9); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y + 18); ctx.lineTo(x + tw * e, y + 18); ctx.stroke();
+    const ld = K.ease.inOut(K.prog(t, Lb.t + 0.25, Lb.t + 0.75));
+    if (ld > 0) { // elbow leader: up from the underline's start, then across to the part
+      const sx = x + Math.min(tw, 260), sy = y - 60, ex = K.lerp(sx, tx, ld), ey = K.lerp(sy, ty, ld);
+      ctx.strokeStyle = K.rgba(AMBER, 0.75); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.fillStyle = K.rgba(AMBER, ld); ctx.beginPath(); ctx.arc(ex, ey, 5 + 1.5 * Math.sin(t * 6), 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // Small print, then finish.
+  const sp = K.prog(t, cfg.smallprint.t, cfg.smallprint.t + 0.4);
+  if (sp > 0) {
+    ctx.save(); ctx.globalAlpha = 0.55 * sp; ctx.fillStyle = '#e8e2d6'; ctx.font = '500 22px Archivo'; ctx.textAlign = 'right';
+    ctx.fillText(cfg.smallprint.text, K.W - 48, K.H - 36); ctx.restore();
+  }
+  K.vignette(ctx, 0.32); K.grain(ctx, t, 0.045);
+};
+window.ready = true;
+</script></body></html>

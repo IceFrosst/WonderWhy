@@ -1,0 +1,250 @@
+{
+ "version": "V04",
+ "title": "Wait, how do these even work? The glasses explain themselves",
+ "width": 1920,
+ "height": 1080,
+ "fps": 30,
+ "duration": 8.0,
+ "footage": {
+  "plate": {
+   "raw": "share_scene_glasses_friend.mp4",
+   "in": 3.2,
+   "speed": 1,
+   "start": 0,
+   "duration": 8.0,
+   "vf": "crop=w=iw:h=iw*9/16:x=0:y='ih*(0.27-0.12*st(0\\,clip((t-1.5)/1.9\\,0\\,1))*ld(0)*(3-2*ld(0)))'",
+   "label": "FOOTAGE: glasses on the table, friend picks them up, turns them over, puts them on",
+   "sub": "REAL \u00b7 share_scene_glasses_friend.mp4 from 3.2 s \u00b7 16:9 window pans up from 27% to 15% of the height"
+  }
+ },
+ "plateZoom": [
+  {
+   "t": 0,
+   "z": 1.0
+  },
+  {
+   "t": 8.0,
+   "z": 1.05
+  }
+ ],
+ "holo": {
+  "scale": 2.5,
+  "yaw": 180,
+  "pitch": 22,
+  "zoom": 1.5,
+  "target": [
+   0,
+   -1.6,
+   3
+  ],
+  "bandLift": 2.6,
+  "explodeMove": 1.2,
+  "stagger": 0.7,
+  "beamMove": 0.6
+ },
+ "anchor": [
+  {
+   "t": 0.0,
+   "x": 900,
+   "y": 840,
+   "w": 2450,
+   "rot": -12,
+   "yaw": 0,
+   "pitch": 0
+  },
+  {
+   "t": 1.25,
+   "x": 905,
+   "y": 830,
+   "w": 2420,
+   "rot": -11,
+   "yaw": 0,
+   "pitch": 0
+  },
+  {
+   "t": 2.35,
+   "x": 900,
+   "y": 540,
+   "w": 1200,
+   "rot": 0,
+   "yaw": -35,
+   "pitch": 0
+  },
+  {
+   "t": 4.9,
+   "x": 870,
+   "y": 525,
+   "w": 1240,
+   "rot": 0,
+   "yaw": -55,
+   "pitch": -2
+  },
+  {
+   "t": 7.25,
+   "x": 1610,
+   "y": 786,
+   "w": 2000,
+   "rot": -3,
+   "yaw": 35,
+   "pitch": -4
+  },
+  {
+   "t": 8.0,
+   "x": 1610,
+   "y": 786,
+   "w": 2000,
+   "rot": -3,
+   "yaw": 35,
+   "pitch": -4
+  }
+ ],
+ "times": {
+  "appear": [
+   0.9,
+   1.4
+  ],
+  "warm": [
+   1.6,
+   3.3
+  ],
+  "explode": [
+   2.2,
+   3.3
+  ],
+  "beam": [
+   3.3,
+   3.9
+  ],
+  "beamOff": [
+   5.0,
+   5.3
+  ],
+  "fold": [
+   5.45,
+   6.35
+  ],
+  "out": [
+   7.1,
+   7.4
+  ],
+  "land": 7.25,
+  "labelsOut": [
+   4.85,
+   5.05
+  ]
+ },
+ "caption": {
+  "text": "Wait, how do these even work?",
+  "in": 0.35,
+  "wordStep": 0.17,
+  "out": 2.7,
+  "y": 990
+ },
+ "smallprint": {
+  "text": "Visualised. On the glasses it's a panel in your view.",
+  "in": 2.8,
+  "out": 6.8
+ },
+ "labels": [
+  {
+   "part": "rim_left",
+   "offset": [
+    0,
+    1.9,
+    0
+   ],
+   "text": "Frame",
+   "sub": "camera, speakers, two batteries",
+   "dx": 220,
+   "dy": -90,
+   "color": "#ffffff",
+   "at": 2.9
+  },
+  {
+   "part": "projector",
+   "offset": [
+    0,
+    0,
+    0
+   ],
+   "text": "Projector",
+   "sub": "makes the picture",
+   "dx": -170,
+   "dy": -100,
+   "color": "#ffc247",
+   "at": 3.1
+  },
+  {
+   "part": "waveguide",
+   "offset": [
+    0.4,
+    -1.2,
+    0
+   ],
+   "text": "Waveguide",
+   "sub": "light zig-zags inside the glass",
+   "dx": -230,
+   "dy": 170,
+   "color": "#4df0ff",
+   "at": 3.45
+  },
+  {
+   "part": "band",
+   "offset": [
+    1.5,
+    0,
+    0
+   ],
+   "text": "Neural Band",
+   "sub": "reads your finger muscles",
+   "dx": 230,
+   "dy": 40,
+   "color": "#6dff9c",
+   "at": 3.65
+  }
+ ],
+ "cues": [
+  {
+   "t": 0.0,
+   "sound": "clip audio: room tone, the friend's line (check where it really is; move caption.in to match)"
+  },
+  {
+   "t": 0.9,
+   "sound": "soft scanner sweep, low, left to right with the scan line"
+  },
+  {
+   "t": 2.2,
+   "sound": "airy glass chime cluster as the parts fly out (one per stagger group, quiet)"
+  },
+  {
+   "t": 3.3,
+   "sound": "thin rising tone with the cyan light path"
+  },
+  {
+   "t": 5.45,
+   "sound": "reverse whoosh as the parts fold back"
+  },
+  {
+   "t": 7.25,
+   "sound": "single soft click as it lands on the face (same click as the app)"
+  },
+  {
+   "t": 7.25,
+   "sound": "music lifts (Act 7: music builds)"
+  }
+ ],
+ "sheet": [
+  0.6,
+  1.2,
+  2.0,
+  2.8,
+  3.8,
+  4.6,
+  5.8,
+  7.2
+ ],
+ "ring": {
+  "dx": -216,
+  "dy": -220
+ }
+}

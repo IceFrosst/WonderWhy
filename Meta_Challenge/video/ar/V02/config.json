@@ -1,0 +1,213 @@
+{
+ "version": "V02",
+ "title": "X-ray peel: the hologram snaps onto the real Prusa, then explodes towards the camera",
+ "width": 1920,
+ "height": 1080,
+ "fps": 30,
+ "duration": 7.0,
+ "footage": {
+  "plate": {
+   "raw": "printer_2_side_by_side.mp4",
+   "in": 1.0,
+   "speed": 1,
+   "start": 0,
+   "duration": 7.0,
+   "vf": "crop=iw:iw*9/16:0:ih*0.25",
+   "label": "FOOTAGE: Prusa Core One+ printing, Bambu P2S beside it",
+   "sub": "REAL \u00b7 printer_2_side_by_side.mp4 from 1.0 s \u00b7 16:9 window 25% down the portrait clip"
+  }
+ },
+ "timing": {
+  "scanStart": 0.9,
+  "scanEnd": 2.45,
+  "snapFrom": 0.45,
+  "tagIn": 2.45,
+  "tagOut": 3.9,
+  "explodeStart": 3.3,
+  "explodeBeatRate": 1.0,
+  "smallPrintIn": 2.6
+ },
+ "look": {
+  "holoScale": 2.5,
+  "holoAlpha": 0.95,
+  "glowRadius": 14,
+  "glowStrength": 0.32,
+  "greySat": 0.12,
+  "printerDim": 0.72,
+  "printerDimExploded": 0.86,
+  "grain": 0.04,
+  "vignette": 0.3,
+  "guides": false
+ },
+ "tag": "Prusa Core One+",
+ "labels": [
+  {
+   "match": "Nozzle",
+   "text": "0.4 mm nozzle",
+   "t": 4.45
+  },
+  {
+   "match": "Heater",
+   "text": "Heater block",
+   "t": 4.85
+  },
+  {
+   "match": "Drive gear",
+   "text": "Drive gear",
+   "t": 5.35
+  }
+ ],
+ "smallPrint": "Visualised. On the glasses it's a panel in your view.",
+ "placeholderSecond": {
+  "x": 420,
+  "y": 640,
+  "w": 760,
+  "h": 760,
+  "text": "Bambu P2S"
+ },
+ "anchor": [
+  {
+   "t": 0.0,
+   "x": 1100,
+   "y": 400,
+   "w": 1400,
+   "rot": 0,
+   "yaw": -48,
+   "pitch": 0,
+   "bx": 1080,
+   "by": 270,
+   "bw": 1600,
+   "bh": 940
+  },
+  {
+   "t": 0.5,
+   "x": 1150,
+   "y": 410,
+   "w": 1340,
+   "rot": 0,
+   "yaw": -48,
+   "pitch": 0,
+   "bx": 1190,
+   "by": 320,
+   "bw": 1420,
+   "bh": 880,
+   "ease": "lin"
+  },
+  {
+   "t": 0.9,
+   "x": 1180,
+   "y": 425,
+   "w": 1290,
+   "rot": 0,
+   "yaw": -48,
+   "pitch": 0,
+   "bx": 1240,
+   "by": 335,
+   "bw": 1320,
+   "bh": 850,
+   "ease": "lin"
+  },
+  {
+   "t": 1.6,
+   "x": 1270,
+   "y": 470,
+   "w": 1210,
+   "rot": 0,
+   "yaw": -48,
+   "pitch": 0,
+   "bx": 1320,
+   "by": 385,
+   "bw": 1150,
+   "bh": 770,
+   "ease": "lin"
+  },
+  {
+   "t": 2.47,
+   "x": 1365,
+   "y": 512,
+   "w": 1130,
+   "rot": 0,
+   "yaw": -48,
+   "pitch": 0,
+   "bx": 1385,
+   "by": 430,
+   "bw": 1010,
+   "bh": 700,
+   "ease": "out3"
+  },
+  {
+   "t": 3.3,
+   "x": 1405,
+   "y": 535,
+   "w": 1110,
+   "rot": 0,
+   "yaw": -48,
+   "pitch": 0,
+   "bx": 1410,
+   "by": 460,
+   "bw": 960,
+   "bh": 700,
+   "ease": "lin"
+  },
+  {
+   "t": 5.3,
+   "x": 1250,
+   "y": 600,
+   "w": 1350,
+   "rot": 0,
+   "yaw": -42,
+   "pitch": 2,
+   "bx": 1420,
+   "by": 470,
+   "bw": 960,
+   "bh": 715,
+   "ease": "inOut3"
+  },
+  {
+   "t": 7.0,
+   "x": 1220,
+   "y": 610,
+   "w": 1430,
+   "rot": 0,
+   "yaw": -36,
+   "pitch": 3,
+   "bx": 1400,
+   "by": 495,
+   "bw": 1000,
+   "bh": 750,
+   "ease": "lin"
+  }
+ ],
+ "cues": [
+  {
+   "t": 0.0,
+   "sound": "room tone + printer hum from the clip (keep it)"
+  },
+  {
+   "t": 0.9,
+   "sound": "soft rising scan tone, 1.5 s, ends on the lock"
+  },
+  {
+   "t": 2.45,
+   "sound": "small click: the hologram locks onto the printer"
+  },
+  {
+   "t": 3.3,
+   "sound": "airy whoosh towards camera as the parts fly apart"
+  },
+  {
+   "t": 4.45,
+   "sound": "three quiet ticks, one per label (4.45, 4.85, 5.35)"
+  }
+ ],
+ "sheet": [
+  0.5,
+  1.4,
+  2.0,
+  2.6,
+  3.6,
+  4.4,
+  5.4,
+  6.6
+ ]
+}

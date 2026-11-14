@@ -1,0 +1,224 @@
+{
+ "version": "V07",
+ "title": "Wait, how did these block all that? The earbud hologram lifts out of his ear on the grass and shows the anti-noise trick",
+ "width": 1920,
+ "height": 1080,
+ "fps": 30,
+ "duration": 7.5,
+ "footage": {
+  "plate": {
+   "raw": "A001_11141516_C098 2.MOV",
+   "in": 18.3,
+   "speed": 0.7,
+   "start": 0,
+   "duration": 7.5,
+   "vf": "crop=iw:iw*9/16:0:ih*0.24",
+   "label": "FOOTAGE: lying on the grass, earbuds in, rubs his forehead",
+   "sub": "REAL · mrnetwork/A001_11141516_C098 2.MOV · 18.3-23.55 s at 0.7x · iPhone portrait, 16:9 window 24% down"
+  }
+ },
+ "_anchor": "hologram centre x,y and size w (px, 1920x1080), rot (deg), yaw (deg, model turn), explode (0..1). Eased between keys. Keys 0-1.5 sit on the earbud in his left ear (frame right); it lifts off from there, up and to the right so it never crosses his face.",
+ "anchor": [
+  {
+   "t": 0,
+   "x": 1080,
+   "y": 735,
+   "w": 40,
+   "rot": 0,
+   "yaw": -40,
+   "explode": 0
+  },
+  {
+   "t": 1.5,
+   "x": 1080,
+   "y": 735,
+   "w": 40,
+   "rot": 0,
+   "yaw": -40,
+   "explode": 0
+  },
+  {
+   "t": 2.0,
+   "x": 1240,
+   "y": 575,
+   "w": 330,
+   "rot": 6,
+   "yaw": -18,
+   "explode": 0
+  },
+  {
+   "t": 2.9,
+   "x": 1440,
+   "y": 390,
+   "w": 720,
+   "rot": 2,
+   "yaw": 10,
+   "explode": 0
+  },
+  {
+   "t": 4.3,
+   "x": 1450,
+   "y": 396,
+   "w": 720,
+   "rot": 0,
+   "yaw": 55,
+   "explode": 0.28
+  },
+  {
+   "t": 5.6,
+   "x": 1456,
+   "y": 400,
+   "w": 720,
+   "rot": 0,
+   "yaw": 48,
+   "explode": 0.12
+  },
+  {
+   "t": 7.5,
+   "x": 1462,
+   "y": 404,
+   "w": 740,
+   "rot": 0,
+   "yaw": 38,
+   "explode": 0.06
+  }
+ ],
+ "_plate": "slow push on the footage: zoom about (fx, fy) in 0..1 (ear keys are measured at zoom 1; keep the push small)",
+ "plate": [
+  {
+   "t": 0.0,
+   "zoom": 1.0,
+   "fx": 0.5,
+   "fy": 0.5
+  },
+  {
+   "t": 7.5,
+   "zoom": 1.04,
+   "fx": 0.5,
+   "fy": 0.5
+  }
+ ],
+ "_wave": "wave strip in the grass upper left: left end x, centre line y, length w, amplitude amp, gap between the two lines before they meet (px)",
+ "wave": [
+  {
+   "t": 4.0,
+   "x": 130,
+   "y": 225,
+   "w": 720,
+   "amp": 48,
+   "gap": 62
+  },
+  {
+   "t": 7.5,
+   "x": 124,
+   "y": 229,
+   "w": 730,
+   "amp": 48,
+   "gap": 62
+  }
+ ],
+ "text": {
+  "question": "“Wait, how did these block all that?”",
+  "noise": "The hall",
+  "anti": "Flipped copy",
+  "sum": "What you hear",
+  "answer": "They play the noise back, flipped.",
+  "honest": "Visualised. On the glasses it's a panel in your view."
+ },
+ "cues": [
+  {
+   "t": 0.0,
+   "sound": "hall crowd noise bleeding through (he is on the grass, the noise is in his head): loud, busy"
+  },
+  {
+   "t": 0.3,
+   "sound": "VO, the user, dry: \"Wait, how did these block all that?\""
+  },
+  {
+   "t": 1.5,
+   "sound": "soft rising shimmer as the earbud lifts out of his ear"
+  },
+  {
+   "t": 3.0,
+   "sound": "tick (label: Outer mic)"
+  },
+  {
+   "t": 3.3,
+   "sound": "tick (label: Speaker)"
+  },
+  {
+   "t": 4.2,
+   "sound": "crowd swells a touch as the cyan wave draws in"
+  },
+  {
+   "t": 4.8,
+   "sound": "reversed swell (the flipped copy)"
+  },
+  {
+   "t": 5.6,
+   "sound": "crowd ducks fast to near silence; one low warm tone as the line goes flat"
+  },
+  {
+   "t": 6.5,
+   "sound": "silence plus a single soft click; music can enter here"
+  }
+ ],
+ "sheet": [
+  0.5,
+  1.8,
+  2.6,
+  3.6,
+  4.6,
+  5.4,
+  6.0,
+  7.0
+ ],
+ "_ear": "the real earbud in his left ear (frame right), measured on the proxy at these output times. Draws the lift-off ring.",
+ "ear": [
+  {
+   "t": 0.0,
+   "x": 990,
+   "y": 765
+  },
+  {
+   "t": 1.0,
+   "x": 1071,
+   "y": 735
+  },
+  {
+   "t": 1.5,
+   "x": 1080,
+   "y": 735
+  },
+  {
+   "t": 2.0,
+   "x": 1065,
+   "y": 705
+  },
+  {
+   "t": 2.5,
+   "x": 1020,
+   "y": 780
+  },
+  {
+   "t": 3.0,
+   "x": 930,
+   "y": 816
+  },
+  {
+   "t": 4.0,
+   "x": 1200,
+   "y": 690
+  },
+  {
+   "t": 5.5,
+   "x": 1251,
+   "y": 624
+  },
+  {
+   "t": 7.0,
+   "x": 1230,
+   "y": 720
+  }
+ ]
+}

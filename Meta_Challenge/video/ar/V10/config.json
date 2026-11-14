@@ -1,0 +1,374 @@
+{
+ "version": "V10",
+ "title": "Beat montage: printer, earbuds, glasses pop in on a 100 BPM grid while grey turns gold",
+ "width": 1920,
+ "height": 1080,
+ "fps": 30,
+ "duration": 8.4,
+ "bpm": 100,
+ "beat": 0.6,
+ "_footage_note": "Clips arrive as SDR portrait 9:16 (1080x1920 proxy here, 2160x3840 on the PC), so vf is relative: a full-width 16:9 window starting a fraction of the height down. start = first moment the slot is on screen (incl. transition overlap).",
+ "footage": {
+  "printer": {
+   "raw": "printer_1_core_one.mp4",
+   "in": 3.5,
+   "speed": 1,
+   "start": 0,
+   "duration": 2.7,
+   "vf": "crop=iw:iw*9/16:0:ih*0.10",
+   "label": "SHOT 1 · POV at the Prusa Core One, mid-print",
+   "sub": "REAL · printer_1_core_one.mp4 (8.0 s, 60 fps) · window 10% down: print head, orange part, blue LED bar"
+  },
+  "earbuds": {
+   "raw": "A001_11141516_C098 2.MOV",
+   "in": 17.3,
+   "speed": 1,
+   "start": 2.2,
+   "duration": 2.85,
+   "vf": "crop=iw:iw*9/16:0:ih*0.30",
+   "label": "SHOT 2 · Lying on the grass, phone in hand, earbuds in",
+   "sub": "REAL · A001_11141516_C098 2.MOV (24 fps) · 17.3-20.1 s, hand goes up to the earbud"
+  },
+  "glasses": {
+   "raw": "IMG_5557.MOV",
+   "in": 11.15,
+   "speed": 1,
+   "start": 4.55,
+   "duration": 3.9,
+   "vf": "crop=iw:iw*9/16:0:ih*0.20",
+   "label": "SHOT 3 · Glasses go on, he faces camera",
+   "sub": "REAL · IMG_5557.MOV (24.4 s, tonemapped proxy) · 11.15-15.0 s"
+  }
+ },
+ "shots": [
+  {
+   "key": "printer",
+   "object": "printer3d",
+   "t0": 0,
+   "t1": 2.4,
+   "pop": 0.6,
+   "labelAt": 1.2,
+   "tag": "PRUSA CORE ONE",
+   "text": "Hot plastic, layer by layer",
+   "accent": "#4df0ff",
+   "tint": "#e6f4ff",
+   "push": [
+    1.04,
+    1.09
+   ],
+   "placeholder": [
+    "#2d3238",
+    "#111417",
+    "#b9c4d2"
+   ]
+  },
+  {
+   "key": "earbuds",
+   "object": "earbuds",
+   "t0": 2.4,
+   "t1": 4.8,
+   "pop": 3.0,
+   "labelAt": 3.3,
+   "tag": "NOISE-CANCELLING EARBUDS",
+   "text": "Sound cancels sound",
+   "accent": "#6dff9c",
+   "tint": "#fff6e8",
+   "push": [
+    1.04,
+    1.1
+   ],
+   "placeholder": [
+    "#2f3a2a",
+    "#10140d",
+    "#cfd8c0"
+   ]
+  },
+  {
+   "key": "glasses",
+   "object": "glasses",
+   "t0": 4.8,
+   "t1": 8.4,
+   "pop": 5.4,
+   "labelAt": 6.0,
+   "tag": "META RAY-BAN DISPLAY",
+   "text": "A screen in one eye",
+   "accent": "#ffc247",
+   "tint": "#ffdca0",
+   "push": [
+    1.04,
+    1.1
+   ],
+   "placeholder": [
+    "#3c2e1c",
+    "#150e07",
+    "#f4e1bd"
+   ]
+  }
+ ],
+ "_anchor_note": "Plate coordinates (1920x1080, before the shot's slow push/zoom, which scales plate and hologram together). x,y = hologram centre, w = hologram square size, rot = deg, yaw/pitch = extra model turn in deg, lx,ly = top-left of the label block. Linear between keyframes; t is global film time.",
+ "anchor": {
+  "printer": [
+   {
+    "t": 0.0,
+    "x": 1440,
+    "y": 490,
+    "w": 940,
+    "rot": 0,
+    "yaw": -18,
+    "pitch": 0,
+    "lx": 120,
+    "ly": 800
+   },
+   {
+    "t": 1.2,
+    "x": 1430,
+    "y": 495,
+    "w": 960,
+    "rot": 0,
+    "yaw": -6,
+    "pitch": 0,
+    "lx": 120,
+    "ly": 800
+   },
+   {
+    "t": 2.7,
+    "x": 1415,
+    "y": 500,
+    "w": 980,
+    "rot": 0,
+    "yaw": 10,
+    "pitch": 0,
+    "lx": 120,
+    "ly": 800
+   }
+  ],
+  "earbuds": [
+   {
+    "t": 2.2,
+    "x": 1440,
+    "y": 420,
+    "w": 880,
+    "rot": 0,
+    "yaw": -12,
+    "pitch": 0,
+    "lx": 120,
+    "ly": 110
+   },
+   {
+    "t": 3.6,
+    "x": 1430,
+    "y": 420,
+    "w": 900,
+    "rot": 0,
+    "yaw": 0,
+    "pitch": 0,
+    "lx": 120,
+    "ly": 110
+   },
+   {
+    "t": 5.0,
+    "x": 1420,
+    "y": 420,
+    "w": 920,
+    "rot": 0,
+    "yaw": 12,
+    "pitch": 0,
+    "lx": 120,
+    "ly": 110
+   }
+  ],
+  "glasses": [
+   {
+    "t": 4.55,
+    "x": 1530,
+    "y": 460,
+    "w": 980,
+    "rot": 0,
+    "yaw": -20,
+    "pitch": 0,
+    "explode": 0,
+    "lx": 1240,
+    "ly": 800
+   },
+   {
+    "t": 7.2,
+    "x": 1510,
+    "y": 470,
+    "w": 1000,
+    "rot": 0,
+    "yaw": 6,
+    "pitch": 0,
+    "explode": 0,
+    "lx": 1240,
+    "ly": 800
+   },
+   {
+    "t": 7.5,
+    "x": 1505,
+    "y": 472,
+    "w": 1010,
+    "rot": 0,
+    "yaw": 10,
+    "pitch": 0,
+    "explode": 0.35,
+    "lx": 1240,
+    "ly": 800
+   },
+   {
+    "t": 8.4,
+    "x": 1540,
+    "y": 475,
+    "w": 1020,
+    "rot": 0,
+    "yaw": 18,
+    "pitch": 0,
+    "explode": 0.4,
+    "lx": 1240,
+    "ly": 800
+   }
+  ]
+ },
+ "_grade_note": "Per shot (each shot reads the curve clamped to its own time range). sat = saturation, warm -1 cold blue .. +1 gold, bright/contrast = CSS filter values.",
+ "grade": [
+  {
+   "t": 0.0,
+   "sat": 0.04,
+   "warm": -0.6,
+   "bright": 0.86,
+   "contrast": 1.08
+  },
+  {
+   "t": 0.6,
+   "sat": 0.06,
+   "warm": -0.55,
+   "bright": 0.88,
+   "contrast": 1.08
+  },
+  {
+   "t": 2.39,
+   "sat": 0.22,
+   "warm": -0.3,
+   "bright": 0.92,
+   "contrast": 1.06
+  },
+  {
+   "t": 2.4,
+   "sat": 0.42,
+   "warm": 0.0,
+   "bright": 0.95,
+   "contrast": 1.05
+  },
+  {
+   "t": 3.0,
+   "sat": 0.48,
+   "warm": 0.1,
+   "bright": 0.97,
+   "contrast": 1.05
+  },
+  {
+   "t": 4.79,
+   "sat": 0.72,
+   "warm": 0.35,
+   "bright": 1.0,
+   "contrast": 1.04
+  },
+  {
+   "t": 4.8,
+   "sat": 0.9,
+   "warm": 0.55,
+   "bright": 1.02,
+   "contrast": 1.04
+  },
+  {
+   "t": 5.4,
+   "sat": 1.0,
+   "warm": 0.8,
+   "bright": 1.04,
+   "contrast": 1.04
+  },
+  {
+   "t": 8.4,
+   "sat": 1.0,
+   "warm": 1.0,
+   "bright": 1.05,
+   "contrast": 1.05
+  }
+ ],
+ "transitions": [
+  {
+   "t": 2.4,
+   "type": "whip",
+   "pre": 0.2,
+   "post": 0.2,
+   "samples": 16,
+   "dir": -1
+  },
+  {
+   "t": 4.8,
+   "type": "push",
+   "pre": 0.25,
+   "post": 0.25,
+   "samples": 12,
+   "zoomOut": 3.2,
+   "zoomIn": 1.9
+  }
+ ],
+ "smallPrint": "Visualised. On the glasses it's a panel in your view.",
+ "cues": [
+  {
+   "t": 0.0,
+   "sound": "music downbeat, 100 BPM track (bar 1)"
+  },
+  {
+   "t": 0.6,
+   "sound": "pop: soft glassy tick + low thump, printer hologram"
+  },
+  {
+   "t": 1.2,
+   "sound": "type tick, label"
+  },
+  {
+   "t": 2.2,
+   "sound": "whip whoosh (peaks on the 2.4 cut)"
+  },
+  {
+   "t": 3.0,
+   "sound": "pop, earbuds hologram (one step brighter)"
+  },
+  {
+   "t": 3.3,
+   "sound": "type tick, label"
+  },
+  {
+   "t": 4.55,
+   "sound": "push-through riser into a soft hit on 4.8"
+  },
+  {
+   "t": 5.4,
+   "sound": "pop, glasses hologram (warmest)"
+  },
+  {
+   "t": 6.0,
+   "sound": "type tick, label"
+  },
+  {
+   "t": 7.2,
+   "sound": "shimmer, glasses explode open"
+  },
+  {
+   "t": 8.4,
+   "sound": "end on the downbeat (bar 4, beat 3), music carries on into the next shot"
+  }
+ ],
+ "sheet": [
+  0.5,
+  1.6,
+  2.4,
+  3.6,
+  4.8,
+  5.6,
+  6.6,
+  7.8
+ ],
+ "backing": 0.32
+}

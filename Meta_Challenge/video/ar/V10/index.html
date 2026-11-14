@@ -1,0 +1,179 @@
+<!doctype html>
+<!-- V10 Beat montage: three real shots cut on a 100 BPM grid (beat = 0.6 s). Printer, earbuds, glasses pop in on
+     the beat over their real thing; cuts are a whip pan and a push-through with real motion blur (K.accumulate);
+     the grade climbs from grey to gold. Everything placed by config.json. window.renderFrame(t) is pure in t. -->
+<html><head><meta charset="utf-8"><title>V10 Beat montage</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { hologram } from '../lib/holo.js';
+const W = 1920, H = 1080;
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+
+// Three holograms = three WebGL contexts, created once.
+const holo = {};
+for (const s of cfg.shots) holo[s.key] = await hologram(s.object, { scale: 1.6 });
+const tintBuf = K.layer(holo[cfg.shots[0].key].size, holo[cfg.shots[0].key].size);
+const tg = tintBuf.getContext('2d');
+
+// ---- helpers ----------------------------------------------------------------------------------------------
+const key = (a, t) => { // linear between keyframes, clamped at both ends
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? K.clamp((t - p.t) / (q.t - p.t)) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, K.lerp(p[k], q[k], u)]));
+};
+const shotIdx = s => { let i = 0; while (i < cfg.shots.length - 1 && s >= cfg.shots[i].t1) i++; return i; };
+const gradeFor = (sh, s) => key(cfg.grade, K.clamp(s, sh.t0, sh.t1 - 0.011));
+const pops = cfg.shots.map(sh => sh.pop);
+const punch = s => pops.reduce((a, p) => a + (s >= p ? 0.022 * Math.exp(-(s - p) * 7) : 0), 0); // beat-synced zoom kick
+
+// Which shots are on screen at time s, each with its transition transform.
+function layout(s) {
+  for (const tr of cfg.transitions) {
+    const a = tr.t - tr.pre, b = tr.t + tr.post;
+    if (s < a || s >= b) continue;
+    const i = shotIdx(tr.t - 0.001), j = i + 1;
+    if (tr.type === 'whip') { // one continuous pan: outgoing leaves, incoming arrives, gap-free
+      const p = K.ease.inOut3(K.prog(s, a, b)), d = tr.dir || -1, X = W * 1.02;
+      return [{ i, ox: d * p * X, z: 1, tilt: d * p * 2.5 }, { i: j, ox: -d * (1 - p) * X, z: 1, tilt: -d * (1 - p) * 2.5 }];
+    }
+    if (tr.type === 'push') { // zoom into the outgoing hologram, land zoomed-in on the next shot and settle
+      if (s < tr.t) return [{ i, ox: 0, z: 1 + (tr.zoomOut - 1) * K.ease.in3(K.prog(s, a, tr.t)), zc: true }];
+      return [{ i: j, ox: 0, z: 1 + (tr.zoomIn - 1) * (1 - K.ease.out3(K.prog(s, tr.t, b + 0.15))), zc: true }];
+    }
+  }
+  return [{ i: shotIdx(s), ox: 0, z: 1 }];
+}
+const activeTr = t => cfg.transitions.find(tr => t >= tr.t - tr.pre - 0.034 && t < tr.t + tr.post);
+
+// ---- one shot ---------------------------------------------------------------------------------------------
+function drawShot(g, s, L, im) {
+  const sh = cfg.shots[L.i], f = cfg.footage[sh.key], A = key(cfg.anchor[sh.key], s), gr = gradeFor(sh, s);
+  const life = K.prog(s, sh.t0, sh.t1), push = K.lerp(sh.push[0], sh.push[1], life) + punch(s);
+  const jx = K.noise(s * 1.7, L.i * 7 + 1) * 7, jy = K.noise(s * 1.5, L.i * 7 + 2) * 5; // handheld drift
+  g.save();
+  g.translate(L.ox, 0);
+  if (L.tilt) { g.translate(W / 2, H / 2); g.rotate(L.tilt * Math.PI / 180); g.translate(-W / 2, -H / 2); }
+  if (L.z !== 1) { const cx = L.zc ? A.x : W / 2, cy = L.zc ? A.y : H / 2; g.translate(cx, cy); g.scale(L.z, L.z); g.translate(-cx, -cy); }
+  g.translate(W / 2 + jx, H / 2 + jy); g.scale(push, push); g.translate(-W / 2, -H / 2);
+
+  // plate, graded
+  g.save();
+  g.filter = `saturate(${gr.sat.toFixed(3)}) brightness(${gr.bright.toFixed(3)}) contrast(${gr.contrast.toFixed(3)})`;
+  if (im) K.cover(g, im);
+  else {
+    const [top, bottom, ink] = sh.placeholder;
+    K.placeholder(g, f.label, f.sub, { top, bottom, ink, y: 92 });
+    standIn(g, sh, A, ink);
+  }
+  g.restore();
+  // cold blue -> gold wash
+  g.save(); g.globalCompositeOperation = 'soft-light';
+  g.fillStyle = gr.warm < 0 ? K.rgba('#4a6a96', -gr.warm * 0.7) : K.rgba('#ffb040', gr.warm * 0.7);
+  g.fillRect(-60, -60, W + 120, H + 120); g.restore();
+
+  // hologram: pop on the beat
+  const k = K.prog(s, sh.pop, sh.pop + 0.32);
+  if (s >= sh.pop) {
+    const h = holo[sh.key], sc = 0.6 + 0.4 * K.ease.outBack(k), w = A.w * sc;
+    const c = h.draw(0, s - sh.pop + 1.2, { yaw: A.yaw, pitch: A.pitch, explode: A.explode ?? null });
+    tg.globalCompositeOperation = 'source-over'; tg.drawImage(c, 0, 0);
+    tg.globalCompositeOperation = 'multiply'; tg.fillStyle = sh.tint; tg.fillRect(0, 0, tintBuf.width, tintBuf.height);
+    // soft dark pool behind the lines so they read on bright grass or venue light (no glow added)
+    g.save(); g.globalAlpha = K.prog(s, sh.pop, sh.pop + 0.15) * (cfg.backing ?? 0.32);
+    const pool = g.createRadialGradient(A.x, A.y, 0, A.x, A.y, w * 0.48);
+    pool.addColorStop(0, 'rgba(0,0,0,1)'); pool.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = pool; g.fillRect(A.x - w, A.y - w, 2 * w, 2 * w); g.restore();
+    g.save(); g.globalCompositeOperation = 'screen'; g.globalAlpha = K.prog(s, sh.pop, sh.pop + 0.07);
+    g.translate(A.x, A.y); g.rotate(A.rot * Math.PI / 180);
+    g.drawImage(tintBuf, -w / 2, -w / 2, w, w);
+    const flash = 1 - K.prog(s, sh.pop, sh.pop + 0.22); // brief overexposure on the hit, no bloom
+    if (flash > 0) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.45 * flash; g.drawImage(tintBuf, -w / 2, -w / 2, w, w); }
+    g.restore();
+    lockOn(g, s, sh, A);
+  }
+  if (s >= sh.labelAt) label(g, s, sh, A);
+  g.restore();
+}
+
+// placeholder only: a dashed box where the real object should sit, so stills read without footage
+function standIn(g, sh, A, ink) {
+  const what = { printer: 'real Prusa here', earbuds: 'real open case here', glasses: 'wearer\'s face here' }[sh.key];
+  const box = { printer: [A.x - 330, A.y - 300, 600, 560], earbuds: [A.x - 330, A.y + 60, 420, 300], glasses: [360, 210, 520, 640] }[sh.key];
+  g.save(); g.strokeStyle = ink; g.globalAlpha = 0.28; g.lineWidth = 3; g.setLineDash([14, 12]);
+  g.strokeRect(...box); g.setLineDash([]);
+  g.fillStyle = ink; g.globalAlpha = 0.4; g.font = '500 24px Archivo'; g.textAlign = 'left'; g.textBaseline = 'top';
+  g.fillText(what, box[0] + 14, box[1] + 12); g.restore();
+}
+
+// corner brackets snap onto the hologram, plus one thin ring on the hit
+function lockOn(g, s, sh, A) {
+  const u = K.prog(s, sh.pop, sh.pop + 0.18), r = A.w * 0.34 * K.lerp(1.3, 1, K.ease.out3(u));
+  const a = s < sh.pop + 0.5 ? 0.9 : K.lerp(0.9, 0.3, K.prog(s, sh.pop + 0.5, sh.pop + 1.1));
+  g.save(); g.translate(A.x, A.y); g.strokeStyle = sh.accent; g.lineWidth = 3; g.lineCap = 'round'; g.globalAlpha = a * K.prog(s, sh.pop, sh.pop + 0.05);
+  const L = 44; g.beginPath();
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    g.moveTo(sx * r, sy * (r - L)); g.lineTo(sx * r, sy * r); g.lineTo(sx * (r - L), sy * r);
+  }
+  g.stroke();
+  const ring = K.prog(s, sh.pop, sh.pop + 0.42);
+  if (ring < 1) {
+    g.globalAlpha = 0.55 * (1 - ring); g.lineWidth = 2;
+    g.beginPath(); g.arc(0, 0, A.w * K.lerp(0.12, 0.62, K.ease.out3(ring)), 0, Math.PI * 2); g.stroke();
+  }
+  g.restore();
+}
+
+// tag + one line, typed on the beat; the block is clamped inside the frame
+function label(g, s, sh, A) {
+  const u = K.prog(s, sh.labelAt, sh.labelAt + 0.28), n = Math.ceil(sh.text.length * K.ease.out2(u));
+  g.save(); g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+  g.font = '600 semi-condensed 58px Archivo'; const tw = g.measureText(sh.text).width;
+  g.font = '600 22px Archivo'; g.letterSpacing = '3px'; const gw = g.measureText(sh.tag).width;
+  const bw = Math.max(tw, gw), x = K.clamp(A.lx, 70, W - 70 - bw), y = K.clamp(A.ly, 60, H - 60 - 110);
+  const a = K.prog(s, sh.labelAt, sh.labelAt + 0.08);
+  // soft dark backing for legibility on bright footage
+  const bg = g.createLinearGradient(x - 40, 0, x + bw + 80, 0);
+  bg.addColorStop(0, 'rgba(0,0,0,0.42)'); bg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.globalAlpha = a; g.fillStyle = bg; g.fillRect(x - 40, y - 26, bw + 120, 140);
+  g.fillStyle = sh.accent; g.fillText(sh.tag, x, y + 14);
+  g.letterSpacing = '0px'; g.font = '600 semi-condensed 58px Archivo'; g.fillStyle = '#fbf3e4';
+  g.shadowColor = 'rgba(0,0,0,0.5)'; g.shadowBlur = 12; g.fillText(sh.text.slice(0, n), x, y + 82); g.shadowBlur = 0;
+  const ul = K.ease.out3(K.prog(s, sh.labelAt + 0.1, sh.labelAt + 0.5));
+  g.fillStyle = sh.accent; g.globalAlpha = a * 0.85; g.fillRect(x, y + 100, tw * ul, 3);
+  g.restore();
+}
+
+// ---- frame --------------------------------------------------------------------------------------------------
+window.renderFrame = async t => {
+  const tr = activeTr(t), n = tr ? tr.samples : 1, shutter = tr ? 1 / 30 : 0;
+  const samples = [];
+  for (let i = 0; i < n; i++) { // prefetch footage for every sub-frame, in order (deterministic)
+    const s = t + (i / n) * shutter, Ls = layout(s), ims = [];
+    for (const L of Ls) { const sh = cfg.shots[L.i], f = cfg.footage[sh.key]; ims.push(await K.footageFrame(sh.key, s - f.start)); }
+    samples.push({ Ls, ims });
+  }
+  let k = 0;
+  K.accumulate(ctx, t, n, shutter, (g, s) => {
+    const { Ls, ims } = samples[k++];
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    Ls.forEach((L, j) => drawShot(g, s, L, ims[j]));
+  });
+  // push-through hit: a short warm lift on the cut
+  const pt = cfg.transitions.find(x => x.type === 'push');
+  const hit = pt ? 1 - K.prog(t, pt.t, pt.t + 0.16) : 0;
+  if (pt && t >= pt.t && hit > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = K.rgba('#ffc247', 0.18 * hit); ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  K.vignette(ctx, 0.32);
+  K.grain(ctx, t, 0.05);
+  // honest small print, bottom left, from the first pop on
+  ctx.save(); ctx.globalAlpha = 0.6 * K.prog(t, cfg.shots[0].pop, cfg.shots[0].pop + 0.3);
+  ctx.fillStyle = '#f2ead8'; ctx.font = '500 22px Archivo'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(cfg.smallPrint, 56, H - 40); ctx.restore();
+};
+window.ready = true;
+</script></body></html>

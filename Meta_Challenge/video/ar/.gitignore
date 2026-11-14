@@ -1,0 +1,4 @@
+# real footage and renders are not for git
+*/frames/
+*/footage/
+out/

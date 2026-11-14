@@ -1,0 +1,242 @@
+<!doctype html>
+<!-- V06 "Colour comes back where the lines have been": the whole frame is grey; the printer3d hologram prints itself
+     bottom-up over the real Prusa, and wherever its lines have been, the footage gets its colour back (a mask built from
+     the hologram canvas, blurred wider the longer ago the line passed). Then an echo of the lines rolls out through the
+     room and the colour follows it. window.renderFrame(t) is a pure function of t: the mask is recomputed every frame
+     from a fixed grid of earlier times, never from stored frames. All object positions: config.anchor. -->
+<html><head><meta charset="utf-8"><title>V06 colour returns</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { hologram } from '../lib/holo.js';
+const W = 1920, H = 1080, PI = Math.PI;
+const out = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const T = cfg.timing, G = cfg.grade, F = cfg.frame, HO = cfg.holo, TX = cfg.text;
+const CYAN = '#4df0ff', AMBER = '#ffc247', GOLD = [255, 196, 96];
+const h = await hologram(HO.object, { scale: HO.scale || 2 });
+const HS = h.size;
+
+// ---- buffers ------------------------------------------------------------------------------------------------------
+const MW = 480, MH = 270, MS = MW / W;                       // colour mask works at quarter resolution
+const mk = K.layer(MW, MH), mx = mk.getContext('2d', { willReadFrequently: true });
+const tmp = K.layer(MW, MH), tx = tmp.getContext('2d');
+const mA = K.layer(MW, MH), mAx = mA.getContext('2d');        // mask as alpha
+const rim = K.layer(MW, MH), rx = rim.getContext('2d');       // warm edge of the returning colour
+const holo = K.layer(HS, HS), hx = holo.getContext('2d');     // 2D copy of the WebGL hologram
+const band = K.layer(HS, HS), bx = band.getContext('2d');     // hot band at the scan line
+const scene = K.layer(), sx = scene.getContext('2d');         // the plate (footage or stand-in), ungraded
+const strip = K.layer(), stx = strip.getContext('2d');
+const col = K.layer(), cx = col.getContext('2d');             // colour version, masked
+const frm = K.layer(), ctx = frm.getContext('2d');            // whole frame before the push
+
+// ---- keyframes (linear) -------------------------------------------------------------------------------------------
+const key = (a, t) => {
+  if (t <= a[0].t) return { ...a[0] };
+  if (t >= a[a.length - 1].t) return { ...a[a.length - 1] };
+  let i = 0; while (t > a[i + 1].t) i++;
+  const p = a[i], q = a[i + 1], u = K.clamp((t - p.t) / (q.t - p.t)), o = {};
+  for (const k of Object.keys(p)) o[k] = K.lerp(p[k], q[k] ?? p[k], u);
+  return o;
+};
+
+// ---- the hologram's bounding box in its own canvas (0..1), measured once at the first anchor's view -------------
+const a0 = cfg.anchor[0];
+h.draw(HO.beat, HO.beatTime, { yaw: a0.yaw || 0, pitch: a0.pitch || 0 });
+const bb = (() => {
+  const N = 300, c = K.layer(N, N), g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(h.canvas, 0, 0, N, N);
+  const d = g.getImageData(0, 0, N, N).data; let x0 = N, y0 = N, x1 = 0, y1 = 0;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = (y * N + x) * 4; if (Math.max(d[i], d[i + 1], d[i + 2]) > 40) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  }
+  return { x0: x0 / N, y0: y0 / N, x1: (x1 + 1) / N, y1: (y1 + 1) / N, cx: (x0 + x1 + 1) / 2 / N, cy: (y0 + y1 + 1) / 2 / N };
+})();
+window.holoBox = bb;
+const wOf = a => a.h / (bb.y1 - bb.y0);                       // hologram canvas size on screen
+// Origin -> hologram canvas top-left, units = screen px. Scales about the anchor (the printer's centre).
+const place = (g, a, s = 1) => { const w = wOf(a); g.translate(a.x, a.y); g.rotate((a.rot || 0) * PI / 180); g.scale(s, s); g.translate(-bb.cx * w, -bb.cy * w); return w; };
+const toScreen = (a, u, v) => { const w = wOf(a), r = (a.rot || 0) * PI / 180, dx = (u - bb.cx) * w, dy = (v - bb.cy) * w; return [a.x + dx * Math.cos(r) - dy * Math.sin(r), a.y + dx * Math.sin(r) + dy * Math.cos(r)]; };
+
+// Reveal line (canvas fraction): rows below it are printed. Bottom-up, like the printer itself.
+const yRev = s => K.lerp(bb.y1 + 0.01, bb.y0 - 0.015, K.ease.inOut(K.prog(s, T.buildIn, T.buildOut)));
+
+// ---- plate: footage (portrait, stored transposed by vf) or a code-drawn colourful stand-in ----------------------
+function drawPortrait(g, im, k, cxp, cyp) {               // im is the transpose=1 frame: width = portrait height
+  const Pw = im.height, Ph = im.width, kk = k / Pw;        // k = on-screen width of the portrait
+  g.save(); g.translate(W / 2 - cxp * Pw * kk, H / 2 - cyp * Ph * kk); g.scale(kk, kk);
+  g.translate(0, Ph); g.rotate(-PI / 2); g.drawImage(im, 0, 0); g.restore();
+}
+function plateFootage(im) {
+  // blurred, darkened cover behind (the right-hand panel), then the sharp strip with a feathered right edge
+  sx.save(); sx.filter = `blur(${F.bgBlur}px) brightness(${F.bgBright})`; drawPortrait(sx, im, W * (F.bgZoom || 1), 0.5, F.cy); sx.restore();
+  stx.clearRect(0, 0, W, H); drawPortrait(stx, im, 1080 * F.s, F.cx, F.cy);
+  const right = W / 2 + (1 - F.cx) * 1080 * F.s, left = W / 2 - F.cx * 1080 * F.s;
+  stx.save(); stx.globalCompositeOperation = 'destination-in';
+  const gr = stx.createLinearGradient(left, 0, right, 0), fe = F.feather / (right - left);
+  gr.addColorStop(0, left > 1 ? 'rgba(0,0,0,0)' : '#000'); gr.addColorStop(Math.min(.5, left > 1 ? fe : 0), '#000');
+  gr.addColorStop(1 - fe, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  stx.fillStyle = gr; stx.fillRect(0, 0, W, H); stx.restore();
+  sx.drawImage(strip, 0, 0);
+}
+function plateStandIn(t, a) {                              // only when no footage is on this machine
+  const g = sx, [L, Tp] = toScreen(a, bb.x0, bb.y0), [R, B] = toScreen(a, bb.x1, bb.y1), Pw = R - L, Ph = B - Tp;
+  let gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#c9c2b4'); gr.addColorStop(1, '#a89f8f'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#1a1c22'; for (let i = 0; i < 9; i++) g.fillRect(1180 + i * 82 + (a.x - 800) * .4, 0, 60, 520);          // curtain
+  g.fillStyle = '#3d3f46'; g.fillRect(0, 300, W, 16);                                                                     // spool rail
+  [['#e5333f', 300], ['#2f6f4a', 980], ['#e8e2d0', 140]].forEach(([c, x]) => { g.fillStyle = c; g.beginPath(); g.ellipse(x + (a.x - 800) * .4, 300, 26, 56, 0, 0, 7); g.fill(); });
+  g.fillStyle = '#7b8a96'; g.fillRect(0, B, W, H - B);                                                                   // floor
+  gr = g.createLinearGradient(0, B - 10, 0, B + 40); gr.addColorStop(0, '#d9a066'); gr.addColorStop(1, '#a8703c'); g.fillStyle = gr; g.fillRect(0, B - 6, W, 44);
+  g.fillStyle = '#8c8f93'; g.fillRect(L - Pw * 1.05, Tp + Ph * .12, Pw * .95, Ph * .88);                                  // second printer
+  g.fillStyle = '#f2d53c'; g.fillRect(L - Pw * .6, Tp + Ph * .3, 60, 40);
+  g.fillStyle = '#16171b'; g.fillRect(L, Tp, Pw, Ph);                                                                     // Prusa
+  g.fillStyle = 'rgba(70,90,120,.55)'; g.fillRect(L + Pw * .08, Tp + Ph * .1, Pw * .84, Ph * .82);
+  g.fillStyle = '#ff7a2f'; g.fillRect(L + Pw * .3, Tp + Ph * .3, Pw * .3, Ph * .06); g.fillRect(L + Pw * .05, Tp - 4, Pw * .18, 18);
+  g.fillStyle = '#4fb4ff'; g.fillRect(L + Pw * .1, Tp + Ph * .4, Pw * .8, 6);
+  g.fillStyle = '#1f4fd0'; g.beginPath(); g.ellipse(L + Pw * .45, Tp - 30, Pw * .22, 40, 0, 0, 7); g.fill();               // blue spool
+  g.fillStyle = '#1d5be0'; g.fillRect(L + Pw * .7, B + 60, 220, 300); g.fillStyle = '#f3c21b'; g.fillRect(L + Pw * .75, B + 70, 120, 60); // bin
+}
+
+// ---- colour mask: union of the printed hologram at earlier times (older = blurred wider) + the line echo ---------
+function stamp(a, yr, s, rScreen, gain) {
+  tx.setTransform(1, 0, 0, 1, 0, 0); tx.clearRect(0, 0, MW, MH);
+  tx.save(); tx.scale(MS, MS); const w = place(tx, a, s);
+  tx.beginPath(); tx.rect(0, yr * w, w, (1 - yr) * w); tx.clip(); tx.drawImage(holo, 0, 0, w, w); tx.restore();
+  mx.globalCompositeOperation = 'lighten'; mx.filter = `blur(${(rScreen * MS).toFixed(2)}px) brightness(${gain.toFixed(2)})`;
+  mx.drawImage(tmp, 0, 0); mx.filter = 'none';
+}
+const gainOf = r => T.gain * (1 + r * MS / 1.4);
+function buildMask(t, a) {
+  mx.globalCompositeOperation = 'source-over'; mx.filter = 'none'; mx.fillStyle = '#000'; mx.fillRect(0, 0, MW, MH);
+  if (t > T.buildIn) {                                         // halos behind the scan line
+    const end = Math.min(t, T.buildOut), n = Math.floor((end - T.buildIn) / T.step - 1e-6), times = [];
+    for (let k = 1; k <= n; k++) times.push(T.buildIn + k * T.step);
+    times.push(end);
+    for (const s of times) { const r = Math.min(T.haloMax, T.halo0 + T.haloRate * (t - s)); stamp(a, yRev(s), 1, r, gainOf(r)); }
+  }
+  if (t > T.echoIn) {                                          // the echo wave of lines, rolling out into the room
+    const end = Math.min(t, T.echoOut), n = Math.floor((end - T.echoIn) / T.echoStep - 1e-6), times = [];
+    for (let k = 1; k <= n; k++) times.push(T.echoIn + k * T.echoStep);
+    times.push(end);
+    for (const e of times) { const r = Math.min(T.haloMax, 40 + 110 * (t - e)); stamp(a, 0, echoScale(e), r, gainOf(r) * 1.15); }
+  }
+  if (t > T.spillIn) {                                         // the last of the room fills in, ragged edge
+    const p = K.ease.inOut(K.prog(t, T.spillIn, T.spillOut)), R = p * 2300 * MS, [ox, oy] = [a.x * MS, a.y * MS];
+    mx.save(); mx.globalCompositeOperation = 'lighten'; mx.filter = `blur(${(60 * MS).toFixed(1)}px)`; mx.fillStyle = '#fff'; mx.beginPath();
+    for (let i = 0; i <= 96; i++) {
+      const th = i / 96 * 2 * PI, k = 1 + .12 * Math.sin(3 * th + 1.3) + .07 * Math.sin(5 * th + 4.1) + .05 * Math.sin(9 * th + 2.2 + t * .8);
+      const rr = Math.max(0, R * k); i ? mx.lineTo(ox + Math.cos(th) * rr, oy + Math.sin(th) * rr) : mx.moveTo(ox + Math.cos(th) * rr, oy + Math.sin(th) * rr);
+    }
+    mx.fill(); mx.restore();
+  }
+  // luminance -> alpha (with a soft knee), and the warm rim where colour is half-way back
+  const src = mx.getImageData(0, 0, MW, MH), d = src.data, A = mAx.createImageData(MW, MH), Rm = rx.createImageData(MW, MH);
+  const rimAmt = G.rim * (1 - K.prog(t, T.spillOut - .3, T.spillOut + .4));
+  for (let i = 0; i < d.length; i += 4) {
+    let m = Math.max(d[i], d[i + 1], d[i + 2]) / 255; m = m >= .6 ? 1 : (x => x * x * (3 - 2 * x))(m / .6);
+    A.data[i] = A.data[i + 1] = A.data[i + 2] = 255; A.data[i + 3] = m * 255;
+    Rm.data[i] = GOLD[0]; Rm.data[i + 1] = GOLD[1]; Rm.data[i + 2] = GOLD[2]; Rm.data[i + 3] = 4 * m * (1 - m) * rimAmt * 255;
+  }
+  mAx.putImageData(A, 0, 0); rx.putImageData(Rm, 0, 0);
+}
+const echoScale = e => 1 + T.echoGrow * K.ease.out2(K.prog(e, T.echoIn, T.echoOut));
+
+// ---- hologram on screen -------------------------------------------------------------------------------------------
+function drawHolo(t, a) {
+  if (t < T.trigger) return;
+  const w = wOf(a), [cxs, cys] = [a.x, a.y];
+  if (t < T.buildIn + .35) {                                   // the ask: a ring closes on the printer
+    const p = K.prog(t, T.trigger, T.buildIn + .1), al = Math.sin(PI * K.clamp(p)) * .9, r = K.lerp(150, 46, K.ease.out3(p));
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = K.rgba(CYAN, al); ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(cxs, cys, r, 0, 2 * PI); ctx.stroke();
+    for (let i = 0; i < 4; i++) { const th = i * PI / 2 + p * .6; ctx.beginPath(); ctx.moveTo(cxs + Math.cos(th) * (r + 8), cys + Math.sin(th) * (r + 8)); ctx.lineTo(cxs + Math.cos(th) * (r + 22), cys + Math.sin(th) * (r + 22)); ctx.stroke(); }
+    ctx.restore();
+  }
+  if (t < T.buildIn) return;
+  const yr = yRev(Math.min(t, T.buildOut)), thin = K.lerp(1, T.thinAlpha, K.ease.inOut(K.prog(t, T.thinIn, T.thinOut)));
+  ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = thin; place(ctx, a);
+  ctx.beginPath(); ctx.rect(0, yr * w, w, (1 - yr) * w); ctx.clip(); ctx.drawImage(holo, 0, 0, w, w); ctx.restore();
+  // hot band: the newest slice glows amber, like the line the nozzle just laid
+  const hot = K.prog(t, T.buildIn, T.buildIn + .2) * (1 - K.prog(t, T.buildOut, T.buildOut + .35));
+  if (hot > 0) {
+    bx.globalCompositeOperation = 'source-over'; bx.fillStyle = '#000'; bx.fillRect(0, 0, HS, HS);
+    bx.save(); bx.beginPath(); bx.rect(0, yr * HS, HS, .05 * HS); bx.clip(); bx.filter = 'grayscale(1) brightness(1.9)'; bx.drawImage(holo, 0, 0); bx.restore();
+    bx.globalCompositeOperation = 'multiply'; bx.fillStyle = AMBER; bx.fillRect(0, 0, HS, HS);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = hot; place(ctx, a); ctx.drawImage(band, 0, 0, w, w);
+    // scan line across the model, with the print head running along it
+    const x0 = (bb.x0 - .03) * w, x1 = (bb.x1 + .03) * w, y = yr * w, gl = ctx.createLinearGradient(x0, 0, x1, 0);
+    gl.addColorStop(0, 'rgba(255,194,71,0)'); gl.addColorStop(.15, 'rgba(255,214,140,.9)'); gl.addColorStop(.85, 'rgba(255,214,140,.9)'); gl.addColorStop(1, 'rgba(255,194,71,0)');
+    ctx.strokeStyle = gl; ctx.globalAlpha = hot * .22; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    ctx.globalAlpha = hot * .9; ctx.lineWidth = 2; ctx.stroke();
+    const hxp = K.lerp(x0 + 30, x1 - 30, .5 + .5 * Math.sin(t * 6.3)), sp = ctx.createRadialGradient(hxp, y, 0, hxp, y, 26);
+    sp.addColorStop(0, 'rgba(255,240,200,1)'); sp.addColorStop(.3, 'rgba(255,194,71,.5)'); sp.addColorStop(1, 'rgba(255,194,71,0)');
+    ctx.globalAlpha = hot; ctx.fillStyle = sp; ctx.fillRect(hxp - 26, y - 26, 52, 52);
+    ctx.restore();
+  }
+  if (t > T.echoIn && t < T.echoOut) {                          // the echo you can see
+    const p = K.prog(t, T.echoIn, T.echoOut);
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = .6 * Math.pow(1 - p, 1.6) * K.prog(t, T.echoIn, T.echoIn + .12);
+    place(ctx, a, echoScale(t)); ctx.drawImage(holo, 0, 0, w, w); ctx.restore();
+  }
+}
+
+// ---- type ---------------------------------------------------------------------------------------------------------
+function words(t, o, size, color, weight = 600) {
+  if (t < o.t0 || t > o.t1) return 0;
+  const fi = K.ease.out3(K.prog(t, o.t0, o.t0 + .4)), fo = 1 - K.ease.in2(K.prog(t, o.t1 - .3, o.t1)), al = fi * fo;
+  ctx.save(); ctx.globalAlpha = al; ctx.fillStyle = color; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.font = `${weight} semi-condensed ${size}px Archivo`; ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 18;
+  o.text.split('\n').forEach((s, i) => ctx.fillText(s, o.x, o.y + i * size * 1.12 + (1 - fi) * 16));
+  ctx.restore(); return al;
+}
+function overlayText(t, a) {
+  words(t, TX.q, 54, '#e8ecf1');
+  words(t, TX.a, 54, '#ffd27a');
+  const al = words(t, TX.tag, 40, '#ffffff');
+  if (al > 0) {                                                // leader from the model's top-right corner to the tag
+    const [px, py] = toScreen(a, K.lerp(bb.x0, bb.x1, TX.tag.bu), K.lerp(bb.y0, bb.y1, TX.tag.bv)), lx = TX.tag.x - 14, ly = TX.tag.y - 14, p = K.ease.out3(K.prog(t, TX.tag.t0, TX.tag.t0 + .5));
+    ctx.save(); ctx.globalAlpha = al; ctx.strokeStyle = CYAN; ctx.fillStyle = CYAN; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, 2 * PI); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(K.lerp(px, lx, p), K.lerp(py, ly, p)); ctx.stroke(); ctx.restore();
+  }
+  const o = TX.honest;
+  if (t > o.t0) { ctx.save(); ctx.globalAlpha = .62 * K.prog(t, o.t0, o.t0 + .4); ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.font = '500 22px Archivo'; ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 8; ctx.fillText(o.text, W - 56, H - 40); ctx.restore(); }
+}
+
+// ---- frame --------------------------------------------------------------------------------------------------------
+window.renderFrame = async t => {
+  const f = cfg.footage.plate, im = await K.footageFrame('plate', t - f.start);
+  const a = key(cfg.anchor, t);
+  h.draw(HO.beat, HO.beatTime, { yaw: a.yaw || 0, pitch: a.pitch || 0 });
+  hx.drawImage(h.canvas, 0, 0, HS, HS);
+
+  sx.save(); sx.fillStyle = '#000'; sx.fillRect(0, 0, W, H); sx.restore();
+  if (im) plateFootage(im); else plateStandIn(t, a);
+
+  // grey world
+  ctx.save(); ctx.filter = G.grey; ctx.drawImage(scene, 0, 0); ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = G.cold; ctx.fillRect(0, 0, W, H); ctx.restore();
+  // colour, only where the lines have been
+  buildMask(t, a);
+  cx.save(); cx.globalCompositeOperation = 'source-over'; cx.filter = G.colour; cx.drawImage(scene, 0, 0); cx.restore();
+  cx.save(); cx.globalCompositeOperation = 'soft-light'; cx.fillStyle = G.warm; cx.fillRect(0, 0, W, H); cx.restore();
+  cx.save(); cx.globalCompositeOperation = 'destination-in'; cx.imageSmoothingQuality = 'high'; cx.filter = 'blur(5px)'; cx.drawImage(mA, -8, -8, W + 16, H + 16); cx.restore();
+  ctx.drawImage(col, 0, 0);
+  ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.imageSmoothingQuality = 'high'; ctx.filter = 'blur(5px)'; ctx.drawImage(rim, 0, 0, W, H); ctx.restore();
+
+  drawHolo(t, a);
+  overlayText(t, a);
+  if (!im) K.slate(ctx, `STAND-IN (no footage here) · ${f.label}`, '#ffffff', .55);
+
+  // gentle push on the whole frame, then grain and vignette
+  const z = K.lerp(F.push[0], F.push[1], K.ease.inOut(t / cfg.duration));
+  out.save(); out.fillStyle = '#000'; out.fillRect(0, 0, W, H);
+  out.translate(W / 2, H / 2); out.scale(z, z); out.translate(-W / 2, -H / 2); out.drawImage(frm, 0, 0); out.restore();
+  K.vignette(out, .32); K.grain(out, t, .05);
+};
+window.ready = true;
+</script></body></html>

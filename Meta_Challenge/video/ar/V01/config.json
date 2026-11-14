@@ -1,0 +1,182 @@
+{
+  "version": "V01",
+  "title": "The printer prints its own hologram",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration": 7.3,
+  "footage": {
+    "plate": {
+      "raw": "printer_1_core_one.mp4",
+      "in": 0.4,
+      "speed": 1,
+      "start": 0,
+      "duration": 7.3,
+      "vf": "crop=iw:iw*9/16:0:ih*0.12",
+      "label": "FOOTAGE: POV walks past the Bambu to the Prusa Core One, then holds on its print head",
+      "sub": "REAL · printer_1_core_one.mp4 from 0.4 s · 16:9 window 12% down the portrait frame · orange parts printing on the bed"
+    }
+  },
+  "anchor_doc": "Hologram square centred at x,y with side w (1920x1080 px, before the push). In the square the model spans v 0.11 (spool top) to 0.82 (base front), u 0.25-0.70. Placement rule: a glowing twin standing on the real bed, right of the orange parts, base on the bed's front edge. rot = roll deg; yaw/pitch = deg added to the model view (beat 0: yaw 28, pitch 16).",
+  "anchor": [
+    {
+      "t": 0.0,
+      "x": 1400,
+      "y": 760,
+      "w": 600,
+      "rot": 0,
+      "yaw": -6,
+      "pitch": 0
+    },
+    {
+      "t": 1.9,
+      "x": 1400,
+      "y": 760,
+      "w": 600,
+      "rot": 0,
+      "yaw": -6,
+      "pitch": 0
+    },
+    {
+      "t": 3.0,
+      "x": 1330,
+      "y": 610,
+      "w": 850,
+      "rot": 0,
+      "yaw": -3,
+      "pitch": 0
+    },
+    {
+      "t": 4.0,
+      "x": 1380,
+      "y": 462,
+      "w": 990,
+      "rot": 0,
+      "yaw": -1,
+      "pitch": 0
+    },
+    {
+      "t": 6.0,
+      "x": 1370,
+      "y": 442,
+      "w": 1000,
+      "rot": 0,
+      "yaw": 1,
+      "pitch": 0
+    },
+    {
+      "t": 7.3,
+      "x": 1360,
+      "y": 442,
+      "w": 1010,
+      "rot": 0,
+      "yaw": 2,
+      "pitch": 0
+    }
+  ],
+  "push_doc": "Digital push on plate and hologram together: zoom z about (cx, cy). Set z to 1 if the real clip already pushes enough.",
+  "push": {
+    "cx": 1060,
+    "cy": 470,
+    "keys": [
+      {
+        "t": 0,
+        "z": 1.0
+      },
+      {
+        "t": 4.0,
+        "z": 1.0
+      },
+      {
+        "t": 7.3,
+        "z": 1.045
+      }
+    ]
+  },
+  "trigger": {
+    "t": 1.9,
+    "u": 0.47,
+    "v": 0.6,
+    "doc": "pinch ring + corner brackets; u,v in holo square (0..1). Move to the hand if a pinch is in shot."
+  },
+  "print": {
+    "t0": 2.3,
+    "t1": 5.6,
+    "layers": 26,
+    "warp": 1.6,
+    "doc": "layers done = layers * ((t - t0)/(t1 - t0))^warp: slow first layers so the nozzle reads, then timelapse fast"
+  },
+  "grade": [
+    {
+      "t": 0,
+      "colour": 0
+    },
+    {
+      "t": 2.3,
+      "colour": 0
+    },
+    {
+      "t": 5.6,
+      "colour": 1
+    },
+    {
+      "t": 7.3,
+      "colour": 1
+    }
+  ],
+  "label": {
+    "text": "It lays hot plastic down, one layer at a time.",
+    "t": 5.75,
+    "x": 90,
+    "y": 975,
+    "to": [
+      0.47,
+      0.63
+    ],
+    "doc": "x,y = left baseline of the label in px; to = leader end in the holo square (0..1), aim it at the printed part on the real bed"
+  },
+  "smallprint": {
+    "text": "Visualised. On the glasses it's a panel in your view.",
+    "t": 2.6
+  },
+  "cues": [
+    {
+      "t": 0.0,
+      "sound": "room tone + real printer hum and footsteps from the clip, low"
+    },
+    {
+      "t": 1.9,
+      "sound": "soft click (pinch / trigger)"
+    },
+    {
+      "t": 2.3,
+      "sound": "stepper ticks, one per layer for the first 5 layers"
+    },
+    {
+      "t": 3.6,
+      "sound": "ticks blur into a rising whirr as the layers speed up"
+    },
+    {
+      "t": 5.6,
+      "sound": "short hiss (plastic cools) + gentle chime as the model completes"
+    },
+    {
+      "t": 5.75,
+      "sound": "light swish for the label"
+    },
+    {
+      "t": 7.3,
+      "sound": "cut on music downbeat"
+    }
+  ],
+  "sheet": [
+    0.8,
+    1.95,
+    2.6,
+    3.3,
+    4.2,
+    5.0,
+    5.9,
+    7.0
+  ]
+}

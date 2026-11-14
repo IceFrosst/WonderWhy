@@ -1,0 +1,162 @@
+<!doctype html>
+<!-- V08 "Notebook margins": grey table footage, the glasses hologram beside the wearer, and handwritten
+     notes (Caveat, written on with a moving clip) with wobbly arrows and circles that point at the real parts.
+     window.renderFrame(t) is a pure function of t. Every position lives in config.json. -->
+<html><head><meta charset="utf-8"><title>V08 notebook margins</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { hologram } from '../lib/holo.js';
+import { makeInk } from './ink.js';
+
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const HC = cfg.holo, G = cfg.grade;
+const h = await hologram('glasses', { scale: HC.scale || 2 });
+const ex = h.explore;
+
+// linear between keyframes, every numeric key
+const key = (a, t) => {
+  let i = 0; while (i < a.length - 2 && t > a[i + 1].t) i++;
+  const p = a[i], q = a[Math.min(i + 1, a.length - 1)], u = q.t > p.t ? K.ease.inOut(K.clamp((t - p.t) / (q.t - p.t))) : 0;
+  return Object.fromEntries(Object.keys(p).map(k => [k, typeof p[k] === 'number' ? K.lerp(p[k], q[k], u) : p[k]]));
+};
+
+// part centres in local coordinates (follow the explode through state.worlds)
+const centre = {};
+for (const n of cfg.notes) if (n.part && !centre[n.part]) {
+  const v = ex.byId.get(n.part).edges.verts, c = new THREE.Vector3();
+  for (let i = 0; i < v.length; i += 3) c.x += v[i], c.y += v[i + 1], c.z += v[i + 2];
+  centre[n.part] = c.multiplyScalar(3 / v.length);
+}
+const toScreen = ([px, py], a) => {
+  const u = (px / 600 - 0.5) * a.w, v = (py / 600 - 0.5) * a.w, r = a.rot * Math.PI / 180;
+  return [a.x + u * Math.cos(r) - v * Math.sin(r), a.y + u * Math.sin(r) + v * Math.cos(r)];
+};
+
+const ink = K.layer(), ig = ink.getContext('2d');
+const holoLay = K.layer(), hg = holoLay.getContext('2d');
+const I = makeInk(K);
+const INK = { amber: '#ffc247', white: '#fff3dc' };
+
+function drawPlate(im, t) {
+  const f = cfg.footage.plate, z = K.lerp(G.zoomFrom, G.zoomTo, K.ease.inOut(t / cfg.duration));
+  if (im) {
+    const sat = K.lerp(G.satStart, G.satEnd, K.ease.inOut(K.prog(t, G.colourFrom, G.colourTo)));
+    ctx.save(); ctx.filter = `saturate(${sat}) contrast(${G.contrast}) brightness(${G.brightness})`;
+    K.cover(ctx, im, z, G.zoomFx, G.zoomFy); ctx.restore();
+    // cold cast that warms as the notes come in
+    ctx.save(); ctx.globalCompositeOperation = 'soft-light';
+    ctx.fillStyle = `rgba(70,100,150,${0.4 * (1 - K.prog(t, G.colourFrom, G.colourTo))})`; ctx.fillRect(0, 0, K.W, K.H); ctx.restore();
+    return;
+  }
+  K.placeholder(ctx, f.label, f.sub, { top: '#2c3036', bottom: '#111317', ink: '#aeb8c8', zoom: z, y: 96 });
+  // stand-in wearer so the layout can be judged without the clip
+  const fc = key(cfg.face, t);
+  ctx.save(); ctx.strokeStyle = '#aeb8c8'; ctx.globalAlpha = 0.22; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.ellipse(fc.x, fc.y + fc.ry * 0.5, fc.rx * 0.95, fc.ry * 3.1, 0, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(fc.x, fc.y + fc.ry * 9, fc.rx * 2.3, fc.ry * 4.2, 0, Math.PI, 2 * Math.PI); ctx.stroke();
+  ctx.globalAlpha = 0.4;
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.roundRect(fc.x + s * fc.rx * 0.48 - fc.rx * 0.4, fc.y - fc.ry * 0.45, fc.rx * 0.8, fc.ry * 0.9, 18); ctx.stroke(); }
+  ctx.globalAlpha = 0.45; ctx.fillStyle = '#aeb8c8'; ctx.font = '500 22px Archivo'; ctx.textAlign = 'center';
+  ctx.fillText('stand-in: wearer + glasses (config.face)', fc.x, fc.y + fc.ry * 4.3);
+  ctx.restore();
+}
+
+function drawHolo(t, a) {
+  const lt = Math.max(0, t - HC.explodeAt);
+  ex.setView({ yaw: a.yaw, pitch: a.pitch });
+  const st = ex.renderAt(HC.beat, lt);
+  const pts = {};
+  for (const id in centre) pts[id] = toScreen(ex.project(centre[id].clone().applyMatrix4(st.worlds.get(id))), a);
+  const k = K.ease.out3(K.prog(t, HC.appear, HC.appear + HC.appearDur));
+  if (k <= 0) return pts;
+  // appears top to bottom behind a soft wipe, rising a little
+  hg.clearRect(0, 0, K.W, K.H);
+  hg.save(); hg.globalCompositeOperation = 'source-over';
+  const s = 0.94 + 0.06 * k, w = a.w * s, rise = 26 * (1 - k);
+  hg.translate(a.x, a.y + rise); hg.rotate(a.rot * Math.PI / 180);
+  hg.drawImage(h.canvas, -w / 2, -w / 2, w, w); hg.restore();
+  if (k < 1) {
+    const top = a.y - a.w / 2, y = top + (a.w + 160) * k;
+    const gr = hg.createLinearGradient(0, y - 160, 0, y);
+    gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    hg.save(); hg.globalCompositeOperation = 'destination-in'; hg.fillStyle = gr; hg.fillRect(0, 0, K.W, K.H); hg.restore();
+  }
+  ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = Math.min(1, k * 1.4); ctx.drawImage(holoLay, 0, 0); ctx.restore();
+  K.glow(ctx, holoLay, 12, 0.3 * k);
+  return pts;
+}
+
+function drawNotes(t, a, pts) {
+  ig.clearRect(0, 0, K.W, K.H);
+  const boil = Math.floor(t * 8), sc = a.w / 900;
+  for (const [ni, n] of cfg.notes.entries()) {
+    const seed = 101 + ni * 37, col = INK[n.ink] || INK.amber;
+    if (n.kind === 'face') {
+      const fc = key(cfg.face, t);
+      I.circle(ig, { cx: fc.x, cy: fc.y, rx: fc.rx, ry: fc.ry, rot: fc.rot, seed, boil, p: K.prog(t, n.circleAt, n.circleAt + n.circleDur), col: INK.amber, lw: 4 });
+      const box = I.text(ig, { text: n.text, x: n.x, y: n.y, size: n.size, col, seed, boil, p: K.prog(t, n.t, n.t + n.dur), rot: -3 });
+      const r = fc.rot * Math.PI / 180, from = [fc.x - Math.cos(r) * fc.rx * 1.08, fc.y - Math.sin(r) * fc.rx * 1.08];
+      const to = [a.x + a.w * 0.36, a.y - a.w * 0.02];
+      I.arrow(ig, { from, to, bow: n.arrowBow, seed: seed + 5, boil, p: K.prog(t, n.arrowAt, n.arrowAt + n.arrowDur), col: INK.amber, lw: 3.2, dash: [12, 11] });
+      void box; continue;
+    }
+    const P = pts[n.part]; if (!P) continue;
+    const cx = a.x + n.dx, cy = a.y + n.dy;
+    const wrongH = n.wrong ? n.size * 1.12 : 0;
+    // layout first (p = 0 draws nothing), so arrows and the ? know where the block sits
+    const lay = I.layout(ig, { text: n.text, size: n.size, wrong: n.wrong });
+    let x0 = cx - lay.w / 2, y0 = cy - (lay.h + wrongH) / 2;
+    x0 = K.clamp(x0, 44, K.W - 44 - lay.w); y0 = K.clamp(y0, 40, K.H - 60 - lay.h - wrongH);
+    const rot = (K.hash(seed) - 0.5) * 4;
+    if (n.wrong) {
+      const wb = I.text(ig, { text: n.wrong, x: x0, y: y0, size: n.size, col: INK.white, alpha: 0.82, seed: seed + 1, boil, p: K.prog(t, n.wrongAt, n.wrongAt + n.wrongDur), rot });
+      I.strike(ig, { box: wb, seed: seed + 2, boil, p: K.prog(t, n.strikeAt, n.strikeAt + 0.26), col: INK.amber, lw: 3.6 });
+    }
+    const tb = I.text(ig, { text: n.text, x: x0, y: y0 + wrongH, size: n.size, col, seed: seed + 3, boil, p: K.prog(t, n.t, n.t + n.dur), rot });
+    const top = y0, bottom = y0 + wrongH + tb.h;
+    const from = n.from === 'top' ? [x0 + lay.w * 0.5, top - 10] : n.from === 'left' ? [x0 - 14, y0 + wrongH + tb.h * 0.35]
+      : n.from === 'right' ? [x0 + lay.w + 14, y0 + wrongH + tb.h * 0.35] : [x0 + lay.w * 0.45, bottom + 8];
+    let to = P;
+    if (n.circlePart) {
+      const R = (n.circleR || 60) * sc;
+      I.circle(ig, { cx: P[0], cy: P[1], rx: R * 1.25, ry: R * 0.8, rot: -8, seed: seed + 4, boil, p: K.prog(t, n.circleAt, n.circleAt + n.circleDur), col, lw: 3.6 });
+      const d = Math.hypot(from[0] - P[0], from[1] - P[1]); to = [P[0] + (from[0] - P[0]) / d * R * 1.15, P[1] + (from[1] - P[1]) / d * R * 0.9];
+    }
+    I.arrow(ig, { from, to, bow: n.arrowBow * sc, seed: seed + 6, boil, p: K.prog(t, n.arrowAt, n.arrowAt + n.arrowDur), col, lw: 3.2, pull: n.circlePart ? 4 : 18 });
+    if (n.q !== undefined) I.question(ig, { at: [from[0] + (from[0] - to[0]) * 0.0, from[1]], toward: to, size: n.size * 1.35, col: INK.white, seed: seed + 7, boil, t, t0: n.q, t1: n.t });
+  }
+  // composite: dark halo for legibility, the ink, then a calm warm glow
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.75)'; ctx.shadowBlur = 16; ctx.drawImage(ink, 0, 0); ctx.restore();
+  ctx.drawImage(ink, 0, 0);
+  K.glow(ctx, ink, 14, 0.5);
+}
+
+function smallPrint(t) {
+  const s = cfg.smallprint, k = K.ease.out2(K.prog(t, s.t, s.t + 0.5));
+  if (k <= 0) return;
+  ctx.save(); ctx.globalAlpha = 0.72 * k; ctx.fillStyle = '#e8e2d6'; ctx.font = '500 semi-condensed 24px Archivo';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 8;
+  ctx.fillText(s.text, s.x, s.y + 8 * (1 - k)); ctx.restore();
+}
+
+window.renderFrame = async t => {
+  const f = cfg.footage.plate, im = await K.footageFrame('plate', t - f.start);
+  ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.filter = 'none';
+  drawPlate(im, t);
+  const a = key(cfg.anchor, t);
+  const pts = drawHolo(t, a);
+  drawNotes(t, a, pts);
+  smallPrint(t);
+  K.vignette(ctx, 0.42); K.grain(ctx, t, 0.06);
+  ctx.restore();
+  if (cfg.debug) console.error('V08 t=' + t, JSON.stringify(Object.fromEntries(Object.entries(pts).map(([k, v]) => [k, v.map(Math.round)]))));
+};
+window.ready = true;
+</script></body></html>

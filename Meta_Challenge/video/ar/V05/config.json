@@ -1,0 +1,268 @@
+{
+ "version": "V05",
+ "title": "Colour spreads out from the lenses; the glasses model turns beside the head",
+ "width": 1920,
+ "height": 1080,
+ "fps": 30,
+ "duration": 7.0,
+ "footage": {
+  "plate": {
+   "raw": "IMG_5557.MOV",
+   "in": 9.8,
+   "speed": 1,
+   "start": 0,
+   "duration": 7.0,
+   "vf": "crop=iw*0.8:iw*0.45:0:ih*0.19",
+   "label": "FOOTAGE: close-up, he puts the glasses on, looks up, then down",
+   "sub": "REAL · mrnetwork/IMG_5557.MOV from 9.8 s · glasses settle at ~2.0 s · 16:9 window, top 80% width, 19% down"
+  }
+ },
+ "push": {
+  "x": 900,
+  "y": 700,
+  "z0": 1.0,
+  "z1": 1.07
+ },
+ "trigger": 2.25,
+ "lenses": [
+  {
+   "t": 0,
+   "lx": 810,
+   "ly": 675,
+   "rx": 1095,
+   "ry": 666,
+   "r": 100
+  },
+  {
+   "t": 1.6,
+   "lx": 810,
+   "ly": 675,
+   "rx": 1095,
+   "ry": 666,
+   "r": 100
+  },
+  {
+   "t": 2.0,
+   "lx": 930,
+   "ly": 640,
+   "rx": 1150,
+   "ry": 640,
+   "r": 100
+  },
+  {
+   "t": 2.3,
+   "lx": 930,
+   "ly": 525,
+   "rx": 1215,
+   "ry": 510,
+   "r": 100
+  },
+  {
+   "t": 2.6,
+   "lx": 915,
+   "ly": 525,
+   "rx": 1215,
+   "ry": 510,
+   "r": 100
+  },
+  {
+   "t": 3.0,
+   "lx": 960,
+   "ly": 480,
+   "rx": 1265,
+   "ry": 455,
+   "r": 100
+  },
+  {
+   "t": 3.5,
+   "lx": 1035,
+   "ly": 585,
+   "rx": 1290,
+   "ry": 555,
+   "r": 100
+  },
+  {
+   "t": 4.0,
+   "lx": 1080,
+   "ly": 780,
+   "rx": 1275,
+   "ry": 750,
+   "r": 100
+  },
+  {
+   "t": 4.5,
+   "lx": 960,
+   "ly": 825,
+   "rx": 1185,
+   "ry": 795,
+   "r": 100
+  },
+  {
+   "t": 5.0,
+   "lx": 930,
+   "ly": 825,
+   "rx": 1125,
+   "ry": 795,
+   "r": 100
+  },
+  {
+   "t": 5.5,
+   "lx": 840,
+   "ly": 855,
+   "rx": 1035,
+   "ry": 825,
+   "r": 100
+  },
+  {
+   "t": 6.0,
+   "lx": 795,
+   "ly": 915,
+   "rx": 1005,
+   "ry": 840,
+   "r": 100
+  },
+  {
+   "t": 6.5,
+   "lx": 795,
+   "ly": 915,
+   "rx": 1050,
+   "ry": 900,
+   "r": 100
+  },
+  {
+   "t": 7.0,
+   "lx": 880,
+   "ly": 880,
+   "rx": 1140,
+   "ry": 850,
+   "r": 100
+  }
+ ],
+ "ring": {
+  "start": 2.35,
+  "end": 5.0,
+  "r1": 1900,
+  "feather": 110
+ },
+ "anchor": [
+  {
+   "t": 2.7,
+   "x": 520,
+   "y": 390,
+   "w": 760,
+   "rot": 0,
+   "yaw": -30,
+   "a": 0
+  },
+  {
+   "t": 3.3,
+   "x": 515,
+   "y": 380,
+   "w": 800,
+   "rot": 0,
+   "yaw": -18,
+   "a": 1
+  },
+  {
+   "t": 4.6,
+   "x": 510,
+   "y": 370,
+   "w": 820,
+   "rot": 0,
+   "yaw": 0,
+   "a": 1
+  },
+  {
+   "t": 7.0,
+   "x": 505,
+   "y": 380,
+   "w": 860,
+   "rot": 0,
+   "yaw": 12,
+   "a": 1
+  }
+ ],
+ "beats": [
+  {
+   "from": 2.7,
+   "beat": 0
+  },
+  {
+   "from": 4.6,
+   "beat": 1
+  }
+ ],
+ "captions": [
+  {
+   "t0": 4.9,
+   "t1": 7.4,
+   "x": 120,
+   "y": 1000,
+   "text": "Put them on. Finally asked how they work."
+  }
+ ],
+ "smallprint": {
+  "t0": 3.3,
+  "text": "Visualised. On the glasses it's a panel in your view."
+ },
+ "cues": [
+  {
+   "t": 0.0,
+   "sound": "hall room tone, low and muffled (grey world)"
+  },
+  {
+   "t": 1.0,
+   "sound": "soft cloth/plastic rustle: glasses going on"
+  },
+  {
+   "t": 2.25,
+   "sound": "tiny soft click as the glasses settle"
+  },
+  {
+   "t": 2.35,
+   "sound": "airy rising swell as colour spreads; room tone opens up"
+  },
+  {
+   "t": 2.8,
+   "sound": "thin glass shimmer: hologram in"
+  },
+  {
+   "t": 4.6,
+   "sound": "three soft staggered slides: parts move out"
+  },
+  {
+   "t": 6.3,
+   "sound": "two quiet ticks: labels"
+  }
+ ],
+ "sheet": [
+  0.8,
+  1.8,
+  2.4,
+  2.9,
+  3.6,
+  4.8,
+  5.8,
+  6.8
+ ],
+ "dropParts": [
+  "eye",
+  "iris",
+  "band",
+  "pad0",
+  "pad1",
+  "pad2",
+  "pad3",
+  "pad4",
+  "palm",
+  "index",
+  "thumb",
+  "middle",
+  "ring",
+  "little"
+ ],
+ "dropLabels": [
+  "battery_right"
+ ],
+ "holoTint": "#c6f6ff"
+}

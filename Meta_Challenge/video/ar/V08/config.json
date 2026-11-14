@@ -1,0 +1,306 @@
+{
+ "version": "V08",
+ "title": "Notebook margins: handwritten notes around the glasses hologram",
+ "width": 1920,
+ "height": 1080,
+ "fps": 30,
+ "duration": 8.0,
+ "debug": false,
+ "footage": {
+  "plate": {
+   "raw": "IMG_5561.MOV",
+   "in": 0,
+   "speed": 1,
+   "start": 0,
+   "duration": 8.0,
+   "vf": "crop=iw:iw*9/16:0:ih*0.30",
+   "label": "FOOTAGE: teammate at the hackathon table, wearing the glasses",
+   "sub": "REAL \u00b7 IMG_5561.MOV \u00b7 portrait, 16:9 window on the face \u00b7 wearer centre, hologram on his left (screen left)"
+  }
+ },
+ "grade": {
+  "satStart": 0.1,
+  "satEnd": 0.55,
+  "colourFrom": 2.2,
+  "colourTo": 7.0,
+  "brightness": 0.8,
+  "contrast": 1.08,
+  "zoomFrom": 1.0,
+  "zoomTo": 1.045,
+  "zoomFx": 0.38,
+  "zoomFy": 0.42
+ },
+ "face": [
+  {
+   "t": 0,
+   "x": 1005,
+   "y": 512,
+   "rx": 150,
+   "ry": 56,
+   "rot": -8
+  },
+  {
+   "t": 1,
+   "x": 951,
+   "y": 508,
+   "rx": 145,
+   "ry": 56,
+   "rot": -10
+  },
+  {
+   "t": 2,
+   "x": 975,
+   "y": 497,
+   "rx": 150,
+   "ry": 56,
+   "rot": -12
+  },
+  {
+   "t": 3,
+   "x": 951,
+   "y": 490,
+   "rx": 150,
+   "ry": 56,
+   "rot": -12
+  },
+  {
+   "t": 4,
+   "x": 885,
+   "y": 510,
+   "rx": 145,
+   "ry": 56,
+   "rot": -10
+  },
+  {
+   "t": 5,
+   "x": 885,
+   "y": 540,
+   "rx": 140,
+   "ry": 54,
+   "rot": -8
+  },
+  {
+   "t": 6,
+   "x": 900,
+   "y": 555,
+   "rx": 150,
+   "ry": 56,
+   "rot": -8
+  },
+  {
+   "t": 7,
+   "x": 1155,
+   "y": 555,
+   "rx": 165,
+   "ry": 60,
+   "rot": -2
+  },
+  {
+   "t": 8,
+   "x": 1160,
+   "y": 555,
+   "rx": 165,
+   "ry": 60,
+   "rot": -2
+  }
+ ],
+ "anchor": [
+  {
+   "t": 0,
+   "x": 430,
+   "y": 460,
+   "w": 760,
+   "rot": 0,
+   "yaw": -18,
+   "pitch": 0
+  },
+  {
+   "t": 2.2,
+   "x": 430,
+   "y": 450,
+   "w": 800,
+   "rot": -2,
+   "yaw": -10,
+   "pitch": 0
+  },
+  {
+   "t": 4.2,
+   "x": 430,
+   "y": 430,
+   "w": 1000,
+   "rot": -1,
+   "yaw": 0,
+   "pitch": 1
+  },
+  {
+   "t": 8,
+   "x": 440,
+   "y": 425,
+   "w": 1030,
+   "rot": 0,
+   "yaw": 16,
+   "pitch": 3
+  }
+ ],
+ "holo": {
+  "beat": 1,
+  "appear": 1.3,
+  "appearDur": 0.8,
+  "explodeAt": 2.2,
+  "scale": 2
+ },
+ "notes": [
+  {
+   "id": "how",
+   "kind": "face",
+   "t": 0.75,
+   "dur": 1.0,
+   "text": "wait. how do these\neven work?",
+   "x": 1300,
+   "y": 250,
+   "size": 60,
+   "ink": "white",
+   "circleAt": 0.35,
+   "circleDur": 0.65,
+   "arrowAt": 1.6,
+   "arrowDur": 0.6,
+   "arrowBow": -60
+  },
+  {
+   "id": "display",
+   "part": "projector",
+   "t": 3.05,
+   "dur": 1.0,
+   "q": 2.6,
+   "text": "the display is a\ntiny projector",
+   "dx": -130,
+   "dy": -320,
+   "size": 50,
+   "ink": "amber",
+   "arrowAt": 2.85,
+   "arrowDur": 0.45,
+   "arrowBow": 40,
+   "from": "bottom"
+  },
+  {
+   "id": "waveguide",
+   "part": "waveguide",
+   "t": 4.45,
+   "dur": 1.1,
+   "wrong": "a tiny TV in the lens?",
+   "wrongAt": 3.55,
+   "wrongDur": 0.6,
+   "strikeAt": 4.2,
+   "text": "nope: light zig-zags inside\nthe glass to your eye (waveguide)",
+   "dx": -100,
+   "dy": 450,
+   "size": 48,
+   "ink": "amber",
+   "arrowAt": 4.35,
+   "arrowDur": 0.45,
+   "arrowBow": -70,
+   "from": "top"
+  },
+  {
+   "id": "camera",
+   "part": "camera",
+   "t": 5.3,
+   "dur": 0.7,
+   "q": 4.95,
+   "text": "camera: sees\nwhat you see",
+   "dx": 270,
+   "dy": -265,
+   "size": 48,
+   "ink": "amber",
+   "arrowAt": 5.15,
+   "arrowDur": 0.4,
+   "arrowBow": -30,
+   "from": "bottom"
+  },
+  {
+   "id": "band",
+   "part": "band",
+   "t": 6.0,
+   "dur": 0.85,
+   "text": "the band reads your\nwrist muscle signals",
+   "dx": 330,
+   "dy": 270,
+   "size": 48,
+   "ink": "amber",
+   "circlePart": true,
+   "circleAt": 5.7,
+   "circleDur": 0.45,
+   "circleR": 70,
+   "arrowAt": 5.85,
+   "arrowDur": 0.35,
+   "arrowBow": 30,
+   "from": "left"
+  }
+ ],
+ "smallprint": {
+  "t": 6.9,
+  "text": "Visualised. On the glasses it's a panel in your view.",
+  "x": 1880,
+  "y": 1040
+ },
+ "cues": [
+  {
+   "t": 0.35,
+   "sound": "pencil circle scratch (soft, close)"
+  },
+  {
+   "t": 0.75,
+   "sound": "pencil writing, 1 s"
+  },
+  {
+   "t": 1.3,
+   "sound": "low airy shimmer as the hologram appears"
+  },
+  {
+   "t": 2.2,
+   "sound": "soft mechanical slide as the parts separate"
+  },
+  {
+   "t": 2.6,
+   "sound": "quick pencil tick (question mark)"
+  },
+  {
+   "t": 3.05,
+   "sound": "pencil writing"
+  },
+  {
+   "t": 4.2,
+   "sound": "two fast pencil strikes (crossing out)"
+  },
+  {
+   "t": 4.45,
+   "sound": "pencil writing"
+  },
+  {
+   "t": 5.3,
+   "sound": "pencil writing"
+  },
+  {
+   "t": 5.7,
+   "sound": "pencil circle"
+  },
+  {
+   "t": 6.0,
+   "sound": "pencil writing"
+  },
+  {
+   "t": 6.9,
+   "sound": "none: room tone, music carries the end"
+  }
+ ],
+ "sheet": [
+  0.6,
+  1.5,
+  2.4,
+  3.4,
+  4.3,
+  5.2,
+  6.3,
+  7.6
+ ]
+}

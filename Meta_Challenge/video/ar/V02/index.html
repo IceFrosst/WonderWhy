@@ -1,0 +1,212 @@
+<!doctype html>
+<!-- V02 "X-ray peel": a scan line rises up the real Prusa (grey world -> colour behind it), the printer3d hologram
+     snaps onto the real machine, the real printer dims to an x-ray, then the print head explodes towards the camera
+     (printer3d beat 1) with three labels. window.renderFrame(t) is a pure function of t. All positions: config.anchor. -->
+<html><head><meta charset="utf-8"><title>V02 X-ray peel</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block;width:1920px;height:1080px}</style>
+<script type="importmap">{"imports":{"three":"/app/render3d/node_modules/three/build/three.module.js","three/addons/":"/app/render3d/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="/video/act1/lib/kit.js"></script>
+<script type="module">
+import { hologram } from '../lib/holo.js';
+const W = 1920, H = 1080;
+const ctx = document.getElementById('c').getContext('2d');
+const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+await K.loadFonts(); await K.loadFootage();
+const T = cfg.timing, L = cfg.look;
+const h = await hologram('printer3d', { scale: L.holoScale || 2 });
+const CYAN = '#4df0ff', AMBER = '#ffc247', INK = '#eef7ff';
+
+// ---- anchor keyframes: each key may name the easing used to arrive at it ('ease', default inOut) ----------------
+const key = (a, t) => {
+  if (t <= a[0].t) return { ...a[0] };
+  if (t >= a[a.length - 1].t) return { ...a[a.length - 1] };
+  let i = 0; while (t > a[i + 1].t) i++;
+  const p = a[i], q = a[i + 1], e = K.ease[q.ease || 'inOut'] || K.ease.inOut, u = e(K.clamp((t - p.t) / (q.t - p.t)));
+  const o = {}; for (const k of Object.keys(p)) if (typeof p[k] === 'number') o[k] = K.lerp(p[k], q[k] ?? p[k], u);
+  return o;
+};
+
+// ---- layers ----------------------------------------------------------------------------------------------------
+const plate = K.layer(), pg = plate.getContext('2d');      // the real shot (or placeholder), full colour
+const col = K.layer(), cg = col.getContext('2d');          // scratch for masked plate passes
+const holo = K.layer(), hg = holo.getContext('2d');        // hologram composited at the anchor
+const sq = K.layer(h.size, h.size), sg = sq.getContext('2d'); // hologram canvas with feathered edges
+
+// scan line height: rises from below the frame to above it (bottom-up, like the printer builds layers)
+const scanY = t => K.lerp(H + 40, -60, K.ease.inOut(K.prog(t, T.scanStart, T.scanEnd)));
+// mask that is opaque below y (the scanned part), feathered over f px
+const belowMask = (g, y, f = 70) => {
+  const gr = g.createLinearGradient(0, y - f * 0.2, 0, y + f);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
+  g.save(); g.globalCompositeOperation = 'destination-in'; g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore();
+};
+const rrect = (g, x, y, w, hh, r) => { g.beginPath(); g.roundRect(x, y, w, hh, r); };
+
+// ---- the hologram state at time t: which beat, what clip time ----------------------------------------------------
+const holoState = t => {
+  const m0 = h.beats[0].move;
+  if (t < T.explodeStart) {
+    // before the lock: beat 0 eased in from snapFrom * move (camera swings the last few degrees into place)
+    const u = K.ease.out3(K.prog(t, T.scanStart, T.scanEnd));
+    return { b: 0, tb: K.lerp(T.snapFrom * m0, m0, u) };
+  }
+  return { b: 1, tb: (t - T.explodeStart) * (T.explodeBeatRate || 1) };
+};
+
+const drawPlate = async t => {
+  const f = cfg.footage.plate, im = await K.footageFrame('plate', t - f.start);
+  pg.save(); pg.clearRect(0, 0, W, H);
+  if (im) K.cover(pg, im, 1.0 + 0.006 * t);
+  else {
+    K.placeholder(pg, f.label, f.sub, { top: '#3a3026', bottom: '#14100c', ink: '#f4e6c8', zoom: 1.0 + 0.006 * t, y: 120 });
+    // stand-ins for where the two real printers are, so the composition reads without footage
+    const a = key(cfg.anchor, t), s = cfg.placeholderSecond;
+    const box = (x, y, w, hh, text, tint) => {
+      pg.save(); pg.fillStyle = tint; rrect(pg, x - w / 2, y - hh / 2, w, hh, 10); pg.fill();
+      pg.setLineDash([14, 10]); pg.strokeStyle = 'rgba(244,230,200,0.45)'; pg.lineWidth = 2; pg.stroke(); pg.setLineDash([]);
+      pg.fillStyle = 'rgba(244,230,200,0.55)'; pg.font = '600 semi-condensed 24px Archivo'; pg.textAlign = 'center';
+      pg.fillText(text, x, y + hh / 2 - 22); pg.restore();
+    };
+    box(s.x, s.y, s.w, s.h, s.text, 'rgba(120,90,60,0.22)');
+    box(a.bx, a.by, a.bw, a.bh, 'real printer (Prusa Core One)', 'rgba(200,110,50,0.30)');
+  }
+  pg.restore();
+};
+
+window.renderFrame = async t => {
+  const a = key(cfg.anchor, t), sy = scanY(t);
+  const exp = K.prog(t, T.explodeStart, T.explodeStart + 2);
+  await drawPlate(t);
+
+  // 1. muted grey world everywhere
+  ctx.save(); ctx.filter = `saturate(${L.greySat}) brightness(0.8) contrast(1.06)`; ctx.drawImage(plate, 0, 0); ctx.restore();
+  ctx.save(); ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(70,100,150,0.45)'; ctx.fillRect(0, 0, W, H); ctx.restore();
+
+  // 2. colour comes back below the scan line
+  if (t > T.scanStart) {
+    cg.save(); cg.clearRect(0, 0, W, H); cg.filter = 'saturate(1.12) contrast(1.03)'; cg.drawImage(plate, 0, 0); cg.restore();
+    belowMask(cg, sy, 110);
+    ctx.drawImage(col, 0, 0);
+  }
+
+  // 3. the real printer goes x-ray: dimmed and desaturated inside its box, below the line
+  const dim = t > T.scanStart ? K.lerp(L.printerDim, L.printerDimExploded, exp) : 0;
+  if (dim > 0) {
+    cg.save(); cg.clearRect(0, 0, W, H);
+    cg.filter = 'grayscale(1) brightness(0.32) contrast(1.15)'; cg.drawImage(plate, 0, 0); cg.filter = 'none';
+    // feathered box around the real printer
+    cg.globalCompositeOperation = 'destination-in';
+    const fx = 70, x0 = a.bx - a.bw / 2, y0 = a.by - a.bh / 2;
+    cg.filter = `blur(${fx / 2}px)`; cg.fillStyle = '#000'; rrect(cg, x0 - 10, y0 - 10, a.bw + 20, a.bh + 20, 40); cg.fill(); cg.filter = 'none';
+    cg.restore();
+    belowMask(cg, sy, 90);
+    ctx.save(); ctx.globalAlpha = dim; ctx.drawImage(col, 0, 0); ctx.restore();
+  }
+
+  // 4. hologram: drawn on black, edges feathered, revealed below the scan line, screened over the plate
+  if (t > T.scanStart) {
+    const { b, tb } = holoState(t);
+    const src = h.draw(b, tb, { yaw: a.yaw, pitch: a.pitch, explode: null });
+    sg.save(); sg.globalCompositeOperation = 'copy'; sg.drawImage(src, 0, 0); sg.restore();
+    const r = h.size / 2, gr = sg.createRadialGradient(r, r, r * 0.62, r, r, r);
+    gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    sg.save(); sg.globalCompositeOperation = 'destination-in'; sg.fillStyle = gr; sg.fillRect(0, 0, h.size, h.size); sg.restore();
+    hg.save(); hg.clearRect(0, 0, W, H);
+    hg.translate(a.x, a.y); hg.rotate(a.rot * Math.PI / 180); hg.drawImage(sq, -a.w / 2, -a.w / 2, a.w, a.w);
+    hg.restore();
+    belowMask(hg, sy, 40);
+    const fadeIn = K.prog(t, T.scanStart, T.scanStart + 0.3);
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = L.holoAlpha * fadeIn; ctx.drawImage(holo, 0, 0); ctx.restore();
+    K.glow(ctx, holo, L.glowRadius, L.glowStrength * fadeIn);
+  }
+
+  // 5. scan line: thin cyan rule, brighter where it crosses the printer, soft wash just below it
+  if (t > T.scanStart && t < T.scanEnd + 0.1) {
+    const fade = 1 - K.prog(t, T.scanEnd - 0.12, T.scanEnd + 0.1);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fade;
+    const wash = ctx.createLinearGradient(0, sy, 0, sy + 90);
+    wash.addColorStop(0, K.rgba(CYAN, 0.16)); wash.addColorStop(1, K.rgba(CYAN, 0));
+    ctx.fillStyle = wash; ctx.fillRect(0, sy, W, 90);
+    ctx.fillStyle = K.rgba(CYAN, 0.55); ctx.fillRect(0, sy - 1, W, 2);
+    const x0 = a.bx - a.bw / 2 - 30, x1 = a.bx + a.bw / 2 + 30;
+    ctx.fillStyle = K.rgba(CYAN, 0.9); ctx.fillRect(x0, sy - 1.5, x1 - x0, 3);
+    ctx.fillRect(x0 - 2, sy - 9, 3, 18); ctx.fillRect(x1 - 1, sy - 9, 3, 18);
+    ctx.restore();
+  }
+
+  // 6. focus brackets: close in on the real printer before the scan, go cyan as it locks, leave on the explode
+  {
+    const close = K.ease.out3(K.prog(t, 0.25, 0.95)), gone = K.prog(t, T.explodeStart + 0.2, T.explodeStart + 0.7);
+    const al = K.prog(t, 0.2, 0.5) * (1 - gone);
+    if (al > 0) {
+      const s = K.lerp(1.22, 1.0, close), bw = a.bw * s + 40, bh = a.bh * s + 40, Lb = 34;
+      const lock = K.prog(t, T.scanEnd - 0.15, T.scanEnd + 0.1);
+      ctx.save(); ctx.globalAlpha = al * 0.85; ctx.strokeStyle = K.mix('#c9d2dc', CYAN, lock); ctx.lineWidth = 2.5; ctx.beginPath();
+      for (const [sx, sy2] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const cx = K.clamp(a.bx + sx * bw / 2, 50, W - 50), cy = K.clamp(a.by + sy2 * bh / 2, 50, H - 50);
+        ctx.moveTo(cx - sx * Lb, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy - sy2 * Lb);
+      }
+      ctx.stroke(); ctx.restore();
+    }
+  }
+
+  // 7. name tag on the lock: "Prusa Core One", top-left of the printer box
+  {
+    const inn = K.ease.out3(K.prog(t, T.tagIn, T.tagIn + 0.35)), out = K.prog(t, T.tagOut - 0.25, T.tagOut);
+    const al = inn * (1 - out);
+    if (al > 0) {
+      const x = a.bx - a.bw / 2 - 20, y = a.by - a.bh / 2 - 46;
+      ctx.save(); ctx.globalAlpha = al; ctx.font = '650 semi-condensed 30px Archivo';
+      const tw = ctx.measureText(cfg.tag).width, bx = K.clamp(x, 60, W - 60 - tw - 32), by = K.clamp(y, 60, H - 120);
+      ctx.fillStyle = 'rgba(6,12,18,0.62)'; rrect(ctx, bx, by - 6 + 10 * (1 - inn), tw + 32, 46, 8); ctx.fill();
+      ctx.strokeStyle = K.rgba(CYAN, 0.7); ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = INK; ctx.textBaseline = 'middle'; ctx.fillText(cfg.tag, bx + 16, by + 17 + 10 * (1 - inn));
+      ctx.restore();
+    }
+  }
+
+  // 8. part labels on the exploded head (positions from printer3d beat 1, mapped through the anchor)
+  if (t > T.explodeStart) {
+    const { b, tb } = holoState(t), ls = h.labels(b, tb), k = a.w / 600;
+    const ca = Math.cos(a.rot * Math.PI / 180), sa = Math.sin(a.rot * Math.PI / 180);
+    cfg.labels.forEach(spec => {
+      const l = ls.find(x => x.text === spec.match); if (!l) return;
+      const u = K.prog(t, spec.t, spec.t + 0.4), e = K.ease.out3(u); if (u <= 0) return;
+      const lx = (l.x - 300) * k, ly = (l.y - 300) * k;
+      const px = a.x + lx * ca - ly * sa, py = a.y + lx * sa + ly * ca;
+      const side = l.side === 'l' ? -1 : 1, reach = 110;
+      ctx.save(); ctx.font = '600 semi-condensed 32px Archivo';
+      const tw = ctx.measureText(spec.text).width;
+      let ex = px + side * reach * e; const tx0 = side > 0 ? ex + 14 : ex - 14 - tw - 28;
+      const tx = K.clamp(tx0, 60, W - 60 - tw - 28); ex += tx - tx0;
+      const ty = K.clamp(py, 70, H - 110);
+      ctx.globalAlpha = e;
+      ctx.strokeStyle = K.rgba(CYAN, 0.85); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ex, ty); ctx.stroke();
+      ctx.fillStyle = AMBER; ctx.beginPath(); ctx.arc(px, py, 5, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(6,12,18,0.66)'; rrect(ctx, tx, ty - 24, tw + 28, 48, 8); ctx.fill();
+      ctx.globalAlpha = K.prog(t, spec.t + 0.12, spec.t + 0.45);
+      ctx.fillStyle = INK; ctx.textBaseline = 'middle'; ctx.fillText(spec.text, tx + 14, ty + 1);
+      ctx.restore();
+    });
+  }
+
+  // 9. honesty small print, vignette, grain
+  K.vignette(ctx, L.vignette);
+  {
+    const al = K.prog(t, T.smallPrintIn, T.smallPrintIn + 0.5);
+    if (al > 0) { ctx.save(); ctx.globalAlpha = 0.55 * al; ctx.fillStyle = INK; ctx.font = 'italic 500 22px Archivo'; ctx.fillText(cfg.smallPrint, 64, H - 52); ctx.restore(); }
+  }
+  if (L.grain) K.grain(ctx, t, L.grain);
+
+  // tuning guides for the PC session (config.look.guides = true): anchor square + real-printer box
+  if (L.guides) {
+    ctx.save(); ctx.strokeStyle = '#ff3df0'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+    ctx.translate(a.x, a.y); ctx.rotate(a.rot * Math.PI / 180); ctx.strokeRect(-a.w / 2, -a.w / 2, a.w, a.w); ctx.restore();
+    ctx.save(); ctx.strokeStyle = '#3dff6a'; ctx.lineWidth = 2; ctx.strokeRect(a.bx - a.bw / 2, a.by - a.bh / 2, a.bw, a.bh);
+    ctx.fillStyle = '#fff'; ctx.font = '600 22px Archivo'; ctx.fillText(`t=${t.toFixed(2)} x${a.x.toFixed(0)} y${a.y.toFixed(0)} w${a.w.toFixed(0)} yaw${a.yaw.toFixed(1)}`, 64, 64); ctx.restore();
+  }
+};
+window.ready = true;
+</script></body></html>
