@@ -17,10 +17,21 @@ Rules for the words (in addition to [DESIGN.md](DESIGN.md)):
 - Explain cause then effect: "X happens, so Y". High-school level, correct physics, no hedging words.
 - A beat that adds nothing is cut. Four strong beats beat six weak ones.
 
+## How it is made and shipped: rendered offline in three.js, streamed as video
+The glasses never run a 3D engine. `Meta_Challenge/app/render3d/` renders every Explore chapter with **three.js** in headless Chromium (Playwright), frame by frame (deterministic, not real time), pipes the frames to ffmpeg, and writes into `bridge/media/<id>/explore/`:
+
+| File | What |
+|---|---|
+| `b<n>.mp4` | Beat n: 600x600, 30 fps, H.264 yuv420p, `+faststart`, black background, **no text in the picture**. Starts with the move from beat n-1's resting state (about 0.8 s), then the beat's own motion. Target under 400 KB per beat |
+| `s<n>.png`, `c<n>.png` | The beat's frame at rest: captioned (for the phone and Android cards) and text-free |
+| `tracks.json` | Per beat: `dur`, `loopFrom` (seconds; the player loops `[loopFrom, end]` so continuing motion keeps going), `labels` (part id, side `l` or `r`, and the anchor's screen position sampled at 10 Hz: `[[t, x, y], ...]`), `number` |
+
+The object's `manifest.json` gains a `"<id>.explore"` entry listing these files (the 2D stills export keeps it when it rewrites the manifest). The glasses app plays `b<n>.mp4` from the bridge's `/media` (it arrives in `show.media`), draws the label text and leader lines itself on an overlay from `tracks.json` (so labels translate without re-rendering), and shows caption and number in the DOM. If a video cannot play within 1.5 s, it shows `c<n>.png` with the same overlay. If there is no media at all (offline), the Explore lens is skipped. Unknown objects: the bridge can render a sketch's explore chapter with the same renderer when Chromium is present (`RENDER3D=1`), and otherwise the sketch shows its 2D lenses only.
+
 ## Look (Ray-Ban Display, additive: black is see-through)
 | Element | Rendering |
 |---|---|
-| Parts | Silhouette and crease edges only, two-pass glow (wide faint + thin bright). Faces filled at alpha 0.04 to 0.10 so solids read as solid. Far edges dimmer (depth cue). Back faces culled |
+| Parts | Glowing edges (silhouette and crease edges, thick anti-aliased lines) with a soft bloom, faces filled very faintly (additive, about 0.05 to 0.12) so solids read as solid, far parts dimmer (depth fade). Filled area stays under about 15% of the frame's brightness budget: black is see-through |
 | Colours | Part `role`: `object` white (default), `actor` cyan, `energy` amber, `loss` hot, `answer` green, `other` pink. The DESIGN.md roles and the "at most 3 roles at once" rule hold |
 | Focus | Beat `focus` parts draw at full brightness in their role colour; every other part becomes a ghost (dim white edges, no fill) |
 | Ghost | Beat `ghost` parts (for example a kettle's body) draw as a faint shell so the inside is visible: an X-ray, not a cut |
