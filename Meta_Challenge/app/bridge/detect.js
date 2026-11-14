@@ -12,14 +12,14 @@ export function loadObjects() {
 
 export function pickProvider(env = process.env) {
   const p = env.DETECT_PROVIDER;
-  if (p === 'anthropic' || p === 'gemini' || p === 'mock' || p === 'pi') return p;
+  if (p === 'anthropic' || p === 'gemini' || p === 'mock' || p === 'pi' || p === 'claude') return p;
   if (env.ANTHROPIC_API_KEY) return 'anthropic';
   if (env.GEMINI_API_KEY) return 'gemini';
   return 'mock';
 }
 
 export function detectTimeout(env = process.env, provider = pickProvider(env)) {
-  return Number(env.DETECT_TIMEOUT_MS) || (provider === 'pi' ? 25000 : 8000);
+  return Number(env.DETECT_TIMEOUT_MS) || (provider === 'claude' ? 60000 : provider === 'pi' ? 25000 : 8000);
 }
 
 export function buildPrompt(objects, question, hasFocus = false) {
@@ -131,6 +131,47 @@ function callPi({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
   });
 }
 
+/** Providers that run on one person's own model login. Dev only: never the demo path, never on a shared server. */
+export const STAND_INS = new Set(['pi', 'claude']);
+
+/**
+ * Dev-only stand-in: runs the local `claude` command (Claude Code) in print mode, with the login of
+ * whoever runs the bridge. It reads the photo from a temp folder with its Read tool. Slow (a new
+ * process per photo, several seconds) and it spends that person's subscription, so it must be chosen
+ * explicitly with DETECT_PROVIDER=claude and must never run on the droplet.
+ */
+function callClaudeCli({ imageBase64, focusBase64, prompt, env, timeoutMs }) {
+  // The model name goes on a shell command line on Windows, so keep it to a safe alphabet.
+  const model = /^[A-Za-z0-9._-]{1,64}$/.test(env.CLAUDE_DETECT_MODEL || '') ? env.CLAUDE_DETECT_MODEL : 'haiku';
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
+  writeFileSync(path.join(dir, 'photo.jpg'), Buffer.from(imageBase64, 'base64'));
+  if (focusBase64) writeFileSync(path.join(dir, 'focus.jpg'), Buffer.from(focusBase64, 'base64'));
+  const ask = `You are an image classifier. Read ${focusBase64 ? 'photo.jpg (image 1) and focus.jpg (image 2)' : 'photo.jpg'} in the current folder with the Read tool, then reply with the JSON only.\n\n${prompt}`;
+  // No argument contains a space: on Windows the command is a .cmd shim and needs a shell.
+  const args = ['-p', '--model', model, '--tools', 'Read', '--allowedTools', 'Read', '--strict-mcp-config', '--output-format', 'text'];
+  const win = process.platform === 'win32';
+  return new Promise((resolve, reject) => {
+    const child = spawn(env.CLAUDE_BIN || 'claude', args, { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'], shell: win });
+    let out = '', err = '', timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      if (win && child.pid) spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+      else child.kill('SIGKILL');
+    }, timeoutMs);
+    child.stdout.on('data', (d) => { out += d; });
+    child.stderr.on('data', (d) => { err += d; });
+    const done = (fn) => { clearTimeout(timer); try { rmSync(dir, { recursive: true, force: true }); } catch { /* temp folder still busy */ } fn(); };
+    child.on('error', (e) => done(() => reject(codeErr('detect_failed', `claude not runnable: ${e.message}`))));
+    child.on('close', (code) => done(() => {
+      if (timedOut) return reject(codeErr('detect_timeout', `Detection timed out after ${timeoutMs} ms`));
+      if (code !== 0) return reject(codeErr('detect_failed', `claude exited ${code}: ${(err || out).slice(-200)}`));
+      resolve({ text: out, model: `claude-cli:${model}` });
+    }));
+    child.stdin.on('error', () => { /* the process died first; close reports it */ });
+    child.stdin.end(ask);
+  });
+}
+
 /** Returns {objectId, confidence, answer, model, detectMs, provider}. Throws Error with .code on failure. */
 export async function detect({ imageBase64, focusBase64, question, forceObjectId, objects = loadObjects(), env = process.env, provider, timeoutMs }) {
   const t0 = Date.now();
@@ -148,7 +189,7 @@ export async function detect({ imageBase64, focusBase64, question, forceObjectId
   if (prov === 'anthropic' && !env.ANTHROPIC_API_KEY) throw codeErr('detect_failed', 'ANTHROPIC_API_KEY not set');
   if (prov === 'gemini' && !env.GEMINI_API_KEY) throw codeErr('detect_failed', 'GEMINI_API_KEY not set');
   const prompt = buildPrompt(objects, question, Boolean(focusBase64));
-  const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : callGemini;
+  const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : prov === 'claude' ? callClaudeCli : callGemini;
   const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs });
   const parsed = parseModelJson(text, objects);
   return { ...parsed, model, provider: prov, detectMs: Date.now() - t0 };

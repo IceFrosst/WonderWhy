@@ -20,7 +20,8 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 | `MIN_CONFIDENCE` | Library matches below this become `lowConfidence`; default 0.6 |
 | `LAST_TTL_MS` | How long `/last` and glasses replay retain a `show`; default 120000 |
 | `HEARTBEAT_MS` | App and WebSocket heartbeat interval; default 10000 |
-| `DETECT_PROVIDER` | `anthropic` / `gemini` / `mock` / `pi`; unset = anthropic if key, else gemini if key, else mock |
+| `DETECT_PROVIDER` | `anthropic` / `gemini` / `mock` / `pi` / `claude`; unset = anthropic if key, else gemini if key, else mock |
+| `CLAUDE_DETECT_MODEL` | Only for `claude`: a **dev-only stand-in** that runs the local `claude` command with the login of whoever runs the bridge (default model `haiku`, timeout 60 s, about 10 s per photo). It spends that person's subscription, so it is opt-in, answers carry `standIn: true`, and it must never run on the droplet |
 | `PI_DETECT_MODEL`, `DETECT_TIMEOUT_MS` | Only for `pi`: runs the local `pi` CLI with that machine's model login (no API key). Dev only: about 7 s per photo, default model `anthropic/claude-haiku-4-5`, default timeout 25 s |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | default model `claude-haiku-5-5` |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | default model `gemini-2.5-flash` (key sent in header) |

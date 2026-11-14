@@ -65,6 +65,7 @@ Response: the same `show` message the glasses get (below), plus `timings`.
 | `lenses` | `[{ "id": "ball.motion", "kind": "motion", "title": "Projectile motion", "lead": "...", "steps": ["..."] }]`: every lens the object has, for lens buttons. `kind` is one of `motion, inside, cutaway, flow, zoom, whatif, compare, number` |
 | `media` | `{ "base": "/media/ball", "lenses": { "ball.motion": { "stills": ["s1.png", "s2.png"], "clip": "clip.mp4" } } }` when exported stills and clips exist for the object (served open under `/media/`). Absent when none exist |
 | `replay`, `ageMs` | Set on a `show` that is replayed from memory (see `/last`) |
+| `standIn` | `true` when the answer came from a dev-only stand-in provider (`pi`, `claude`: a person's own model login on a dev machine). Clients show a "Stand-in model" tag. Never set on the droplet. `/health` carries the same flag |
 
 Source of truth for `summary`, `steps` and `lenses` is `shared/objects.json` (`tagline`, `answer`, `chapters[]` with `scene, lens, title, lead?, hint, captions[]`). The glasses app reads the same file.
 

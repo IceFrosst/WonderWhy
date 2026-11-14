@@ -4,7 +4,7 @@ import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
-import { detect, detectTimeout, loadObjects, pickProvider } from './detect.js';
+import { detect, detectTimeout, loadObjects, pickProvider, STAND_INS } from './detect.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BODY_LIMIT = 5 * 1024 * 1024;
@@ -179,6 +179,7 @@ export function start({
         ...(body.question ? { question: body.question } : {}),
         ...(result.answer ? { answer: result.answer } : {}),
         ...(!body.forceObjectId && result.provider !== 'forced' && result.objectId !== 'unknown' && obj && result.confidence < minConfidence ? { lowConfidence: true } : {}),
+        ...(STAND_INS.has(result.provider) ? { standIn: true } : {}),
         ...objectFields(obj), ...mediaFields(result.objectId),
         timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: result.detectMs, model: result.model },
         t_sent: Date.now(),
@@ -203,7 +204,7 @@ export function start({
       if (req.method === 'GET' && url.pathname === '/objects') return json(req, res, 200, { objects });
       if (req.method === 'GET' && url.pathname === '/last') return json(req, res, 200, currentLast());
       if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
-      if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, glasses: glasses.size, phones: phones.size });
+      if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
       if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), res, headers, 'public, max-age=300', MEDIA_EXTS)) return;
       if (req.method === 'GET' && serveGlasses(url.pathname, res, headers)) return;
