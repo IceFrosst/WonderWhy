@@ -20,6 +20,15 @@ data class LensMedia(val stills: List<String>, val clip: String?)
 /** `media` block: `base` is a bridge path like `/media/ball`. */
 data class Media(val base: String, val lenses: Map<String, LensMedia>)
 
+/** `/ask` answer: the lens (library id like `kettle.cutaway`) and 1-based step that answers the question. */
+data class LensHint(val id: String, val step: Int)
+
+/** One chapter of a generated sketch: shaped like a library chapter (the app uses the text only). */
+data class SketchChapter(val lens: String, val scene: String, val title: String, val lead: String?, val captions: List<String>)
+
+/** `show.sketch`: a generated, unverified explanation of an object the library does not have. */
+data class Sketch(val label: String, val answer: String?, val verified: Boolean, val chapters: List<SketchChapter>)
+
 data class Detection(
     val objectId: String,
     val label: String,
@@ -31,6 +40,19 @@ data class Detection(
     val steps: List<String> = emptyList(),
     val lenses: List<Lens> = emptyList(),
     val media: Media? = null,
+    // ---- 14 Nov additions (all optional) ----
+    /** Language of the library text in this message (`show.lang`); null from an older bridge. */
+    val lang: String? = null,
+    /** The question this answer is for (`/ask`, or `/detect` with a question). */
+    val question: String? = null,
+    /** `/ask`: which lens and step answer the question. */
+    val lensHint: LensHint? = null,
+    /** `waitSketch`: the generated sketch for an unknown object. */
+    val sketch: Sketch? = null,
+    /** `waitSketch`: set instead of [sketch] when it could not be made (`sketch_failed`). */
+    val sketchError: String? = null,
+    /** Answer from a dev-only stand-in model. */
+    val standIn: Boolean = false,
 )
 
 /** A track the wearer can step through: a lens, or the plain `steps` list when the bridge sent no lenses. */
@@ -52,6 +74,8 @@ sealed class Verdict {
     data class Plain(val det: Detection) : Verdict()
     /** v1 steps or lenses: overview card, then steps. */
     data class Explainer(val det: Detection, val tracks: List<Track>) : Verdict()
+    /** Unknown object with a generated sketch: same explainer, every card tagged "Sketch · unverified". */
+    data class Sketched(val det: Detection, val tracks: List<Track>) : Verdict()
 }
 
 class JsonParseException(msg: String) : IllegalArgumentException(msg)
@@ -194,7 +218,54 @@ object DetectionParser {
             steps = strings(root["steps"]),
             lenses = (root["lenses"] as? List<*>).orEmpty().mapNotNull { lens(it) },
             media = media(root["media"]),
+            lang = root.str("lang")?.trim()?.ifEmpty { null },
+            question = root.str("question")?.trim()?.ifEmpty { null },
+            lensHint = lensHint(root["lensHint"]),
+            sketch = sketch(root["sketch"]),
+            sketchError = root.str("sketchError")?.trim()?.ifEmpty { null },
+            standIn = root["standIn"] == true,
         )
+    }
+
+    /** PROTOCOL: a sketch has 1 to 3 chapters. */
+    const val MAX_SKETCH_CHAPTERS = 3
+
+    private fun lensHint(v: Any?): LensHint? {
+        val m = v as? Map<*, *> ?: return null
+        val id = m.str("id")?.trim()?.ifEmpty { null } ?: return null
+        val step = (m["step"] as? Double)?.takeIf { it >= 1 && it == Math.floor(it) }?.toInt() ?: 1
+        return LensHint(id, step)
+    }
+
+    /** A sketch with no usable chapter (no captions) is dropped: the app then shows the model's answer. */
+    private fun sketch(v: Any?): Sketch? {
+        val m = v as? Map<*, *> ?: return null
+        val chapters = (m["chapters"] as? List<*>).orEmpty().mapNotNull { c ->
+            val cm = c as? Map<*, *> ?: return@mapNotNull null
+            val captions = strings(cm["captions"])
+            if (captions.isEmpty()) return@mapNotNull null
+            val lens = cm.str("lens")?.trim().orEmpty()
+            SketchChapter(
+                lens = lens,
+                scene = cm.str("scene")?.trim().orEmpty(),
+                title = cm.str("title")?.trim()?.ifEmpty { null } ?: kindName(lens),
+                lead = cm.str("lead")?.trim()?.ifEmpty { null },
+                captions = captions,
+            )
+        }.take(MAX_SKETCH_CHAPTERS)
+        if (chapters.isEmpty()) return null
+        return Sketch(
+            label = m.str("label")?.trim()?.ifEmpty { null } ?: "Sketch",
+            answer = m.str("answer")?.trim()?.ifEmpty { null },
+            // Anything but an explicit true counts as unverified (PROTOCOL: always false today).
+            verified = m["verified"] == true,
+            chapters = chapters,
+        )
+    }
+
+    /** Tracks of a sketch. Lens ids are `sketch.<lens>`: there is no media for them. */
+    fun sketchTracks(s: Sketch): List<Track> = s.chapters.mapIndexed { i, c ->
+        Track("sketch.${c.lens.ifEmpty { "$i" }}", c.title, c.lead, c.captions)
     }
 
     private fun Map<*, *>.str(k: String): String? = when (val v = this[k]) {
@@ -262,6 +333,7 @@ object DetectionParser {
     }
 
     fun verdict(d: Detection): Verdict = when {
+        d.objectId == "unknown" && d.sketch != null -> Verdict.Sketched(d, sketchTracks(d.sketch))
         d.lowConfidence && d.objectId != "unknown" && d.label.isNotBlank() -> Verdict.NotSure(d.label)
         d.objectId == "unknown" || d.confidence < LOCAL_MIN_CONFIDENCE || d.lowConfidence -> Verdict.Unrecognised(d.answer)
         else -> tracks(d).let { if (it.isEmpty()) Verdict.Plain(d) else Verdict.Explainer(d, it) }

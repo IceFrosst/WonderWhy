@@ -14,4 +14,7 @@ object Prefs {
     fun setFixture(c: Context, v: Boolean) = sp(c).edit().putBoolean("fixture", v).apply()
     fun bridgeToken(c: Context) = sp(c).getString("bridgeToken", "") ?: ""
     fun setBridgeToken(c: Context, v: String) = sp(c).edit().putString("bridgeToken", v).apply()
+    /** Language picker on the phone screen: "" = phone language, else one of [Lang.SUPPORTED]. */
+    fun lang(c: Context) = sp(c).getString("lang", "") ?: ""
+    fun setLang(c: Context, v: String) = sp(c).edit().putString("lang", v).apply()
 }

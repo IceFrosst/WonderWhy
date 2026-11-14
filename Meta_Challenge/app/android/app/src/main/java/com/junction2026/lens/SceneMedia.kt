@@ -20,6 +20,8 @@ class SceneMedia(
     private val load: suspend (path: String) -> ByteArray?,
 ) {
     private val cache = HashMap<String, Bitmap>()
+    /** Paths whose cached piece was cut from a whole exported frame ([StillFrame]). */
+    private val frames = HashSet<String>()
     private val failed = HashSet<String>()
     private val inflight = HashMap<String, Deferred<Bitmap?>>()
 
@@ -32,9 +34,13 @@ class SceneMedia(
         if (path in failed) return null
         val d = inflight.getOrPut(path) {
             scope.async {
+                var frame = false
                 val bmp = try {
                     withContext(Dispatchers.IO) {
-                        load(path)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.let { band(it) }
+                        load(path)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.let { src ->
+                            frame = StillFrame.isFrame(src.width, src.height)
+                            if (frame) stage(src) else src
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e // cleared: leave the new cache alone
@@ -42,7 +48,7 @@ class SceneMedia(
                     null
                 }
                 inflight.remove(path)
-                if (bmp != null) cache[path] = bmp else failed += path
+                if (bmp != null) { cache[path] = bmp; if (frame) frames += path } else failed += path
                 bmp
             }
         }
@@ -53,17 +59,33 @@ class SceneMedia(
         paths.forEach { p -> if (p !in cache && p !in failed) scope.launch { runCatching { get(p) } } }
     }
 
+    /** A real exported frame (600x600 with its own title and English caption) cut to its drawing. */
+    private fun stage(src: Bitmap): Bitmap {
+        val px = IntArray(src.width * src.height)
+        src.getPixels(px, 0, src.width, 0, 0, src.width, src.height)
+        val c = StillFrame.crop(px, src.width, src.height)
+        return Bitmap.createBitmap(src, c.left, c.top, c.width, c.height)
+    }
+
     /**
-     * Puts a (usually square) still in the middle of a wide black band. The display scales an image to the
-     * card's width, so a square still would push the title off the 600x600 screen. Black is see-through.
+     * The still of [path] ready for a step card whose caption is [captionChars] long with [metaLines] small
+     * lines. The display scales an image to the card's width, so the picture is put in a black band (black is
+     * see-through) wide enough that title, picture, caption and two buttons fit the 600x600 screen
+     * ([StillFrame.aspectFor]). Drawing-only stills (demo fixtures) never get less than the old 3:1 band.
      */
-    private fun band(src: Bitmap): Bitmap {
-        val (w, h) = StillBand.size(src.width, src.height)
-        if (w == src.width && h == src.height) return src
+    fun forCard(path: String, captionChars: Int, metaLines: Int): Bitmap? {
+        val piece = cache[path] ?: return null
+        val aspect = StillFrame.aspectFor(captionChars, metaLines).let { if (path in frames) it else maxOf(it, StillBand.ASPECT) }
+        return pad(piece, aspect)
+    }
+
+    private fun pad(piece: Bitmap, aspect: Double): Bitmap {
+        val (w, h) = StillFrame.bandFor(piece.width, piece.height, aspect)
+        if (w == piece.width && h == piece.height) return piece
         val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         android.graphics.Canvas(out).apply {
             drawColor(android.graphics.Color.BLACK)
-            drawBitmap(src, ((w - src.width) / 2).toFloat(), ((h - src.height) / 2).toFloat(), null)
+            drawBitmap(piece, ((w - piece.width) / 2).toFloat(), ((h - piece.height) / 2).toFloat(), null)
         }
         return out
     }
@@ -73,6 +95,7 @@ class SceneMedia(
         inflight.values.forEach { it.cancel() }
         inflight.clear()
         cache.clear()
+        frames.clear()
         failed.clear()
     }
 }
