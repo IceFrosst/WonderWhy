@@ -43,7 +43,7 @@
           "hint": "Up/down: fret. Left/right: next lens.",
           "captions": [
             "Each fret shortens the string and raises the note by about 6 percent. Twelve frets double the frequency: one octave.",
-            "A string twice as long sounds one octave lower at every fret. That is why bass instruments are big."
+            "A string twice as long sounds one octave lower at every fret. That is partly why bass instruments are big."
           ],
           "knobs": [
             {
@@ -259,8 +259,8 @@
             "losses": [
               {
                 "at": "body",
-                "label": "Most becomes heat in the wood",
-                "share": 0.5
+                "label": "Most becomes heat, a little is sound",
+                "share": 0.9
               }
             ],
             "steps": [
@@ -303,7 +303,7 @@
           "lead": "An open A string swings 110 times every second.",
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
-            "Frequency counts swings per second. The open low A string of a guitar makes 110 of them: 110 hertz.",
+            "Frequency counts swings per second. The open A string of a guitar makes 110 of them: 110 hertz.",
             "Fret 12 halves the string, so the note doubles to 220 Hz. The wave runs along the string at 143 m/s.",
             "Each doubling is one octave. Two octaves above this string is the 440 Hz that orchestras tune to."
           ],
@@ -316,7 +316,7 @@
             "headline": {
               "value": 110,
               "unit": "Hz",
-              "label": "an open low A string, swings per second",
+              "label": "an open A string, swings per second",
               "decimals": 0
             },
             "rows": [
@@ -377,7 +377,7 @@
           "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "Gravity pulls the ball down all the time, so its path curves into a parabola.",
-            "Sideways speed never changes. Only the up-and-down speed does, because gravity acts down.",
+            "Without air, sideways speed never changes. Only the up-and-down speed does, because gravity acts down.",
             "Air drag slows the ball, so the best angle drops below 45 degrees. Grey = no air."
           ],
           "knobs": [
@@ -428,7 +428,7 @@
           "lead": "Change the angle, then change the planet.",
           "hint": "Up/down: angle. Left/right: next lens.",
           "captions": [
-            "Change the angle. A flat throw and a steep throw both fall short. 45 degrees goes farthest.",
+            "Change the angle. A flat throw and a steep throw both fall short. Without air, 45 degrees goes farthest.",
             "On the Moon gravity is six times weaker, so every throw flies six times as far. The best angle is still 45."
           ],
           "knobs": [
@@ -636,7 +636,7 @@
           "captions": [
             "Your arm does work on the ball. A tennis ball thrown at 10 metres per second carries about 2.9 joules.",
             "Going up, motion energy turns into height energy. At the top of a 45 degree throw it is half and half.",
-            "Coming down, height energy turns back into motion. A little is lost to air drag on the way.",
+            "Coming down, height energy turns back into motion. Air drag takes some, about a tenth for a tennis ball.",
             "On landing the motion energy becomes heat, sound and the next bounce. None of it is destroyed."
           ],
           "knobs": [
@@ -670,7 +670,7 @@
               },
               {
                 "id": "land",
-                "label": "Heat and sound",
+                "label": "Heat, sound, bounce",
                 "sub": "on landing"
               }
             ],
@@ -678,7 +678,7 @@
               {
                 "at": "down",
                 "label": "Air drag",
-                "share": 0.05
+                "share": 0.12
               }
             ],
             "steps": [
@@ -820,7 +820,7 @@
           "hint": "Up/down: rear teeth. Left/right: next lens.",
           "captions": [
             "Fewer teeth at the back give more speed for the same pedalling: 44 km/h on the smallest gear, 14 on the largest.",
-            "The small front ring lowers every gear by about a third. You go slower, but each push on the pedal is stronger."
+            "The small front ring lowers every gear by about 30 percent. You go slower, but each push on the pedal is stronger."
           ],
           "knobs": [
             {
@@ -1169,7 +1169,7 @@
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
             "48 teeth divided by 16 is a ratio of 3. The wheel turns three times per pedal turn: 3 times 2.1 metres.",
-            "At 80 pedal turns a minute that is 30 km/h. The price: only 17 percent of your push reaches the tyre.",
+            "At 80 pedal turns a minute that is 30 km/h. The price: the tyre pushes with only 17 percent of your pedal force.",
             "A low gear swaps it round. Three times the push for climbing, but only 2.1 metres per turn."
           ],
           "knobs": [
@@ -1198,7 +1198,7 @@
                 "decimals": 0
               },
               {
-                "label": "Share of your push at the tyre",
+                "label": "Tyre push per pedal push",
                 "value": 17,
                 "unit": "%",
                 "decimals": 0,
@@ -1243,7 +1243,7 @@
           "captions": [
             "Heated water expands and gets lighter, so it rises in the middle and sinks at the sides.",
             "Hot spots at the bottom let vapour bubbles form (nucleation), then they rise and burst.",
-            "At 100 C extra energy goes into turning water to vapour, not heating it. That is latent heat."
+            "At 100 °C extra energy goes into turning water to vapour, not heating it. That is latent heat."
           ],
           "knobs": [
             {
@@ -1281,11 +1281,11 @@
           "scene": "curve",
           "lens": "whatif",
           "title": "What if",
-          "lead": "Twice the water takes twice the time.",
+          "lead": "Twice the water takes about twice the time.",
           "hint": "Up/down: litres. Left/right: next lens.",
           "captions": [
-            "Boiling time grows in a straight line with the water. Twice the water needs twice the time and twice the energy.",
-            "Water that starts at 60 C needs only half the heating, so it boils in half the time."
+            "Boiling time grows almost in a straight line with the water. Twice the water needs about twice the time and energy.",
+            "Water that starts at 60 °C needs only half the heating, so it boils in half the time."
           ],
           "knobs": [
             {
@@ -1314,7 +1314,7 @@
             },
             "series": [
               {
-                "name": "From 20 C",
+                "name": "From 20 °C",
                 "role": "main",
                 "points": [
                   [
@@ -1380,7 +1380,7 @@
                 ]
               },
               {
-                "name": "From 60 C",
+                "name": "From 60 °C",
                 "role": "other",
                 "points": [
                   [
@@ -1455,13 +1455,13 @@
             "steps": [
               {
                 "series": [
-                  "From 20 C"
+                  "From 20 °C"
                 ]
               },
               {
                 "series": [
-                  "From 20 C",
-                  "From 60 C"
+                  "From 20 °C",
+                  "From 60 °C"
                 ]
               }
             ]
@@ -1477,7 +1477,7 @@
             "Electricity flows from the socket into a coil of wire in the base: the heating element.",
             "The element resists the current, so all of the electrical energy turns into heat, which passes into the water.",
             "About 88 percent ends up in the water. The rest warms the jug and the air around it.",
-            "At 100 C the water turns to steam. The steam heats a metal strip that bends and clicks the kettle off."
+            "At 100 °C the water turns to steam. The steam heats a metal strip that bends and clicks the kettle off."
           ],
           "knobs": [
             null,
@@ -1501,7 +1501,7 @@
               {
                 "id": "water",
                 "label": "Water",
-                "sub": "20 to 100 C"
+                "sub": "20 to 100 °C"
               },
               {
                 "id": "steam",
@@ -1578,7 +1578,7 @@
             "headline": {
               "value": 0.11,
               "unit": "kWh",
-              "label": "to boil this much water from 20 C",
+              "label": "to boil this much water from 20 °C",
               "decimals": 2
             },
             "rows": [
@@ -1589,7 +1589,7 @@
                 "decimals": 1
               },
               {
-                "label": "Cost at 20 c per kWh",
+                "label": "Cost at 20 cents per kWh",
                 "value": 2.1,
                 "unit": "cents",
                 "decimals": 1
@@ -1647,7 +1647,7 @@
           "title": "Swing time",
           "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
-            "One swing takes T = 2 pi sqrt(L/g). A longer string swings more slowly.",
+            "For small swings, one swing takes T = 2 pi sqrt(L/g). A longer string swings more slowly.",
             "The angle follows a smooth sine wave. Four times the length gives double the period.",
             "Mass cancels out: two bobs of different mass on equal strings swing together."
           ],
@@ -1697,7 +1697,7 @@
               "decimals": 1
             },
             "y": {
-              "label": "time per swing",
+              "label": "time there and back",
               "unit": "s",
               "decimals": 2
             },
@@ -1904,7 +1904,7 @@
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
             "Lifting the keys to one side stores height energy. Nothing moves yet.",
-            "Let go: height energy turns into motion. At the bottom it is all motion, about half a metre per second.",
+            "Let go: height energy turns into motion. At the bottom it is all motion: half a metre per second for a 20 degree swing.",
             "On the far side the keys climb again and motion turns back into height. Then it all runs in reverse.",
             "Each swing the air takes a little energy away as heat, so the swings shrink. The swing time stays the same."
           ],
@@ -1981,7 +1981,7 @@
           "scene": "number",
           "lens": "number",
           "title": "The number",
-          "lead": "Keys on a 25 cm lanyard take one second per swing.",
+          "lead": "Keys on a 25 cm lanyard swing back and forth every second.",
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
             "Swing time is 2 pi times the square root of length over g. For 25 centimetres that is one second.",
@@ -1997,7 +1997,7 @@
             "headline": {
               "value": 1.0,
               "unit": "s",
-              "label": "one full swing on a 25 cm string",
+              "label": "one full swing, there and back, on a 25 cm string",
               "decimals": 1
             },
             "rows": [
@@ -2014,7 +2014,7 @@
                 "decimals": 1
               },
               {
-                "label": "Speed at the bottom",
+                "label": "Speed at the bottom, 20 degree swing",
                 "value": 0.5,
                 "unit": "m/s",
                 "decimals": 1
@@ -2115,7 +2115,7 @@
               "label": "charger",
               "unit": "W",
               "min": 5,
-              "max": 65,
+              "max": 45,
               "step": 5,
               "value": 20,
               "decimals": 0
@@ -2165,22 +2165,6 @@
                   [
                     45,
                     0.4
-                  ],
-                  [
-                    50,
-                    0.36
-                  ],
-                  [
-                    55,
-                    0.33
-                  ],
-                  [
-                    60,
-                    0.3
-                  ],
-                  [
-                    65,
-                    0.28
                   ]
                 ]
               },
@@ -2223,22 +2207,6 @@
                   [
                     45,
                     0.81
-                  ],
-                  [
-                    50,
-                    0.72
-                  ],
-                  [
-                    55,
-                    0.66
-                  ],
-                  [
-                    60,
-                    0.6
-                  ],
-                  [
-                    65,
-                    0.56
                   ]
                 ]
               }
@@ -2360,7 +2328,7 @@
           "captions": [
             "4000 milliamp-hours at 3.85 volts is about 15 watt-hours: the energy of one full battery.",
             "Charging it costs under half a cent. A whole year of daily charging is a little over one euro.",
-            "A kettle burns through the same energy in 28 seconds. Heating water costs far more than computing."
+            "A 2 kW kettle uses a phone's full charge in 28 seconds. The phone spends that energy over a whole day."
           ],
           "knobs": [
             null,
@@ -2376,10 +2344,10 @@
             },
             "rows": [
               {
-                "label": "Cost of one full charge",
-                "value": 0.4,
+                "label": "One full charge at 20 cents per kWh",
+                "value": 0.36,
                 "unit": "cents",
-                "decimals": 1
+                "decimals": 2
               },
               {
                 "label": "A year of daily charging",
@@ -2433,7 +2401,7 @@
           "captions": [
             "A steel spoon looks smooth and solid. Its secrets are far too small to see.",
             "Three hundred times closer, the steel is a patchwork of tiny crystal grains, each a few hundredths of a millimetre wide.",
-            "A million times closer, each grain is a tidy grid of atoms. Loose electrons drift between them and carry heat along fast."
+            "A hundred thousand times closer still, each grain is a tidy grid of atoms. Loose electrons move between them and help carry heat."
           ],
           "knobs": [
             null,
@@ -2458,7 +2426,7 @@
                 "label": "Atoms and electrons",
                 "scale": "0.3 nm",
                 "draw": "lattice",
-                "times": "x 1 000 000"
+                "times": "x 50 000 000"
               }
             ],
             "heat": {
@@ -2490,7 +2458,7 @@
           "captions": [
             "Hot tea shakes the atoms in the bowl of the spoon. That shaking is heat.",
             "The shaking passes along the metal, helped by loose electrons. In a minute the handle is warm.",
-            "Your fingers take the heat from the handle. A little also leaves into the air along the way."
+            "Your fingers take the heat from the handle. Some also leaves into the air along the way."
           ],
           "knobs": [
             null,
@@ -2503,7 +2471,7 @@
               {
                 "id": "tea",
                 "label": "Hot tea",
-                "sub": "80 C"
+                "sub": "80 °C"
               },
               {
                 "id": "bowl",
@@ -2558,12 +2526,12 @@
           "scene": "number",
           "lens": "number",
           "title": "The number",
-          "lead": "Steel carries heat about a hundred times better than wood.",
+          "lead": "Steel conducts heat about a hundred times better than wood.",
           "hint": "Pinch: next step. Left/right: next lens.",
           "captions": [
-            "Steel passes heat about 100 times more readily than wood. That is why a metal spoon feels cold and a wooden one does not.",
+            "Steel conducts heat about 100 times better than wood and pulls warmth from your skin much faster. That is why it feels cold.",
             "Both spoons are at room temperature. The steel one only drains the warmth from your skin faster.",
-            "Silver conducts 27 times better still. A silver spoon in hot tea gets too hot to hold in seconds."
+            "Silver conducts 27 times better than steel. A silver spoon in hot tea can get too hot to hold within a minute."
           ],
           "knobs": [
             null,
@@ -2574,37 +2542,37 @@
             "headline": {
               "value": 100,
               "unit": "times",
-              "label": "how much better steel carries heat than wood",
+              "label": "how much better stainless steel conducts heat than wood",
               "decimals": 0
             },
             "rows": [
               {
                 "label": "Stainless steel",
                 "value": 16,
-                "unit": "W/m K",
+                "unit": "W/(m K)",
                 "decimals": 0
               },
               {
                 "label": "Wood",
                 "value": 0.15,
-                "unit": "W/m K",
+                "unit": "W/(m K)",
                 "decimals": 2
               },
               {
                 "label": "Your skin",
                 "value": 33,
-                "unit": "C",
+                "unit": "°C",
                 "decimals": 0
               },
               {
                 "label": "The spoon and the room",
                 "value": 21,
-                "unit": "C",
+                "unit": "°C",
                 "decimals": 0
               }
             ],
             "compare": {
-              "label": "Silver carries heat better than steel by",
+              "label": "Silver conducts heat better than steel by",
               "value": 27,
               "unit": "times",
               "decimals": 0
