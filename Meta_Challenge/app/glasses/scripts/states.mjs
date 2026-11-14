@@ -939,6 +939,96 @@ async function main() {
       await session.expectText('100%', {exact: true});
       const hint = await session.page.locator('.ex-hint').textContent().catch(() => '');
       session.check(!hint, `flow sketch promised an unusable knob: ${JSON.stringify(hint)}`);
+
+      // This state performs two scene checks; keep the client heartbeat fresh between them.
+      session.socket = [...bridge.frames].reverse().find(frame => frame.message.type === 'hello' && frame.socket?.readyState === 1)?.socket
+        ?? session.socket;
+      send(session, {type: 'ping', t_sent: Date.now()});
+      const mergeCheck = await session.page.evaluate(() => {
+        const debug = window.__lensDebug;
+        if (!debug) return {exists: false};
+        const spec = {
+          nodes: [{label: 'Input', watts: 2000}, {label: 'Output'}],
+          tags: ['one', 'two'],
+          nested: {title: 'Original', fixed: 7},
+        };
+        const merged = debug.mergeSpecText(spec, {
+          nodes: [{label: 'Syote', watts: 'wrong'}, {label: 'Tulos'}, {label: 'extra'}],
+          tags: ['yksi', 'kaksi', 'extra'],
+          nested: {title: 'x'.repeat(100), fixed: 'wrong', extra: 'ignored'},
+          extra: 'ignored',
+        });
+        return {
+          exists: true,
+          copied: merged !== spec && merged.nodes !== spec.nodes,
+          labels: merged.nodes.map(node => node.label),
+          nodeLength: merged.nodes.length,
+          tags: merged.tags,
+          titleLength: merged.nested.title.length,
+          fixed: merged.nested.fixed,
+          rootKeys: Object.keys(merged),
+          nestedKeys: Object.keys(merged.nested),
+          scalarIgnored: debug.mergeSpecText(spec, 'not an object') === spec,
+        };
+      });
+      session.check(mergeCheck.exists === true, 'webdriver mergeSpecText debug hook is missing');
+      session.check(mergeCheck.copied === true, `mergeSpecText did not deep-copy the spec: ${JSON.stringify(mergeCheck)}`);
+      session.check(JSON.stringify(mergeCheck.labels) === JSON.stringify(['Syote', 'Tulos']),
+        `mergeSpecText did not replace matching strings: ${JSON.stringify(mergeCheck)}`);
+      session.check(mergeCheck.nodeLength === 2 && JSON.stringify(mergeCheck.tags) === JSON.stringify(['yksi', 'kaksi']),
+        `mergeSpecText changed an array length: ${JSON.stringify(mergeCheck)}`);
+      session.check(mergeCheck.titleLength === 80 && mergeCheck.fixed === 7,
+        `mergeSpecText did not cap text or preserve a non-string: ${JSON.stringify(mergeCheck)}`);
+      session.check(JSON.stringify(mergeCheck.rootKeys) === JSON.stringify(['nodes', 'tags', 'nested']) &&
+        JSON.stringify(mergeCheck.nestedKeys) === JSON.stringify(['title', 'fixed']),
+      `mergeSpecText added an unknown key: ${JSON.stringify(mergeCheck)}`);
+      session.check(mergeCheck.scalarIgnored === true, 'mergeSpecText did not return spec unchanged for non-object text');
+
+      const kettle = objects.find(object => object.id === 'kettle');
+      const flow = kettle?.chapters.find(chapter => chapter.lens === 'flow');
+      if (!kettle || !flow) throw new Error('kettle flow fixture is missing');
+      send(session, {
+        type: 'show',
+        reqId: 'translated-flow',
+        objectId: kettle.id,
+        label: kettle.label,
+        lang: 'fi',
+        lensHint: {id: 'kettle.flow', step: 1},
+        lenses: [{
+          id: 'kettle.flow',
+          kind: 'flow',
+          title: 'Virtaus',
+          steps: flow.captions,
+          knobLabels: flow.knobs.map(() => null),
+          specText: {
+            nodes: [
+              {label: 'Pistorasia'},
+              {label: 'Vastus'},
+              {label: 'Vesi'},
+              {label: 'Hoyry'},
+              {label: 'extra node'},
+            ],
+            extra: 'ignored',
+          },
+        }],
+      });
+      await session.expectText('Virtaus', {exact: false});
+      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
+      try {
+        await session.page.waitForFunction(() => {
+          const canvas = document.querySelector('.ex-canvas');
+          if (!(canvas instanceof HTMLCanvasElement)) return false;
+          const context = canvas.getContext('2d');
+          if (!context) return false;
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          for (let index = 0; index < pixels.length; index += 4) {
+            if (pixels[index] || pixels[index + 1] || pixels[index + 2]) return true;
+          }
+          return false;
+        }, null, {timeout: WAIT_MS});
+      } catch (error) {
+        session.check(false, `translated flow canvas stayed black: ${errorMessage(error)}`);
+      }
     });
 
     await simple('curve-bounds', {}, async session => {

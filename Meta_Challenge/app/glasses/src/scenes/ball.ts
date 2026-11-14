@@ -188,6 +188,20 @@ export class BallScene implements Scene {
     // landing marker + apex marker
     dot(ctx, px(main.range), groundY, 4, C.cyan);
 
+    if (drag) {
+      ctx.font = '600 16px system-ui';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = C.soft;
+      ctx.fillText('no air', px(this.ideal.range) - 4, groundY - 28);
+      // Right of the landing dot: the main path comes down from the upper left, so text left of it would sit on the curve.
+      ctx.fillStyle = C.cyan;
+      ctx.textAlign = 'left';
+      const withAir = 'with air';
+      const withAirX = Math.min(px(this.real.range) + 10, w - ctx.measureText(withAir).width - 4);
+      ctx.fillText(withAir, withAirX, groundY - 6);
+    }
+
     // animate ball
     this.clock += dt * 0.9;
     const hold = 0.7;

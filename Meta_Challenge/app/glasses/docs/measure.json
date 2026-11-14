@@ -1,128 +1,128 @@
 {
-  "date": "2026-11-14T03:21:31.527Z",
+  "date": "2026-11-14T06:43:30.237Z",
   "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
   "bundle": {
-    "jsGzipBytes": 195028,
+    "jsGzipBytes": 196082,
     "cssGzipBytes": 18495,
-    "totalGzipBytes": 213523,
+    "totalGzipBytes": 214577,
     "requests": 5
   },
   "fps": {
     "guitar.motion": {
-      "min": 29.81,
-      "median": 29.98
+      "min": 29.87,
+      "median": 29.92
     },
     "guitar.whatif": {
-      "min": 29.98,
-      "median": 29.99
-    },
-    "guitar.flow": {
-      "min": 29.96,
-      "median": 29.98
-    },
-    "guitar.number": {
-      "min": 29.87,
-      "median": 29.98
-    },
-    "ball.motion": {
-      "min": 29.87,
-      "median": 29.98
-    },
-    "ball.compare": {
-      "min": 29.97,
-      "median": 29.98
-    },
-    "ball.whatif": {
-      "min": 29.95,
+      "min": 29.83,
       "median": 29.96
     },
+    "guitar.flow": {
+      "min": 29.81,
+      "median": 29.96
+    },
+    "guitar.number": {
+      "min": 29.9,
+      "median": 29.9
+    },
+    "ball.motion": {
+      "min": 29.89,
+      "median": 29.92
+    },
+    "ball.compare": {
+      "min": 29.84,
+      "median": 29.89
+    },
+    "ball.whatif": {
+      "min": 29.87,
+      "median": 29.9
+    },
     "ball.flow": {
-      "min": 29.98,
-      "median": 29.98
+      "min": 29.81,
+      "median": 30.06
     },
     "ball.number": {
-      "min": 29.85,
-      "median": 29.98
-    },
-    "bicycle.motion": {
       "min": 29.9,
-      "median": 29.98
-    },
-    "bicycle.whatif": {
-      "min": 29.84,
       "median": 29.91
     },
+    "bicycle.motion": {
+      "min": 29.91,
+      "median": 29.95
+    },
+    "bicycle.whatif": {
+      "min": 29.9,
+      "median": 29.92
+    },
     "bicycle.flow": {
-      "min": 29.95,
+      "min": 29.89,
       "median": 29.98
     },
     "bicycle.number": {
-      "min": 29.98,
-      "median": 29.98
+      "min": 29.93,
+      "median": 29.97
     },
     "kettle.motion": {
-      "min": 28.98,
-      "median": 29.89
+      "min": 29.84,
+      "median": 30
     },
     "kettle.cutaway": {
-      "min": 29.92,
-      "median": 29.98
+      "min": 29.91,
+      "median": 29.93
     },
     "kettle.whatif": {
-      "min": 29.95,
-      "median": 29.96
+      "min": 29.87,
+      "median": 29.91
     },
     "kettle.flow": {
-      "min": 29.93,
-      "median": 29.98
+      "min": 29.91,
+      "median": 30
     },
     "kettle.number": {
-      "min": 29.87,
-      "median": 29.98
+      "min": 29.78,
+      "median": 29.99
     },
     "pendulum.motion": {
-      "min": 29.83,
-      "median": 29.98
+      "min": 29.78,
+      "median": 29.97
     },
     "pendulum.whatif": {
-      "min": 29.94,
-      "median": 29.96
+      "min": 29.84,
+      "median": 29.91
     },
     "pendulum.flow": {
-      "min": 29.98,
-      "median": 29.98
+      "min": 29.84,
+      "median": 29.93
     },
     "pendulum.number": {
-      "min": 29.82,
+      "min": 29.86,
       "median": 29.98
     },
     "phone.inside": {
-      "min": 29.95,
-      "median": 29.98
+      "min": 29.82,
+      "median": 30.06
     },
     "phone.whatif": {
-      "min": 29.79,
-      "median": 29.97
+      "min": 29.88,
+      "median": 29.9
     },
     "phone.flow": {
-      "min": 29.95,
-      "median": 29.98
+      "min": 29.87,
+      "median": 29.88
     },
     "phone.number": {
-      "min": 29.91,
-      "median": 29.98
+      "min": 29.81,
+      "median": 29.97
     },
     "spoon.zoom": {
-      "min": 29.85,
-      "median": 29.98
+      "min": 29.91,
+      "median": 29.94
     },
     "spoon.flow": {
-      "min": 29.98,
-      "median": 29.99
+      "min": 29.85,
+      "median": 29.95
     },
     "spoon.number": {
-      "min": 29.87,
-      "median": 29.98
+      "min": 29.85,
+      "median": 29.95
     }
   },
   "states": [

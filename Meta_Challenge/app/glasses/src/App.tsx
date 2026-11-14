@@ -14,7 +14,7 @@ import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
 import {BridgeClient, bridgeUrl} from './bridge';
 import type {BridgeMsg, ShowMsg} from './bridge';
 import {emitNav, onNav} from './bus';
-import {OBJECTS, findObject, sketchToObject} from './content';
+import {OBJECTS, findObject, mergeSpecText, sketchToObject} from './content';
 import type {ObjectInfo} from './content';
 import Explainer from './Explainer';
 
@@ -63,6 +63,14 @@ interface DemoRun {
 
 const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/;
 
+declare global {
+  interface Window {
+    __lensDebug?: {mergeSpecText: typeof mergeSpecText};
+  }
+}
+
+if (navigator.webdriver) window.__lensDebug = {mergeSpecText};
+
 /** Translated copy of a library object from a `show` (never mutates the library). */
 function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
   const lenses = m.lenses;
@@ -74,6 +82,12 @@ function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
     chapters: base.chapters.map(c => {
       const t = c.lens ? lenses.find(l => l && l.id === `${base.id}.${c.lens}`) : undefined;
       if (!t) return c;
+      const translatedKnobs = Array.isArray(c.knobs) && Array.isArray(t.knobLabels) && t.knobLabels.length === c.knobs.length
+        ? c.knobs.map((knob, index) => {
+            const label = t.knobLabels?.[index];
+            return knob && typeof label === 'string' ? {...knob, label} : knob;
+          })
+        : c.knobs;
       return {
         ...c,
         title: typeof t.title === 'string' && t.title ? t.title : c.title,
@@ -82,6 +96,8 @@ function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
           Array.isArray(t.steps) && t.steps.length === c.captions.length && t.steps.every(x => typeof x === 'string' && x)
             ? t.steps
             : c.captions,
+        knobs: translatedKnobs,
+        spec: Object.hasOwn(t, 'specText') ? mergeSpecText(c.spec, t.specText) : c.spec,
       };
     }),
   };

@@ -17,6 +17,8 @@ export interface ShowMsg {
     title: string;
     lead?: string;
     steps: string[];
+    specText?: unknown;
+    knobLabels?: Array<string | null>;
   }>;
   media?: {
     base: string;
@@ -129,11 +131,16 @@ function sanitiseFrame(value: unknown): BridgeMsg | null {
           return [];
         }
         const lead = text(item.lead);
+        const knobLabels = Array.isArray(item.knobLabels) && item.knobLabels.every(label => label === null || typeof label === 'string')
+          ? item.knobLabels.map(label => label === null ? null : label.slice(0, TEXT_LIMIT))
+          : undefined;
         return [{
           id,
           kind: kind as NonNullable<ShowMsg['lenses']>[number]['kind'],
           title,
           ...(lead === undefined ? {} : {lead}),
+          ...(item.specText === undefined ? {} : {specText: item.specText}),
+          ...(knobLabels === undefined ? {} : {knobLabels}),
           steps: item.steps.flatMap(step => {
             const safe = text(step);
             return safe === undefined ? [] : [safe];

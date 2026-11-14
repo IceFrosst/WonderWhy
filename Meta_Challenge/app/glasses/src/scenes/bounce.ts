@@ -6,7 +6,8 @@ const TIME_SCALE = 0.6;
 const MAX_BOUNCES = 12;
 const PEAK_DASH = [2, 6];
 const SOLID: number[] = [];
-const ENERGY_COLORS = [C.cyan, C.amber, C.pink, C.hot];
+const ENERGY_COLORS = [C.amber, C.cyan, C.hot];
+const ENERGY_LABELS = ['height', 'motion', 'lost'];
 const PERCENT = Array.from({length: 101}, (_, i) => `${i}%`);
 
 interface Preset {
@@ -79,7 +80,8 @@ class BouncingBall {
           this.terminal = nextPeak < 0.02 * this.drop || this.bounces >= MAX_BOUNCES;
           this.phase = 'contact';
           this.time = this.contact = 0;
-          this.duration = 0.04 + 0.04 * this.preset.squashiness;
+          // Hold contact long enough for squash to read at the 30 fps display cap.
+          this.duration = 0.08 + 0.08 * this.preset.squashiness;
         }
       } else {
         this.contact = clamp(this.time / this.duration, 0, 1);
@@ -117,6 +119,22 @@ class BouncingBall {
       ? Math.max(0, this.incomingEnergy - (this.lost - this.lostBefore) - out[1]) : 0;
     out[3] = this.lost;
   }
+
+  projectedPeak(index: number): number {
+    return this.drop * Math.pow(this.preset.e * this.preset.e, index);
+  }
+
+  visualPosition(trailCount: number): {index: number; progress: number} {
+    if (this.phase === 'rest') return {index: trailCount - 1, progress: 1};
+    if (this.phase === 'contact') return {index: clamp(this.bounces - 1, 0, trailCount - 1), progress: 1};
+    if (this.bounces === 0) {
+      return {index: 0, progress: 0.5 + 0.5 * clamp(this.time / this.duration, 0, 1)};
+    }
+    return {
+      index: clamp(this.bounces, 0, trailCount - 1),
+      progress: clamp(this.time / this.duration, 0, 1),
+    };
+  }
 }
 
 export class BounceScene implements Scene {
@@ -131,9 +149,11 @@ export class BounceScene implements Scene {
   private readonly right = new BouncingBall();
   private readonly energy = new Float64Array(4);
   private readouts: Readout[] = [];
+  private fontFamily = 'system-ui';
 
   init(ctx: CanvasRenderingContext2D, w: number, h: number): void {
     this.ctx = ctx;
+    this.fontFamily = getComputedStyle(document.body).fontFamily || 'system-ui';
     this.resize(w, h);
     this.restart();
   }
@@ -201,7 +221,7 @@ export class BounceScene implements Scene {
     }
 
     clear(ctx, w, h);
-    const radius = Math.min(w * 0.025, h * 0.047);
+    const radius = Math.min(w * 0.04, h * 0.1);
     const ground = h * 0.91;
     // A fixed metre scale makes a changed drop height visible, even on a wide canvas.
     const scale = (ground - h * 0.09 - radius * 2) / 3;
@@ -214,10 +234,26 @@ export class BounceScene implements Scene {
     ctx.stroke();
 
     if (pair) {
-      this.drawBall(this.left, w * 0.28, w * 0.34, ground, radius, scale);
-      this.drawBall(this.right, w * 0.72, w * 0.34, ground, radius, scale);
+      this.drawBall(this.left, w * 0.27, w * 0.4, ground, radius, scale, PRESETS[this.selected].name);
+      this.drawBall(
+        this.right,
+        w * 0.73,
+        w * 0.4,
+        ground,
+        radius,
+        scale,
+        PRESETS[this.selected === PRESETS.length - 1 ? 0 : PRESETS.length - 1].name,
+      );
     } else {
-      this.drawBall(this.left, w * (this.step === 2 ? 0.39 : 0.5), w * 0.52, ground, radius, scale);
+      this.drawBall(
+        this.left,
+        w * (this.step === 2 ? 0.34 : 0.5),
+        w * (this.step === 2 ? 0.58 : 0.86),
+        ground,
+        radius,
+        scale,
+        PRESETS[this.selected].name,
+      );
     }
     if (this.step === 2) {
       this.left.energies(this.energy);
@@ -227,24 +263,70 @@ export class BounceScene implements Scene {
     return this.readouts;
   }
 
-  private drawBall(ball: BouncingBall, x: number, laneWidth: number, ground: number, radius: number, scale: number): void {
+  private drawBall(
+    ball: BouncingBall,
+    x: number,
+    laneWidth: number,
+    ground: number,
+    radius: number,
+    scale: number,
+    label: string,
+  ): void {
     const ctx = this.ctx!;
-    ctx.setLineDash(PEAK_DASH);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = C.dim;
-    ctx.beginPath();
-    for (let i = 0; i < ball.peakCount; i++) {
-      const y = ground - radius - ball.peaks[i] * scale;
-      ctx.moveTo(x - laneWidth * 0.4, y);
-      ctx.lineTo(x + laneWidth * 0.4, y);
+    const trailCount = 4;
+    const laneLeft = x - laneWidth * 0.5;
+    const span = laneWidth / trailCount;
+    ctx.font = `600 16px ${this.fontFamily}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = C.soft;
+    ctx.fillText(label, x, 2);
+
+    // A dotted bounce path makes the shrinking sequence readable even in a still.
+    ctx.fillStyle = C.cyan;
+    for (let index = 0; index < trailCount; index++) {
+      const peak = ball.projectedPeak(index);
+      if (peak < 0.015) break;
+      for (let dotIndex = 0; dotIndex <= 12; dotIndex++) {
+        const t = dotIndex / 12;
+        const dotX = laneLeft + (index + t) * span;
+        const dotY = ground - radius - peak * scale * 4 * t * (1 - t);
+        ctx.globalAlpha = 0.12 + (1 - index / trailCount) * 0.12;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
-    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Peak guides and direct height labels name the first three diminishing arcs.
+    for (let index = 0; index < trailCount; index++) {
+      const peak = ball.projectedPeak(index);
+      if (peak < 0.015) break;
+      const peakX = laneLeft + (index + 0.5) * span;
+      const peakY = ground - radius - peak * scale;
+      ctx.setLineDash(PEAK_DASH);
+      ctx.strokeStyle = C.dim;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(peakX - span * 0.34, peakY);
+      ctx.lineTo(peakX + span * 0.34, peakY);
+      ctx.stroke();
+      if (index < 3) {
+        const height = `${peak.toFixed(2)} m`;
+        const textWidth = ctx.measureText(height).width;
+        const textX = clamp(peakX, laneLeft + textWidth / 2, laneLeft + laneWidth - textWidth / 2);
+        const textY = clamp(peakY - 20, 22, ground - 24);
+        ctx.fillStyle = C.soft;
+        ctx.fillText(height, textX, textY);
+      }
+    }
     ctx.setLineDash(SOLID);
 
     let rx = radius;
     let ry = radius;
     if (ball.phase === 'contact') {
-      const squash = Math.min(0.35, ball.impactSpeed * ball.preset.squashiness * 0.075)
+      const squash = Math.min(0.45, ball.impactSpeed * ball.preset.squashiness * 0.1)
         * Math.sin(Math.PI * ball.contact);
       ry *= 1 - squash;
       rx /= 1 - squash;
@@ -253,35 +335,72 @@ export class BounceScene implements Scene {
       ry *= 1 + stretch;
       rx /= 1 + stretch;
     }
+    const visual = ball.visualPosition(trailCount);
+    const ballX = laneLeft + (visual.index + visual.progress) * span;
     // Bottom stays on the floor during contact; stretched flight never clips it.
     const y = ground - ry - ball.height * scale;
     ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fillStyle = C.faint;
-    ctx.fill();
-    glowStroke(ctx, C.white, 2);
+    ctx.ellipse(ballX, y, rx, ry, 0, 0, Math.PI * 2);
+    glowStroke(ctx, C.cyan, 3);
   }
 
   private drawEnergy(ground: number): void {
     const ctx = this.ctx!;
-    const x = this.w * 0.86;
-    const width = this.w * 0.055;
-    const height = this.h * 0.72;
+    const x = this.w * 0.72;
+    const width = clamp(this.w * 0.055, 26, 34);
+    const height = this.h * 0.66;
     const initial = G * this.drop;
+    const values = [this.energy[0] + this.energy[2], this.energy[1], this.energy[3]];
+    const segments: Array<{actualY: number; color: string; label: string; desiredY: number}> = [];
+    const top = ground - height;
+
+    ctx.font = `600 18px ${this.fontFamily}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = C.white;
+    ctx.fillText('energy', x, top - 8);
     ctx.lineWidth = 1;
     ctx.strokeStyle = C.dim;
     ctx.strokeRect(x, ground - height, width, height);
     let bottom = ground;
-    for (let i = 0; i < 4; i++) {
-      const segment = clamp(this.energy[i] / initial, 0, 1) * height;
-      if (segment <= 0) continue;
-      ctx.fillStyle = ENERGY_COLORS[i];
-      ctx.globalAlpha = 0.14;
-      ctx.fillRect(x, bottom - segment, width, segment);
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = ENERGY_COLORS[i];
-      ctx.strokeRect(x, bottom - segment, width, segment);
-      bottom -= segment;
+    for (let index = 0; index < values.length; index++) {
+      const segment = clamp(values[index] / initial, 0, 1) * height;
+      const segmentTop = bottom - segment;
+      if (segment > 0.5) {
+        ctx.fillStyle = ENERGY_COLORS[index];
+        ctx.globalAlpha = 0.14;
+        ctx.fillRect(x, segmentTop, width, segment);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = ENERGY_COLORS[index];
+        ctx.strokeRect(x, segmentTop, width, segment);
+      }
+      const actualY = segment > 1 ? segmentTop + segment / 2 : bottom;
+      segments.push({actualY, color: ENERGY_COLORS[index], label: ENERGY_LABELS[index], desiredY: actualY});
+      bottom = segmentTop;
+    }
+
+    const ordered = [...segments].sort((a, b) => a.desiredY - b.desiredY);
+    const minLabelY = top + 10;
+    const maxLabelY = ground - 10;
+    ordered.forEach((segment, index) => {
+      segment.desiredY = clamp(segment.desiredY, minLabelY, maxLabelY);
+      if (index > 0) segment.desiredY = Math.max(segment.desiredY, ordered[index - 1].desiredY + 20);
+    });
+    const overflow = Math.max(0, ordered[ordered.length - 1].desiredY - maxLabelY);
+    if (overflow) ordered.forEach(segment => { segment.desiredY -= overflow; });
+
+    ctx.font = `600 16px ${this.fontFamily}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (const segment of segments) {
+      ctx.strokeStyle = segment.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + width, segment.actualY);
+      ctx.lineTo(x + width + 7, segment.desiredY);
+      ctx.stroke();
+      ctx.fillStyle = segment.color;
+      ctx.fillText(segment.label, x + width + 10, segment.desiredY);
     }
   }
 
