@@ -112,19 +112,20 @@ Third person films; IceFrost wears one pair, friend sits next to him.
 | 25 | 1:16-1:22 | Title | Black, logo, fade in | **WonderWhy. See how the world really works.** → **Come to our table. Try it.** · Meta Ray-Ban Display · Junction 2026 | One click, silence |
 
 ## Footage map
-All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index: `raw/INDEX.md`, made by [video/ingest.sh](video/ingest.sh)). Pixel clips: 4K HEVC 60 fps portrait. iPhone clips (MrNetwork, `friend-next` → `DemoVideos/`): 4K HEVC portrait.
+All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index: `raw/INDEX.md`, made by [video/ingest.sh](video/ingest.sh)). Pixel clips: 4K HEVC 60 fps portrait. iPhone clips (MrNetwork, `friend-next` → `DemoVideos/` and `DemoVideos/New/`, split parts re-joined): 4K HEVC portrait; `A001_*` are 24 fps.
 | Shot | Clip | What it shows | Status |
 |---|---|---|---|
-| 3 earbuds in | — | — | **missing on laptop** (on a phone?) |
-| 4 grass, scrolling | — | shot A | **missing on laptop** |
-| 5 crowd walk | `mrnetwork/IMG_5545.MOV` (19 s), `IMG_5546.MOV` (7 s), `IMG_5556.MOV` (2 s) | walking the hall | ok (glasses already on: use before he puts them on, or grade grey) |
+| 3 earbuds in | — | close-up of fingers pushing earbuds in | **missing** (earbud visible in ear in `A001_11141516_C098_2` at ~50%) |
+| 4 grass, scrolling | `mrnetwork/A001_11141516_C098_2.MOV` (26 s, 24 fps) | lying on grass, phone, earbuds in | ok |
+| 24 grass ending / B1 | `mrnetwork/A001_11141518_C099_2.MOV` (21 s), `A001_11141519_C100.MOV` (21 s) | on the grass with the glasses, arms up, touching grass | ok |
+| 5 crowd walk | `mrnetwork/IMG_5556.MOV` (2 s, from behind), `IMG_5545.MOV` (19 s), `IMG_5546.MOV` (7 s) | walking the hall | ok, but glasses already on in 5545/5546: a back-view crowd walk **without glasses** is missing |
 | 6 glasses on | `icefrost/PXL_20261114_153315589.mp4` (12 s) | putting the glasses on in the crowd | ok |
 | 6 alt | `mrnetwork/IMG_5543.MOV`, `IMG_5544.MOV` (6 s each) | wearing the glasses, close-up (tilted) | ok |
 | 8 earbuds in palm | `icefrost/PXL_20261114_145509708.mp4` (5 s) | open earbuds case on a table | ok |
 | 8 alt | `mrnetwork/IMG_5560.MOV` (10 s) | hand with the glasses' charging case | b-roll |
 | 11-13 printers | `icefrost/PXL_20261114_153800338.mp4`, `PXL_20261114_153844169.mp4` (8 s each) | Prusa Core One printing + second printer beside it | ok (identify printer 2 for the comparison) |
 | 15 sauna | `icefrost/PXL_20261114_135130437.mp4` (15 s) | sauna benches, stove | ok (check for water/steam moment) |
-| 16 gym bike | — | — | **missing on laptop** |
+| 16 gym bike | `mrnetwork/A001_11141614_C103.MOV` (13 s, 24 fps) | someone on an **air bike** (fan wheel) | ok, but **it is a fan bike, not a magnet bike**: change the line to air resistance (*The harder you push, the harder the air pushes back*) or film a magnet spin bike |
 | 18 / 21 / 23 band, glasses on a face | `mrnetwork/IMG_5557.MOV` (24 s), `IMG_5561.MOV` (8 s) | facing camera with glasses; at the table with glasses | ok |
 | 19-23 share scene | — | — | **missing on laptop** (friend's uploads) |
 | B-roll | `PXL_20261113_*` (6 clips), `PXL_20261114_135208665` (balcony), `PXL_20261114_141728301` (CRT TV wall) | hall, stage, robot, tables | spare |
