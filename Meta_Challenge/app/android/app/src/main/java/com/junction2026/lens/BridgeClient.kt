@@ -8,13 +8,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
 
-data class Detection(
-    val objectId: String,
-    val label: String,
-    val confidence: Double,
-    val answer: String?,
-)
-
 /** A failure with text that is safe to show on the glasses. */
 class BridgeException(
     val userMessage: String,
@@ -80,21 +73,47 @@ class BridgeClient(var baseUrl: String, var token: String = "") {
                     BridgeAuth.ErrorKind.BRIDGE -> BridgeException("Bridge error (${kind.ifEmpty { "HTTP $code" }})")
                 }
             }
-            val j = JSONObject(text)
-            Detection(
-                objectId = j.optString("objectId", "unknown"),
-                label = j.optString("label", ""),
-                confidence = j.optDouble("confidence", 0.0),
-                answer = j.optString("answer", "").ifBlank { null },
-            )
+            DetectionParser.parse(text) // v1 fields optional; see Detection.kt
         } catch (e: BridgeException) {
             throw e
         } catch (e: java.net.SocketTimeoutException) {
             throw BridgeException("Bridge timed out", e)
         } catch (e: java.io.IOException) {
             throw BridgeException("Can't reach the bridge (network)", e)
+        } catch (e: JsonParseException) {
+            throw BridgeException("Bad answer from the bridge", e)
         } catch (e: org.json.JSONException) {
             throw BridgeException("Bad answer from the bridge", e)
+        } finally {
+            c?.disconnect()
+        }
+    }
+
+    /**
+     * GET a media file (`/media/...`, open on the bridge) into memory. The token header is sent anyway
+     * (harmless). Null on any failure or when the file is bigger than [maxBytes].
+     */
+    suspend fun fetchBytes(path: String, maxBytes: Int = 2_000_000): ByteArray? = withContext(Dispatchers.IO) {
+        var c: HttpURLConnection? = null
+        try {
+            c = url(path).openConnection() as HttpURLConnection
+            c.connectTimeout = 4000
+            c.readTimeout = 6000
+            BridgeAuth.headers(token).forEach { (k, v) -> c.setRequestProperty(k, v) }
+            if (c.responseCode !in 200..299) return@withContext null
+            c.inputStream.use { input ->
+                val out = java.io.ByteArrayOutputStream()
+                val buf = ByteArray(16 * 1024)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    out.write(buf, 0, n)
+                    if (out.size() > maxBytes) return@withContext null
+                }
+                out.toByteArray()
+            }
+        } catch (_: Exception) {
+            null
         } finally {
             c?.disconnect()
         }

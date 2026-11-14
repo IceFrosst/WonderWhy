@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.SystemClock
 import com.meta.wearable.dat.camera.addCamera
 import com.meta.wearable.dat.camera.removeCamera
 import com.meta.wearable.dat.camera.types.PhotoData
@@ -30,8 +31,10 @@ import com.meta.wearable.dat.inputs.addInputs
 import com.meta.wearable.dat.inputs.removeInputs
 import com.meta.wearable.dat.inputs.types.InputEvent
 import com.meta.wearable.dat.inputs.types.InputsConfiguration
+import com.meta.wearable.dat.inputs.types.NavDirection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -81,6 +84,22 @@ class GlassesController(
     private var concepts: Map<String, String> = emptyMap()
     private val busy = AtomicBoolean(false) // one capture at a time, whatever the trigger
     private var connecting = false
+
+    /**
+     * Fixture mode (default off): no camera, no network. Each trigger answers with the next v1 fixture
+     * from `assets/fixture/` (ball, guitar, low confidence) and stills come from `assets/fixture/media/`.
+     */
+    @Volatile var useFixture = false
+    private var fixtureIndex = 0
+
+    // Explainer state. Touched only on the main thread (inside [scope]).
+    private var current: Detection? = null
+    private var explainer: ExplainerState? = null
+    /** Last explainer action (pinch or card button), to swallow the twin of a pinch that also clicks a button. */
+    private var lastNavAt = 0L
+    private val media = SceneMedia(scope) { path ->
+        if (useFixture) readAsset("fixture$path") else bridge.fetchBytes(path)
+    }
 
     // ---- connect / disconnect ----
 
@@ -162,6 +181,9 @@ class GlassesController(
         session = null
         display = null
         attached = false
+        explainer = null
+        current = null
+        media.clear()
         batteryWarned = false
         lastDon = null
         busy.set(false)
@@ -201,9 +223,11 @@ class GlassesController(
                 inputsJob = scope.launch {
                     inputs.events.collect { ev ->
                         when (ev) {
-                            is InputEvent.Select -> trigger()
+                            is InputEvent.Select -> onSelect()
                             is InputEvent.Capture -> trigger()
-                            is InputEvent.Nav, is InputEvent.Back, is InputEvent.Button, is InputEvent.Drag -> Unit
+                            is InputEvent.Nav -> onNav(ev.direction)
+                            is InputEvent.Back -> onBack()
+                            is InputEvent.Button, is InputEvent.Drag -> Unit
                         }
                     }
                 }
@@ -225,6 +249,7 @@ class GlassesController(
         if (d.batteryLevel <= 15 && !batteryWarned) {
             batteryWarned = true
             if (!busy.get()) {
+                explainer = null
                 show(Cards.notice("Battery low", "${d.batteryLevel}% left on the glasses") { scope.launch { showIdle() } })
             }
         }
@@ -247,6 +272,7 @@ class GlassesController(
         if (!busy.compareAndSet(false, true)) { log("Busy: ignoring trigger"); return }
         captureJob = scope.launch {
             try {
+                explainer = null
                 runCapture()
             } finally {
                 busy.set(false)
@@ -257,17 +283,20 @@ class GlassesController(
     private suspend fun runCapture() {
         try {
             show(Cards.looking())
-            val tCapture = System.currentTimeMillis()
-            val (jpeg, focus) = withTimeout(30_000) { takePhotoJpeg() }
-            log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
-            onPhoto(jpeg)
-            val det = bridge.detect(jpeg, focus, tCapture)
-            log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}")
-            if (det.objectId == "unknown" || det.confidence < 0.5) {
-                show(Cards.result("Not sure what this is", null, det.answer, ::trigger, ::done))
+            val det = if (useFixture) {
+                delay(400)
+                nextFixture()
             } else {
-                show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, ::done))
+                val tCapture = System.currentTimeMillis()
+                val (jpeg, focus) = withTimeout(30_000) { takePhotoJpeg() }
+                log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
+                onPhoto(jpeg)
+                bridge.detect(jpeg, focus, tCapture)
             }
+            log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}" +
+                (if (det.lowConfidence) " lowConfidence" else "") +
+                (if (det.lenses.isNotEmpty() || det.steps.isNotEmpty()) " lenses=${det.lenses.size} steps=${det.steps.size}" else ""))
+            present(det)
         } catch (e: CancellationException) {
             withContext(NonCancellable) {
                 show(Cards.error("Cancelled", "Capture stopped", ::trigger, ::done))
@@ -291,7 +320,125 @@ class GlassesController(
     private suspend fun showError(title: String, detail: String) =
         show(Cards.error(title, detail, ::trigger, ::done))
 
-    private fun done() { scope.launch { showIdle() } }
+    private fun done() { scope.launch { explainer = null; showIdle() } }
+
+    // ---- result and explainer ----
+
+    /** Picks the result screen. An old bridge (no v1 fields) lands on exactly the cards it always did. */
+    private suspend fun present(det: Detection) {
+        media.clear()
+        current = det
+        explainer = null
+        when (val v = DetectionParser.verdict(det)) {
+            is Verdict.NotSure -> show(Cards.notSure(v.guess, ::trigger, ::done))
+            is Verdict.Unrecognised -> show(Cards.result("Not sure what this is", null, v.answer, ::trigger, ::done))
+            is Verdict.Plain -> show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, ::done))
+            is Verdict.Explainer -> showExplainer(ExplainerState(v.tracks))
+        }
+    }
+
+    private fun stillPaths(det: Detection, track: Track): List<String?> {
+        val base = det.media?.base ?: return emptyList()
+        return DetectionParser.stills(det, track.lensId).map { DetectionParser.stillPath(base, it) }
+    }
+
+    /** Shows [s] at once (with the still if cached), then swaps the still in when it arrives. */
+    private suspend fun showExplainer(s: ExplainerState) {
+        val det = current ?: return
+        explainer = s
+        val paths = stillPaths(det, s.track)
+        media.prefetch(paths.filterNotNull())
+        val path = if (s.isOverview) null else paths.getOrNull(s.step)
+        val cached = path?.let { media.cached(it) }
+        show(explainerCard(det, s, cached))
+        if (path != null && cached == null && !media.hasFailed(path)) {
+            scope.launch {
+                val bmp = runCatching { media.get(path) }.getOrNull()
+                // Only if the wearer is still on this card; a failed still keeps the text card.
+                if (bmp != null && explainer === s && current === det) show(explainerCard(det, s, bmp))
+                else if (bmp == null) log("Still unavailable: $path")
+            }
+        }
+    }
+
+    private fun explainerCard(det: Detection, s: ExplainerState, still: Bitmap?) = Cards.explainer(
+        s = s,
+        label = det.label,
+        summary = det.summary ?: concepts[det.objectId],
+        answer = det.answer,
+        still = still,
+        onPrimary = { scope.launch { explainerPrimary() } },
+        onSecondary = { scope.launch { explainerSecondary() } },
+    )
+
+    /** True once per pinch: a pinch may arrive both as a Select event and as a click on the focused button. */
+    private fun navAllowed(): Boolean {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastNavAt < NAV_DEBOUNCE_MS) return false
+        lastNavAt = now
+        return true
+    }
+
+    private fun onSelect() {
+        scope.launch {
+            if (explainer != null) explainerPrimary()
+            // Twin of an explainer button click that just closed the explainer: ignore it.
+            else if (SystemClock.uptimeMillis() - lastNavAt >= NAV_DEBOUNCE_MS) trigger()
+        }
+    }
+
+    /** Pinch and the primary button: the obvious next thing. */
+    private suspend fun explainerPrimary() {
+        val s = explainer ?: return
+        if (!navAllowed()) return
+        when (val m = s.pinch()) {
+            is ExplainerState.Move.Show -> showExplainer(m.state)
+            ExplainerState.Move.Again -> { explainer = null; trigger() }
+        }
+    }
+
+    /** Overview: Again. Step cards: Done. */
+    private suspend fun explainerSecondary() {
+        val s = explainer ?: return
+        if (!navAllowed()) return
+        explainer = null
+        if (s.isOverview) trigger() else showIdle()
+    }
+
+    /** D-pad: left/right changes lens (starts at its step 1), down/up steps forward/back. */
+    private fun onNav(dir: NavDirection) {
+        scope.launch {
+            val s = explainer ?: return@launch
+            val n = when (dir) {
+                NavDirection.LEFT -> s.switchLens(-1)
+                NavDirection.RIGHT -> s.switchLens(+1)
+                NavDirection.UP -> s.prev()
+                NavDirection.DOWN -> s.next()
+            }
+            if (n !== s) showExplainer(n)
+        }
+    }
+
+    /** Back: one step back, then the overview, then idle. Outside the explainer Back does nothing (as before). */
+    private fun onBack() {
+        scope.launch {
+            val s = explainer ?: return@launch
+            val b = s.back()
+            if (b != null) showExplainer(b) else { explainer = null; showIdle() }
+        }
+    }
+
+    // ---- fixture mode ----
+
+    private suspend fun readAsset(name: String): ByteArray? = withContext(Dispatchers.IO) {
+        runCatching { ctx.assets.open(name).use { it.readBytes() } }.getOrNull()
+    }
+
+    private suspend fun nextFixture(): Detection {
+        val name = FIXTURES[fixtureIndex++ % FIXTURES.size]
+        val bytes = readAsset("fixture/detect_$name.json") ?: throw CaptureFailure("Fixture missing", name)
+        return DetectionParser.parse(String(bytes, Charsets.UTF_8))
+    }
 
     private suspend fun takePhotoJpeg(): Pair<ByteArray, ByteArray> {
         val sess = session ?: throw CaptureFailure("Session stopped", "Connect again")
@@ -365,5 +512,8 @@ class GlassesController(
     companion object {
         /** Share of the photo's width and height that counts as "what the wearer is looking at". */
         const val AIM_FRACTION = 0.5f
+        private const val NAV_DEBOUNCE_MS = 350L
+        /** Fixture order for [useFixture]: `assets/fixture/detect_<name>.json`. */
+        private val FIXTURES = listOf("ball", "guitar", "lowconf")
     }
 }

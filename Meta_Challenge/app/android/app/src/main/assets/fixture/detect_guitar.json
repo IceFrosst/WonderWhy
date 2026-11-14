@@ -1,0 +1,43 @@
+{
+  "type": "show",
+  "reqId": "fixture-guitar",
+  "objectId": "guitar",
+  "label": "Guitar string",
+  "confidence": 0.88,
+  "summary": "A shorter string vibrates faster, so the note is higher.",
+  "steps": [
+    "Pressing a fret shortens the string. Half the length gives double the frequency: f = v / 2L.",
+    "A string also vibrates in whole-number patterns: harmonics n = 1, 2, 3 at f, 2f, 3f.",
+    "Wave speed depends on tension T and mass per length: f = (1/2L) sqrt(T/mu). Tighter = higher."
+  ],
+  "lenses": [
+    {
+      "id": "guitar.motion",
+      "kind": "motion",
+      "title": "Standing waves",
+      "steps": [
+        "Pressing a fret shortens the string. Half the length gives double the frequency: f = v / 2L.",
+        "A string also vibrates in whole-number patterns: harmonics n = 1, 2, 3 at f, 2f, 3f.",
+        "Wave speed depends on tension T and mass per length: f = (1/2L) sqrt(T/mu). Tighter = higher."
+      ]
+    }
+  ],
+  "media": {
+    "base": "/media/guitar",
+    "lenses": {
+      "guitar.motion": {
+        "stills": [
+          "s1.png"
+        ]
+      }
+    }
+  },
+  "timings": {
+    "t_capture": 0,
+    "t_received": 0,
+    "t_detected": 0,
+    "detectMs": 0,
+    "model": "fixture"
+  },
+  "t_sent": 0
+}
