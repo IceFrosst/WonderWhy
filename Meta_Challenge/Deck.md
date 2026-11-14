@@ -60,13 +60,13 @@ The guidebook's peer review uses different criteria (Innovation, Impact, Impleme
 | Who has this problem, and how do you know? | Learners who stop to look things up. We have not run a study, this is our assumption |
 | What exists already? | Meta AI explains by voice. We show a checked animation of the mechanism, drawn for the additive display, with several lenses per object |
 | Does it only work on 7 objects? | Yes for checked physics. Others show "Not sure" or a sketch tagged unverified |
-| Does it work offline or without the Web App? | Phone app: saved cards offline (no stills), stills from the bridge online. Tested in the emulator, not on glasses |
+| Does it work offline or without the Web App? | Phone app: saved cards offline (with stills for all 7 objects, bundled into the app), stills from the bridge online. Tested in the emulator, not on glasses |
 | What was technically hard? | The camera is only in the phone app and the animation only in the Web App, and they cannot run at once. We built a bridge that links them and a `/last` replay for a handover |
 | What does not work yet? | Nothing has run on real glasses. Spoken questions ran only with injected text, not a real microphone. Translations are machine-made. Sketches for unknown objects are unverified and off by default. Clips are made but not played by the phone app. Detection accuracy was measured on a dev stand-in, not Gemini |
 | Why not a phone? | A phone works, but you stop, unlock and aim. Glasses keep your hands on the object. We have not compared them in a user test |
 | How do you handle privacy? | One photo per pinch, not saved on the phone, sent to our bridge and a model provider. The microphone listens only while an answer is on screen. No account, no history. Consent card exists in the Web App; not yet in the phone app |
 | How would it scale or who pays? | Schools and science centres first. We have no pricing and no pilot yet |
-| How did you test it? | Headless Chrome at 600x600 (125 of 125 screens and states, 30 fps), 112 Android JVM tests, an emulator and a Pixel 8 with Meta's mock glasses, Meta's test gate. TODO (human): add the real-glasses result from [Glasses_Test.md](Glasses_Test.md) |
+| How did you test it? | Headless Chrome at 600x600 (125 of 125 screens and states, 30 fps), 153 Android JVM tests, an emulator and a Pixel 8 with Meta's mock glasses, Meta's test gate. TODO (human): add the real-glasses result from [Glasses_Test.md](Glasses_Test.md) |
 
 ## TODO (human)
 - Team names, repo and demo QR on slide 8.

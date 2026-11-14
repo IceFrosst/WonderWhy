@@ -9,6 +9,8 @@ updated: 2026-11-14
 
 > [!summary]
 > Nothing has run on real glasses yet. Ordered so the tests that change our plan come first. Bring: Display pair, Neural Band, Android phone (12+), laptop, stopwatch, a ball, a guitar or kettle. Write results in the pass/fail column.
+>
+> The same rows can be ticked in the Android app under Developer > Glasses check, which produces a text report to share (built and run on the emulator only).
 
 **Prepare before the slot** (not counted in the 20 min): phone has the Meta AI app v272+ and our APK installed with "Mock glasses" OFF, app restarted ([android README](app/android/README.md)). Bridge token is at hand (ask a teammate, never in git). Open booth questions: [Booth_Questions](Booth_Questions.md).
 
