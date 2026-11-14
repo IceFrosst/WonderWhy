@@ -156,7 +156,9 @@ test('/ask validates questions and library object ids', async (t) => {
     { question: 'Why?', aboutObjectId: 'unknown' },
   ]) {
     const response = await post(base, body);
-    assert.equal(response.status, 400); assert.deepEqual(await response.json(), { error: 'bad_request' });
+    assert.equal(response.status, 400);
+    const error = await response.json();
+    assert.equal(error.error, 'bad_request'); assert.equal(typeof error.message, 'string'); assert.match(error.reqId, /^[\w-]{1,64}$/);
   }
 });
 

@@ -127,10 +127,12 @@ test('body, model concurrency, WebSocket payload, and socket limits are enforced
   const app = await bridge(t, { maxInflight: 1, maxSockets: 1, provider: 'fake', detectFn: async () => { await gate; return { objectId: 'ball', confidence: 1, answer: '', model: 'test', provider: 'fake', detectMs: 1 }; } });
   assert.equal(app.server.requestTimeout, 30000); assert.equal(app.server.headersTimeout, 10000); assert.equal(app.server.keepAliveTimeout, 5000);
   const tooLarge = await fetch(app.base + '/detect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: 'x'.repeat(2 * 1024 * 1024 + 1) });
-  assert.equal(tooLarge.status, 413); assert.deepEqual(await tooLarge.json(), { error: 'too_large' });
+  assert.equal(tooLarge.status, 413); const tooLargeError = await tooLarge.json();
+  assert.equal(tooLargeError.error, 'too_large'); assert.equal(typeof tooLargeError.message, 'string'); assert.match(tooLargeError.reqId, /^[\w-]{1,64}$/);
   const first = post(app.base, '/detect', { reqId: 'held', imageBase64: jpeg }); await sleep(20);
   const busy = await post(app.base, '/detect', { reqId: 'busy', imageBase64: jpeg });
-  assert.equal(busy.status, 429); assert.equal(busy.headers.get('retry-after'), '2'); assert.deepEqual(await busy.json(), { error: 'busy' });
+  assert.equal(busy.status, 429); assert.equal(busy.headers.get('retry-after'), '2');
+  const busyError = await busy.json(); assert.equal(busyError.error, 'busy'); assert.equal(busyError.reqId, 'busy'); assert.equal(typeof busyError.message, 'string');
   const one = await openSocket(app.port); const second = new WebSocket(`ws://localhost:${app.port}/ws`); second.on('error', () => {}); const secondClose = closeCode(second);
   assert.equal(await secondClose, 1013); one.ws.close();
   release(); assert.equal((await first).status, 200);
@@ -146,7 +148,8 @@ test('prototype names are rejected as object ids and input fields are normalized
   const app = await bridge(t);
   for (const body of [null, 1, []]) {
     const response = await fetch(app.base + '/detect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    assert.equal(response.status, 400); assert.deepEqual(await response.json(), { error: 'bad_json' });
+    assert.equal(response.status, 400); const error = await response.json();
+    assert.equal(error.error, 'bad_json'); assert.equal(typeof error.message, 'string'); assert.match(error.reqId, /^[\w-]{1,64}$/);
   }
   for (const id of ['__proto__', 'constructor']) {
     assert.equal((await post(app.base, '/detect', { forceObjectId: id })).status, 400);

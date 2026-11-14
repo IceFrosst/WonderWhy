@@ -80,9 +80,17 @@ ${lines.join('\n')}
 Question: ${JSON.stringify(String(question || ''))}
 
 Reply with strict JSON only, no markdown, using this shape and replacing the placeholders with JSON values:
-{"answer": "at most 2 short sentences, plain words, in ${language}", "lensId": "<one of the listed ids or null>", "step": <number or null>}
+{"answer": "one sentence of at most 14 words, plain words, in ${language}", "lensId": "<one of the listed ids or null>", "step": <number or null>}
 
 The answer must agree with the listed text. You may add one fact the list does not contain only if you are certain it is true. Choose the listed lens and step that best support the answer. Use null for both when no listed step fits.`;
+}
+
+/** Keep a model answer within the protocol's hard word and character caps. */
+export function truncateAnswer(value) {
+  const answer = String(value || '').trim();
+  const words = answer.split(/\s+/).filter(Boolean);
+  if (words.length > 14) return `${words.slice(0, 14).join(' ').slice(0, 299)}\u2026`;
+  return answer.slice(0, 300);
 }
 
 function jsonObjects(source) {
@@ -114,8 +122,7 @@ export function parseAskReply(value, object) {
       let parsed;
       try { parsed = JSON.parse(candidate); } catch { continue; }
       if (!parsed || typeof parsed !== 'object' || typeof parsed.answer !== 'string') continue;
-      const answer = parsed.answer.trim().slice(0, 300);
-      if (!answer) continue;
+      const answer = truncateAnswer(parsed.answer);
       const chapters = Array.isArray(object?.chapters) ? object.chapters : [];
       const lensIndex = chapters.findIndex((chapter) => `${object.id}.${chapter.lens}` === parsed.lensId);
       const lensId = lensIndex >= 0 ? parsed.lensId : null;

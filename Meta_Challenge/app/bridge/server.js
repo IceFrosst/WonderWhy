@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import { ask as answerQuestion, detect, detectTimeout, loadObjects, pickProvider, sketch as generateSketch, STAND_INS } from './detect.js';
-import { pickStep } from './ask.js';
+import { pickStep, truncateAnswer } from './ask.js';
 import { validateSketch } from './sketch.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -20,6 +20,17 @@ const GLASSES_DIST = path.resolve(here, '..', 'glasses', 'dist');
 const MEDIA_EXTS = new Set(['.png', '.jpg', '.mp4', '.json', '.webp']);
 const LANGUAGES = new Set(['en', 'fi', 'sv', 'de', 'es', 'fr']);
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+const ERROR_MESSAGES = {
+  unauthorized: 'A valid bridge token is required.',
+  bad_json: 'The request body must be valid JSON.',
+  too_large: 'The request body is too large.',
+  bad_request: 'The request is invalid.',
+  bad_image: 'A valid JPEG image is required.',
+  busy: 'The model is busy; try again shortly.',
+  detect_timeout: 'The model did not answer in time.',
+  detect_failed: 'The model could not answer the request.',
+  server_error: 'The bridge could not complete the request.',
+};
 
 const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
@@ -110,6 +121,61 @@ function normalizeLang(value) {
 
 function record(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function plainRecord(value) {
+  if (!record(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function copyTranslationData(value, depth = 1) {
+  if (depth > 6) return undefined;
+  if (typeof value === 'string') return value.slice(0, 80);
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (Array.isArray(value)) {
+    const result = [];
+    for (const item of value.slice(0, 64)) {
+      const copied = copyTranslationData(item, depth + 1);
+      if (copied === undefined) return undefined;
+      result.push(copied);
+    }
+    return result;
+  }
+  if (!plainRecord(value)) return undefined;
+  const result = {};
+  for (const [key, item] of Object.entries(value)) {
+    const copied = copyTranslationData(item, depth + 1);
+    if (copied !== undefined) Object.defineProperty(result, key, { value: copied, enumerable: true, writable: true, configurable: true });
+  }
+  return result;
+}
+
+function mergeSpecText(base, translated) {
+  if (Array.isArray(base)) {
+    if (!Array.isArray(translated) || translated.length !== base.length) return base;
+    return base.map((item, index) => mergeSpecText(item, translated[index]));
+  }
+  if (plainRecord(base)) {
+    if (!plainRecord(translated)) return base;
+    const result = { ...base };
+    for (const key of Object.keys(base)) {
+      if (Object.hasOwn(translated, key)) {
+        Object.defineProperty(result, key, { value: mergeSpecText(base[key], translated[key]), enumerable: true, writable: true, configurable: true });
+      }
+    }
+    return result;
+  }
+  if (typeof base === 'string' && typeof translated === 'string') return translated;
+  if (typeof base === 'number' && typeof translated === 'number' && Number.isFinite(translated)) return translated;
+  return base;
+}
+
+function translatedKnobLabels(translatedChapter, chapter) {
+  if (!Array.isArray(translatedChapter?.knobs)) return undefined;
+  const count = Array.isArray(chapter?.captions) ? chapter.captions.length : 0;
+  if (translatedChapter.knobs.length !== count || !translatedChapter.knobs.every((label) => label === null || typeof label === 'string')) return undefined;
+  return translatedChapter.knobs.slice();
 }
 
 export function start({
@@ -242,6 +308,11 @@ export function start({
     return headers;
   }
   const json = (req, res, code, obj, extra = {}) => { res.writeHead(code, { 'content-type': 'application/json', ...cors(req), ...extra }); res.end(JSON.stringify(obj)); };
+  const knownRequestIds = new WeakMap();
+  const requestError = (req, res, status, error, reqId = requestId(), extra = {}, message = ERROR_MESSAGES[error] || ERROR_MESSAGES.server_error) => {
+    knownRequestIds.set(req, reqId);
+    return json(req, res, status, { error, message, reqId }, extra);
+  };
   const authorized = (req) => !token || sameToken(req.headers['x-lens-token'], token);
 
   function loadTranslation(lang) {
@@ -279,17 +350,26 @@ export function start({
         && translatedChapter.captions.every((caption) => typeof caption === 'string')
         ? translatedChapter.captions
         : chapter.captions;
+      const specText = plainRecord(translatedChapter.spec) ? copyTranslationData(translatedChapter.spec) : undefined;
+      const knobLabels = translatedKnobLabels(translatedChapter, chapter);
+      const knobs = knobLabels && Array.isArray(chapter.knobs) && chapter.knobs.length === knobLabels.length
+        ? chapter.knobs.map((knob, index) => (record(knob) && typeof knobLabels[index] === 'string' ? { ...knob, label: knobLabels[index] } : knob))
+        : chapter.knobs;
       return {
         ...chapter,
         ...(typeof translatedChapter.title === 'string' ? { title: translatedChapter.title } : {}),
         ...(typeof translatedChapter.lead === 'string' ? { lead: translatedChapter.lead } : {}),
         ...(captions !== undefined ? { captions } : {}),
+        ...(specText !== undefined && chapter.spec !== undefined ? { spec: mergeSpecText(chapter.spec, specText) } : {}),
+        ...(knobs !== undefined ? { knobs } : {}),
       };
     }) : obj.chapters;
     return {
       ...obj,
       ...(typeof translated.label === 'string' ? { label: translated.label } : {}),
       ...(typeof translated.answer === 'string' ? { answer: translated.answer } : {}),
+      ...(typeof translated.tagline === 'string' ? { tagline: translated.tagline } : {}),
+      ...(typeof translated.short === 'string' ? { short: translated.short } : {}),
       ...(chapters !== undefined ? { chapters } : {}),
     };
   }
@@ -372,12 +452,22 @@ export function start({
     });
   }
 
-  function objectFields(obj) {
+  function objectFields(obj, translated, lang) {
     if (!obj || !Array.isArray(obj.chapters) || !obj.chapters.length) return {};
-    const lenses = obj.chapters.map((chapter) => ({
-      id: `${obj.id}.${chapter.lens}`, kind: chapter.lens, title: chapter.title,
-      lead: chapter.lead || '', steps: Array.isArray(chapter.captions) ? chapter.captions : [],
-    }));
+    const lenses = obj.chapters.map((chapter) => {
+      const translatedChapter = lang !== 'en' && record(translated?.chapters) && record(translated.chapters[chapter.lens])
+        ? translated.chapters[chapter.lens]
+        : null;
+      const specText = plainRecord(translatedChapter?.spec) ? copyTranslationData(translatedChapter.spec) : undefined;
+      const knobLabels = translatedKnobLabels(translatedChapter, chapter);
+      return {
+        id: `${obj.id}.${chapter.lens}`, kind: chapter.lens, title: chapter.title,
+        ...(typeof chapter.lead === 'string' && chapter.lead ? { lead: chapter.lead } : {}),
+        steps: Array.isArray(chapter.captions) ? chapter.captions : [],
+        ...(specText !== undefined ? { specText } : {}),
+        ...(knobLabels !== undefined ? { knobLabels } : {}),
+      };
+    });
     return {
       ...(typeof obj.answer === 'string' ? { summary: obj.answer } : {}),
       steps: lenses[0].steps,
@@ -405,7 +495,7 @@ export function start({
       fields: {
         label: libraryObject ? libraryObject.label : (typeof translation?.unknown_label === 'string' ? translation.unknown_label : 'Unknown object'),
         lang: libraryLang,
-        ...objectFields(libraryObject), ...mediaFields(objectId),
+        ...objectFields(libraryObject, translated, libraryLang), ...mediaFields(objectId),
       },
     };
   }
@@ -441,25 +531,35 @@ export function start({
     return typeof value === 'string' && REQUEST_ID.test(value) ? value : randomUUID();
   }
 
-  async function bodyObject(req, res) {
+  async function bodyObject(req, res, detailedErrors = false) {
     let body;
     try { body = JSON.parse(await readBody(req) || '{}'); }
-    catch (e) { json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); return null; }
-    if (!record(body)) { json(req, res, 400, { error: 'bad_json' }); return null; }
+    catch (e) {
+      const error = e.status ? 'too_large' : 'bad_json';
+      if (detailedErrors) requestError(req, res, e.status || 400, error);
+      else json(req, res, e.status || 400, { error });
+      return null;
+    }
+    if (!record(body)) {
+      if (detailedErrors) requestError(req, res, 400, 'bad_json');
+      else json(req, res, 400, { error: 'bad_json' });
+      return null;
+    }
     return body;
   }
 
   async function handleDetect(req, res) {
     const context = requestContext();
-    const body = await bodyObject(req, res); if (!body) { finishSequence(context); return; }
+    const body = await bodyObject(req, res, true); if (!body) { finishSequence(context); return; }
     const reqId = requestId(body.reqId);
+    knownRequestIds.set(req, reqId);
     const lang = normalizeLang(body.lang);
-    if (body.question !== undefined && typeof body.question !== 'string') { finishSequence(context); return json(req, res, 400, { error: 'bad_request' }); }
+    if (body.question !== undefined && typeof body.question !== 'string') { finishSequence(context); return requestError(req, res, 400, 'bad_request', reqId); }
     const question = typeof body.question === 'string' ? body.question.trim().slice(0, QUESTION_LIMIT) : '';
     const forceObjectId = typeof body.forceObjectId === 'string' ? body.forceObjectId : null;
     if (body.forceObjectId !== undefined && (!forceObjectId || (forceObjectId !== 'unknown' && !byId.has(forceObjectId)))) {
       finishSequence(context);
-      return json(req, res, 400, { error: 'bad_request' });
+      return requestError(req, res, 400, 'bad_request', reqId);
     }
     const t_received = Date.now(); const t_capture = Number(body.t_capture) || t_received;
     const preUploadMs = typeof body.preUploadMs === 'number' && Number.isFinite(body.preUploadMs) && body.preUploadMs >= 0 ? body.preUploadMs : null;
@@ -468,7 +568,7 @@ export function start({
       finishSequence(context);
       finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'bad_image' });
       both({ type: 'error', code: 'bad_image', message: 'A valid JPEG image is required', reqId });
-      return json(req, res, 400, { error: 'bad_image' });
+      return requestError(req, res, 400, 'bad_image', reqId);
     }
     try {
       // Optional centre crop ("aim"): the model classifies what is in it. A broken crop is dropped, not fatal.
@@ -513,19 +613,20 @@ export function start({
       if (e.code === 'busy') {
         finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'busy' });
         both({ type: 'error', code: 'busy', message: 'Model capacity is busy', reqId });
-        return json(req, res, 429, { error: 'busy' }, { 'retry-after': '2' });
+        return requestError(req, res, 429, 'busy', reqId, { 'retry-after': '2' });
       }
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
       finishRequest('detect', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: code });
       both({ type: 'error', code, message: e.message, reqId });
-      json(req, res, 502, { error: code, message: e.message, reqId });
+      requestError(req, res, 502, code, reqId);
     }
   }
 
   async function handleAsk(req, res) {
     const context = requestContext();
-    const body = await bodyObject(req, res); if (!body) { finishSequence(context); return; }
+    const body = await bodyObject(req, res, true); if (!body) { finishSequence(context); return; }
     const reqId = requestId(body.reqId);
+    knownRequestIds.set(req, reqId);
     const lang = normalizeLang(body.lang);
     const question = typeof body.question === 'string' ? body.question.trim() : '';
     const object = typeof body.aboutObjectId === 'string' ? byId.get(body.aboutObjectId) : null;
@@ -536,7 +637,7 @@ export function start({
       const message = !object ? 'A library aboutObjectId is required' : `Question must be 1 to ${QUESTION_LIMIT} characters`;
       finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'bad_request' });
       both({ type: 'error', code: 'bad_request', message, reqId });
-      return json(req, res, 400, { error: 'bad_request' });
+      return requestError(req, res, 400, 'bad_request', reqId, {}, `${message}.`);
     }
     try {
       const presentation = libraryPresentation(object.id, lang);
@@ -544,21 +645,29 @@ export function start({
       const result = await runAsk({ object: scoringObject, question, lang, env: process.env, provider, timeoutMs: detectTimeoutMs });
       let lensId = result?.lensId;
       let step = result?.step;
-      const chapter = object.chapters?.find((item) => `${object.id}.${item.lens}` === lensId);
-      if (!chapter || !Number.isInteger(step) || step < 1 || step > (chapter.captions?.length || 0)) {
+      let chapter = object.chapters?.find((item) => `${object.id}.${item.lens}` === lensId);
+      let matched = Boolean(chapter && Number.isInteger(step) && step >= 1 && step <= (chapter.captions?.length || 0));
+      const rawAnswer = typeof result?.answer === 'string' ? result.answer.trim() : '';
+      if (rawAnswer && !matched) {
         const local = pickStep(scoringObject, question);
         lensId = local?.lensId || null;
         step = local?.step || null;
+        chapter = object.chapters?.find((item) => `${object.id}.${item.lens}` === lensId);
+        matched = Boolean(chapter && Number.isInteger(step) && step >= 1 && step <= (chapter.captions?.length || 0));
       }
+      const noMatch = !rawAnswer || !matched;
       const t_detected = Date.now();
       const model = typeof result?.model === 'string' ? result.model : 'unknown';
       const detectMs = Number.isFinite(result?.ms) ? result.ms : t_detected - t_received;
       if (result?.provider) lastProvider = { provider: result.provider, model };
+      const answer = noMatch
+        ? (typeof presentation.fields.summary === 'string' ? presentation.fields.summary : '')
+        : (model === 'local-match' ? rawAnswer.slice(0, 300) : truncateAnswer(rawAnswer));
       const show = {
         type: 'show', reqId, objectId: object.id,
         ...presentation.fields, confidence: 1, question,
-        answer: typeof result?.answer === 'string' ? result.answer.slice(0, 300) : '',
-        ...(lensId && step ? { lensHint: { id: lensId, step } } : {}),
+        answer,
+        ...(!noMatch ? { lensHint: { id: lensId, step } } : { noMatch: true }),
         ...(STAND_INS.has(result?.provider) ? { standIn: true } : {}),
         timings: {
           t_capture: t_received, t_received, t_detected, preUploadMs: null,
@@ -580,12 +689,12 @@ export function start({
       if (e.code === 'busy') {
         finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: 'busy' });
         both({ type: 'error', code: 'busy', message: 'Model capacity is busy', reqId });
-        return json(req, res, 429, { error: 'busy' }, { 'retry-after': '2' });
+        return requestError(req, res, 429, 'busy', reqId, { 'retry-after': '2' });
       }
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
       finishRequest('ask', { reqId, detectMs: Date.now() - t_received, requestProvider: provider, model: provider, error: code });
       both({ type: 'error', code, message: e.message, reqId });
-      return json(req, res, 502, { error: code, message: e.message, reqId });
+      return requestError(req, res, 502, code, reqId);
     }
   }
 
@@ -597,14 +706,22 @@ export function start({
   }
 
   const server = http.createServer(async (req, res) => {
+    const endpointRoute = String(req.url || '').split('?', 1)[0];
+    const detailedRoute = endpointRoute === '/ask' || endpointRoute === '/detect';
     try {
       let url;
       try { url = new URL(req.url, 'http://x'); }
-      catch { return json(req, res, 400, { error: 'bad_request' }); }
+      catch {
+        if (detailedRoute) return requestError(req, res, 400, 'bad_request');
+        return json(req, res, 400, { error: 'bad_request' });
+      }
       const headers = cors(req);
       if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
       const protectedRoute = (req.method === 'POST' && ['/detect', '/ask', '/rendered'].includes(url.pathname)) || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
-      if (protectedRoute && !authorized(req)) return json(req, res, 401, { error: 'unauthorized' });
+      if (protectedRoute && !authorized(req)) {
+        if (detailedRoute) return requestError(req, res, 401, 'unauthorized');
+        return json(req, res, 401, { error: 'unauthorized' });
+      }
       if (req.method === 'GET' && url.pathname === '/phone') {
         let page;
         try { page = readFileFn(path.join(here, 'public', 'phone.html')); }
@@ -627,9 +744,11 @@ export function start({
       if (req.method === 'POST' && url.pathname === '/rendered') return await handleRendered(req, res);
       if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), req, res, headers, 'public, max-age=300', MEDIA_EXTS, readFileFn)) return;
       if (req.method === 'GET' && serveGlasses(url.pathname, req, res, headers, readFileFn)) return;
-      json(req, res, 404, { error: 'not_found' });
+      if (detailedRoute) requestError(req, res, 404, 'bad_request');
+      else json(req, res, 404, { error: 'not_found' });
     } catch (e) {
-      if (!res.headersSent) json(req, res, 500, { error: 'server_error' });
+      if (!res.headersSent && detailedRoute) requestError(req, res, 500, 'server_error', knownRequestIds.get(req) || requestId());
+      else if (!res.headersSent) json(req, res, 500, { error: 'server_error' });
       else res.destroy();
     }
   });

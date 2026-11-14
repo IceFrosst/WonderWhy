@@ -73,7 +73,7 @@ test('translated show fields merge per field without changing lens ids', async (
   assert.deepEqual(show.lenses, [
     { id: 'thing.motion', kind: 'motion', title: 'Liike', lead: 'English lead.', steps: ['Ensimm\u00e4inen', 'Toinen'] },
     { id: 'thing.inside', kind: 'inside', title: 'Inside', lead: 'Sis\u00e4puolen johdanto.', steps: ['Third', 'Fourth'] },
-    { id: 'thing.heat', kind: 'heat', title: 'Heat', lead: '', steps: ['Warm'] },
+    { id: 'thing.heat', kind: 'heat', title: 'Heat', steps: ['Warm'] },
   ]);
   assert.deepEqual(show.lenses.map((lens) => lens.id), ['thing.motion', 'thing.inside', 'thing.heat']);
 

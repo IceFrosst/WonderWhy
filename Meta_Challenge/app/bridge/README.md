@@ -46,6 +46,9 @@ Protected when `LENS_TOKEN` is set: `POST /detect`, `POST /ask`, `POST /rendered
 
 `POST /detect` accepts `lang` (`en`, `fi`, `sv`, `de`, `es`, or `fr`), and `GET /objects?lang=fi` returns the localized library. The bridge lazily reads and caches `../shared/i18n/<lang>.json`. Missing files, objects, lenses, and fields fall back to English; translated caption arrays are used only when their length matches the English array. To add a language, add it to the bridge's accepted language list and model language names, add it to the phone selector, then create the corresponding JSON file under `shared/i18n` using the existing files as the schema.
 
+Localized `show.lenses` may include `specText` and `knobLabels` for text drawn inside scenes; the English `spec` is never sent in a show.
+`GET /objects?lang=` merges translated `tagline`, `short`, chapter drawing text, and knob labels over the English library data.
+
 ## Sketches
 
 Set `SKETCH_PROVIDER=fixture` for the recorded stapler demo or `SKETCH_PROVIDER=auto` to generate explanations for unknown real photos. Auto mode costs one extra model call for each unknown object. Every generated sketch is marked `verified: false`; its numbers are estimates and are not checked facts.
