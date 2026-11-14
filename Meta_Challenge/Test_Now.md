@@ -7,6 +7,8 @@ updated: 2026-11-14
 
 # Test what we have now (Sat 14 Nov, updated 12:05)
 
+For the next checkout use the [current loaner checklist](Loaner_Test.md). The [design handoff](Design_Handoff.md) records the end of the live session and links the simulator.
+
 > [!summary]
 > For whoever holds the glasses next. Everything is set up on IceFrost's **Pixel 8** and the **Display glasses + band**. Takes about 15 minutes. Write what you see in the last column, or just tell IceFrost.
 
@@ -32,7 +34,7 @@ Things it knows well: **guitar, ball, bike, kettle, keys on a string, phone, spo
 | 1 | Open **Physics Lens** on the Pixel. If it says "Glasses not connected", tap **Connect glasses** | Glasses show "Physics Lens · Look at something and pinch" | |
 | 2 | Look at one of the objects, keep it in the **middle** of your view. **Pinch** (thumb + index finger, quick tap) | "Taking the photo" with a progress bar | |
 | 3 | First time only: a consent card. Pinch = Agree | | |
-| 4 | Card "What should I explain?": **say your question**, e.g. "how is it built?", "where does the energy go?", "how much?". Or pinch to skip | Progress bar "Thinking about your question" | |
+| 4 | Optional. If **Ask a question before sending a photo** is enabled in Developer, say your question or pinch to skip. The default submits immediately. | Progress bar "Thinking" or "Thinking about your question" | |
 | 5 | Wait (10 to 30 s) | A card with a still picture, opened at the part your question was about | |
 | 6 | Pinch = next step. Swipe left/right on your finger = other lens. Thumb + middle finger = back | Steps and lenses change | |
 | 7 | Say a follow-up while a result is on screen, e.g. "why?" | An answer card | |
@@ -48,7 +50,7 @@ Things it knows well: **guitar, ball, bike, kettle, keys on a string, phone, spo
 | 4 | Go back to the phone app and pinch at a new object | Does the phone app still work, or does it need Connect again? | |
 
 ## Test 3: all in one (Web App takes the photo) — NEW, untested on glasses
-The phone app runs in **Camera only** mode (Developer section, switch "Camera only (Web App shows the result)"; it is ON on the Pixel now). It takes no Display, so our Web App can stay in front. The Web App's home has a **Take photo** button: the bridge passes the request to the phone app (`GET /capture`, polled every second), the phone app takes the photo, the result comes back to the Web App as a normal `show`.
+Turn on **Film on glasses (Web App)** on the main phone screen, then tap **Connect glasses**. It takes no Display, so our Web App can stay in front. The Web App's home has a **Take photo** button: the bridge passes the request to the phone app (`GET /capture`, polled twice a second), the phone app takes the photo, the result comes back to the Web App as a normal `show`.
 
 | # | Do | You should see | What happened |
 |---|---|---|---|
@@ -57,7 +59,9 @@ The phone app runs in **Camera only** mode (Developer section, switch "Camera on
 | 3 | Look at a library object, select **Take photo** | 10 to 20 s later the live animation of that object | |
 | 4 | If nothing happens: the phone log says why (camera refused while the Web App is in front?) | | |
 
-To go back to cards on the glasses: switch "Camera only" off, Disconnect, Connect.
+To return to the native cards, turn **Film on glasses (Web App)** off and tap **Connect glasses**.
+
+For the kettle film, press Down to focus the playback controls. Select **Inspect** to rotate with Left/Right. Up/Down changes mode between Rotate, Zoom and Pan. Pinch to show or reassemble the parts, and Back to return to the film. **Listen** reads the current caption if the device exposes a speech voice.
 
 ## State for whoever iterates next (12:05)
 | Area | State | Where |

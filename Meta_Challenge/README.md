@@ -7,6 +7,8 @@ updated: 2026-11-14
 
 # Meta challenge: AI Glasses for Everyone, Everyday
 
+**Current baseline** · [Design handoff](Design_Handoff.md) covers the loaner results, simulator controls, and where to edit and regenerate the visuals.
+
 > [!summary]
 > Our **grand prize project**. Idea: **real-world explanation mode**. The trajectory-prediction idea is parked (see [Wearables_Research](../Research/Wearables_Research.md)).
 
@@ -59,6 +61,6 @@ _To fill in._ Candidates: [Wearables_Research](../Research/Wearables_Research.md
 |---|---|
 | Idea chosen | **Physics Lens** (explanation mode). Name still open |
 | Booth questions answered | Partly: [Booth_Questions](Booth_Questions.md) |
-| Code | Built overnight in [app/](app/README.md): 7 objects, 29 lenses, bridge, glasses Web App, Android app. Tested in simulators and an emulator only. **Never run on real glasses** |
-| Docs | [Submission](Submission.md) (claims with test setups), [Deck](Deck.md), [Glasses_Test](Glasses_Test.md) (first real-glasses test) |
+| Code | Android camera and Gemini result rendering ran on the loaner. The glasses Web App played the existing films and ran live kettle Inspect. See [Design handoff](Design_Handoff.md) for the verified routes and unresolved device checks. |
+| Docs | [Design handoff](Design_Handoff.md), [loaner results and retest checklist](Loaner_Test.md), [submission draft](Submission.md), [deck](Deck.md) |
 | Open for humans | Name, video, repo URL, live bridge deploy and lock, a Finnish read of the translations |

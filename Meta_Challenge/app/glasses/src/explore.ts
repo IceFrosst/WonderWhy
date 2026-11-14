@@ -248,11 +248,12 @@ export function arrangeExplore(info: ObjectInfo, media: ExploreMedia | null): {i
   const index = info.chapters.findIndex(isExploreChapter);
   if (index < 0) return {info, explore: null};
   const chapter = info.chapters[index];
-  const others = info.chapters.filter(item => !isExploreChapter(item));
+  const others = info.chapters.filter(item => !isExploreChapter(item) &&
+    (info.id !== 'phone' || item.lens === 'whatif' || item.lens === 'inside'));
   const usable = media !== null && parseExploreSpec(chapter.spec, chapter.captions.length) !== null &&
     media.videos.length === chapter.captions.length;
   if (!usable) return {info: {...info, chapters: others}, explore: null};
-  return {info: {...info, chapters: [chapter, ...others]}, explore: media};
+  return {info: {...info, chapters: [chapter, ...others.filter(item => info.id !== 'phone' || item.lens !== 'inside')]}, explore: media};
 }
 
 function sample(v: unknown): [number, number, number] | null {

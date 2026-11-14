@@ -15,7 +15,8 @@
   "dependencies": {
     "@wearables-ui-toolkit/mrbd": "130.33.0",
     "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react-dom": "19.2.7",
+    "three": "0.170.0"
   },
   "devDependencies": {
     "@types/react": "19.2.14",

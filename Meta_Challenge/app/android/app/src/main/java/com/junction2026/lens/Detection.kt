@@ -23,7 +23,13 @@ data class Lens(
  * Exported scene media for one lens. Files are relative to [Media.base]. Explore lenses also list [clean]
  * (text-free stills at rest, `explore/c<n>.png`) and [tracks] (`explore/tracks.json`, label anchors).
  */
-data class LensMedia(val stills: List<String>, val clip: String?, val clean: List<String> = emptyList(), val tracks: String? = null)
+data class LensMedia(
+    val stills: List<String>,
+    val clip: String?,
+    val clean: List<String> = emptyList(),
+    val tracks: String? = null,
+    val beatClips: List<String> = emptyList(),
+)
 
 /** `media` block: `base` is a bridge path like `/media/ball`. */
 data class Media(val base: String, val lenses: Map<String, LensMedia>)
@@ -338,6 +344,9 @@ object DetectionParser {
             key to LensMedia(
                 stills = strings(lm["stills"]), clip = lm.str("clip")?.ifBlank { null },
                 clean = strings(lm["clean"]), tracks = lm.str("tracks")?.trim()?.ifEmpty { null },
+                beatClips = (lm["beats"] as? List<*>).orEmpty().take(8).map {
+                    (it as? Map<*, *>)?.str("clip").orEmpty()
+                },
             )
         }.toMap()
         return Media(base, lenses)
@@ -365,9 +374,15 @@ object DetectionParser {
     fun tracks(d: Detection): List<Track> {
         val fromLenses = d.lenses.filter { it.steps.isNotEmpty() }
             .filter { !Explore.isExplore(it.id) || exploreUsable(d.media?.lenses?.get(it.id), it.steps.size) }
+            .filter { d.objectId != "phone" || it.kind in setOf("explore", "whatif", "inside") }
             .take(MAX_LENSES)
             .map { Track(it.id, it.title, it.lead, it.steps) }
-        if (fromLenses.isNotEmpty()) return fromLenses
+        if (fromLenses.isNotEmpty()) {
+            if (d.objectId != "phone") return fromLenses
+            return if (fromLenses.any { Explore.isExplore(it.lensId) }) {
+                fromLenses.filter { Explore.isExplore(it.lensId) || it.lensId == "phone.whatif" }
+            } else fromLenses
+        }
         if (d.steps.isEmpty()) return emptyList()
         // `steps` are the captions of the first lens, so its media (if any) belongs to them (not an Explore
         // lens without media: its captions are then shown as text only).

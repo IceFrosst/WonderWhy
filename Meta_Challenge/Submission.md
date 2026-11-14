@@ -8,7 +8,7 @@ updated: 2026-11-14
 # Submission text (Sun 15 Nov, matches what is built)
 
 > [!summary]
-> Text for the Junction Platform. **FINAL by Sun 10:00**, draft projects are not reviewed ([guidebook](../Research/Sources/Junction_2026_Participant_Guidebook.pdf), p. 12). Nothing here has run on real glasses yet. State comes from [app/README](app/README.md), [android README](app/android/README.md), the [handover](../Overnight/handover/meta.md) and the overnight status files (updated Sat 14 Nov, about 06:35 UTC).
+> Draft text for the Junction Platform. **FINAL by Sun 10:00**, draft projects are not reviewed ([guidebook](../Research/Sources/Junction_2026_Participant_Guidebook.pdf), p. 12). The table below records the earlier overnight baseline. Use the [design handoff](Design_Handoff.md) and [loaner evidence](Loaner_Test.md) for current test claims, including real capture, Gemini, and live kettle Inspect.
 
 ## Status labels used below
 | Label | Meaning |
@@ -103,12 +103,11 @@ Meta Wearables Device Access Toolkit 1.0.1 (Android, Kotlin, speech module `mwda
 | Spoken questions and language | The question text goes to the bridge and the model provider; the microphone listens only while a result is on screen | [android README](app/android/README.md) |
 
 ## Known limits
-- Never run on real glasses. Real-glasses plan: [Glasses_Test.md](Glasses_Test.md).
-- Camera lives in the phone app and animations live in the Web App. They cannot run together, so the full loop on glasses depends on the handover test.
+- Real capture and live kettle Inspect worked on the loaner. A complete photo-to-film run initiated from the foreground Web App and visible native MP4 playback still need acceptance. [Loaner evidence](Loaner_Test.md)
 - 7 objects. Others show "Not sure", or a generated sketch tagged unverified when that switch is on.
 - Physics is prerendered and checked by the team; the lens captions also went through an independent physics fact-check (18 captions corrected, curves recomputed). Sketches and model answers are not checked.
-- Detection numbers come from a dev stand-in, not Gemini. Translations are machine-made.
-- The live bridge is unlocked and on `mock` until a human deploys the fixed version.
+- The earlier aggregate detection benchmark used a stand-in. The real smartphone run used Gemini. Translations are machine-made.
+- The current hosted bridge uses Gemini and requires the team’s private bridge credential for recognition.
 
 ## Pilot path
 One physics class or a science centre, with a before and after quiz. **PLANNED**, no pilot has run.

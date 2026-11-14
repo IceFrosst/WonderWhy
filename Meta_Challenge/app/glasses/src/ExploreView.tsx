@@ -20,11 +20,18 @@ interface Props {
   isSketch: boolean;
   autoPlay: boolean;
   paused: boolean;
+  inspecting: boolean;
+  filmPaused: boolean;
+  onToggleFilm: () => void;
+  onHome: () => void;
+  onInspect?: () => void;
+  finalCapture: boolean;
   standIn?: boolean;
   demo?: boolean;
   lang?: string;
   onAuto: () => void;
   onRendered: () => void;
+  onMotion: () => void;
   /** A follow-up question answered on this beat (shown above the caption). */
   followUp?: {question: string; answer: string} | null;
 }
@@ -65,7 +72,7 @@ declare global {
 
 type Mode = 'loading' | 'video' | 'still' | 'none';
 
-const FALLBACK_MS = 1500;
+const FALLBACK_MS = 4500;
 const INPUT_PAUSE_MS = 20000;
 const FADE_MS = 300;
 const FRAME_GAP_MS = 1000 / 30;
@@ -89,6 +96,8 @@ class BeatPlayer {
   private paused = false;
   private loopFrom = 0;
   private disposed = false;
+  private lastVideoTime = 0;
+  private lastMotionAt = 0;
 
   constructor(
     private videos: [HTMLVideoElement, HTMLVideoElement],
@@ -130,6 +139,8 @@ class BeatPlayer {
     this.started = false;
     this.startedAt = 0;
     this.loops = 0;
+    this.lastVideoTime = 0;
+    this.lastMotionAt = 0;
     if (!url) {
       this.showStill(beat, token);
       return;
@@ -173,6 +184,17 @@ class BeatPlayer {
       this.startedAt = now - video.currentTime * 1000;
       window.clearTimeout(this.fallbackTimer);
     }
+    if (this.started) {
+      if (video.currentTime !== this.lastVideoTime || !this.lastMotionAt) {
+        this.lastVideoTime = video.currentTime;
+        this.lastMotionAt = now;
+      } else if (now - this.lastMotionAt >= FALLBACK_MS) {
+        this.showStill(this.beat, this.token);
+        return;
+      }
+      // Let the current clip buffer before starting a second download.
+      if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) this.preloadNext();
+    }
     const duration = video.duration;
     if (Number.isFinite(duration) && duration > 0.3 && !video.seeking && video.currentTime >= duration - 0.07) this.loop(video);
   }
@@ -186,6 +208,7 @@ class BeatPlayer {
   resume(): void {
     if (!this.paused) return;
     this.paused = false;
+    this.lastMotionAt = 0;
     if (this.current && (this.mode === 'video' || this.mode === 'loading')) this.play(this.current);
     if (!this.started && this.mode !== 'still' && this.mode !== 'none') this.armFallback(this.token, this.beat);
   }
@@ -253,7 +276,6 @@ class BeatPlayer {
         }
         this.still.classList.remove('is-on');
         this.onShown();
-        this.preloadNext();
       });
       this.frames.push(second);
     });
@@ -374,11 +396,18 @@ export default function ExploreView({
   isSketch,
   autoPlay,
   paused,
+  inspecting,
+  filmPaused,
+  onToggleFilm,
+  onHome,
+  onInspect,
+  finalCapture,
   standIn,
   demo,
   lang,
   onAuto,
   onRendered,
+  onMotion,
   followUp = null,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -394,18 +423,62 @@ export default function ExploreView({
   const followRef = useRef<HTMLParagraphElement>(null);
   const playerRef = useRef<BeatPlayer | null>(null);
   const controlRef = useRef<{start: () => void; stop: () => void} | null>(null);
+  const lastMode = useRef<Mode>('loading');
   const tracksRef = useRef<Tracks | null>(null);
   const lastInputRef = useRef(-Infinity);
   const layoutDirty = useRef(true);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
-  const live = useRef({step, replay, autoPlay, onAuto, onRendered, spec});
-  live.current = {step, replay, autoPlay, onAuto, onRendered, spec};
+  const live = useRef({step, replay, autoPlay, onAuto, onRendered, onMotion, spec});
+  live.current = {step, replay, autoPlay, onAuto, onRendered, onMotion, spec};
+  const motionReported = useRef(false);
   const [captionSize, setCaptionSize] = useState(20);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceError, setVoiceError] = useState(false);
+  const [stillOnly, setStillOnly] = useState(false);
   const beat = spec.beats[step];
   const caption = captions[step] ?? '';
   const number = beat?.number ?? null;
   const lastBeat = captions.length - 1;
+  const speech = window.speechSynthesis;
+  const line = followUp?.answer || caption;
+
+  useEffect(() => {
+    setSpeaking(false);
+    setVoiceError(false);
+    const cancelOnHide = () => {
+      if (!document.hidden) return;
+      speech?.cancel();
+      setSpeaking(false);
+    };
+    document.addEventListener('visibilitychange', cancelOnHide);
+    return () => {
+      document.removeEventListener('visibilitychange', cancelOnHide);
+      speech?.cancel();
+    };
+  }, [speech, step, line, inspecting, paused]);
+
+  const listen = () => {
+    if (!speech || !line) return;
+    speech.cancel();
+    setVoiceError(false);
+    if (speaking) {
+      setSpeaking(false);
+      return;
+    }
+    const speechLine = new SpeechSynthesisUtterance(line);
+    speechLine.lang = lang || 'en-GB';
+    speechLine.rate = 0.92;
+    speechLine.onend = () => setSpeaking(false);
+    speechLine.onerror = event => {
+      if (event.error === 'canceled' || event.error === 'interrupted') return;
+      setSpeaking(false);
+      setVoiceError(true);
+    };
+    lastInputRef.current = performance.now();
+    setSpeaking(true);
+    speech.speak(speechLine);
+  };
 
   // Any wearer input (D-pad, pinch, bridge nav) pauses auto-play for 20 s.
   useEffect(() => onNav(() => {
@@ -419,12 +492,13 @@ export default function ExploreView({
 
   // Pinch lands on the stage: keep it focused.
   useEffect(() => {
+    if (inspecting) return;
     const t = window.setTimeout(() => {
       const el = stageRef.current;
       if (el && document.activeElement !== el) el.focus({preventScroll: true});
     }, FOCUS_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [step]);
+  }, [step, inspecting]);
 
   // Caption: 20 px, at most 2 lines; a long (translated) sentence steps down to 18 then 16 px.
   useLayoutEffect(() => {
@@ -487,6 +561,7 @@ export default function ExploreView({
     lastShown.current = {step, replay};
     player.setLoopFrom(tracksRef.current?.beats[step]?.loopFrom ?? 0);
     player.show(step, restart);
+    setStillOnly(false);
     layoutDirty.current = true;
   }, [step, replay, media]);
 
@@ -709,6 +784,14 @@ export default function ExploreView({
       const player = playerRef.current;
       if (!player) return;
       player.tick(now);
+      if (!motionReported.current && player.mode === 'video' && player.started) {
+        motionReported.current = true;
+        live.current.onMotion();
+      }
+      if (player.mode !== lastMode.current) {
+        lastMode.current = player.mode;
+        setStillOnly(player.mode === 'still' || player.mode === 'none');
+      }
       const currentStep = live.current.step;
       const key = `${currentStep}|${player.mode}|${tracksRef.current ? 1 : 0}`;
       if (layoutDirty.current || key !== placedFor) {
@@ -721,7 +804,7 @@ export default function ExploreView({
       // Auto-play: the beat's own duration from when its video really started; input holds it 20 s.
       const tracks = tracksRef.current;
       // The spec's beat dur (default 6 s); tracks.json's dur is the clip length, move included.
-      const dur = (live.current.spec.beats[currentStep]?.dur ?? 6) * 1000;
+      const dur = (tracks?.beats[currentStep]?.dur ?? live.current.spec.beats[currentStep]?.dur ?? 6) * 1000;
       const inputHold = lastInputRef.current + INPUT_PAUSE_MS - now;
       const canAuto = live.current.autoPlay && currentStep < lastBeat && player.beat === currentStep;
       const progress = progressRef.current;
@@ -730,7 +813,8 @@ export default function ExploreView({
         progress.style.opacity = show ? '1' : '0';
         if (show) progress.style.transform = `scaleX(${Math.min(1, (now - player.startedAt) / dur).toFixed(3)})`;
       }
-      if (canAuto && player.started && autoFiredFor !== currentStep) {
+      const beatPlayed = player.mode !== 'video' || player.loops > 0 || player.videoTime() * 1000 >= dur - 100;
+      if (canAuto && player.started && beatPlayed && autoFiredFor !== currentStep) {
         const due = Math.max(player.startedAt + dur, lastInputRef.current + INPUT_PAUSE_MS);
         if (now >= due) {
           autoFiredFor = currentStep;
@@ -857,6 +941,27 @@ export default function ExploreView({
         <p className="xp-caption" ref={captionRef} key={`c${step}`}>
           {caption}
         </p>
+        {!demo && !inspecting && (
+          <div className="xp-actions" aria-label="Film controls" onFocus={() => {
+            lastInputRef.current = performance.now();
+          }}>
+            {stillOnly ? (
+              <button type="button" onClick={() => {
+                if (filmPaused) onToggleFilm();
+                emitNav('up');
+                stageRef.current?.focus();
+              }}>Play again</button>
+            ) : <button type="button" onClick={onToggleFilm}>{filmPaused ? 'Resume' : 'Pause'}</button>}
+            {onInspect && <button type="button" onClick={onInspect}>Inspect</button>}
+            {speech && window.SpeechSynthesisUtterance && line && (
+              <button type="button" onClick={listen}>{speaking ? 'Stop voice' : voiceError ? 'Retry voice' : 'Listen'}</button>
+            )}
+            {finalCapture && step === lastBeat && (
+              <button type="button" onClick={() => emitNav('next')}>New photo</button>
+            )}
+            <button type="button" data-film-home onClick={onHome}>Home</button>
+          </div>
+        )}
       </div>
     </div>
   );

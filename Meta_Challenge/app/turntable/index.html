@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WonderWhy · Kettle turntable</title>
+<style>
+  * {box-sizing:border-box}
+  body {margin:0;background:#000;color:#eef9ff;font:18px/1.35 system-ui;touch-action:none}
+  main {max-width:600px;margin:auto;padding:12px 16px}
+  h1 {margin:0;font-size:24px} p {margin:4px 0 8px;color:#c4d5df}
+  canvas {display:block;width:min(100%, 360px);margin:auto;cursor:grab;aspect-ratio:1}
+  canvas:active {cursor:grabbing}
+  fieldset {margin:6px 0;padding:0;border:0;display:flex;gap:6px;flex-wrap:wrap}
+  button {font:inherit;color:inherit;background:#12191d;border:1px solid #78939f;border-radius:6px;padding:4px 8px}
+  button[aria-pressed="true"] {color:#9befff;border-color:#9befff}
+  :focus-visible {outline:2px solid #f9db76;outline-offset:2px}
+  #caption {min-height:2.7em}
+</style>
+<main>
+  <h1>Inside an electric kettle</h1>
+  <p id="status">Loading the turntable…</p>
+  <canvas width="360" height="360" aria-label="Pre-rendered kettle views, controlled by the buttons below"></canvas>
+  <fieldset aria-label="Inspection mode">
+    <button id="rotate" aria-pressed="true">Rotate</button><button id="zoom" aria-pressed="false">Zoom</button><button id="pan" aria-pressed="false">Pan</button>
+    <button id="inside" aria-pressed="false">Explode</button><button id="reset">Reset</button>
+  </fieldset>
+  <fieldset aria-label="Adjust view">
+    <button id="less" aria-label="Rotate left">−</button><button id="more" aria-label="Rotate right">+</button><button id="listen">Listen</button>
+  </fieldset>
+  <p id="caption">The heating element sits underneath the water.</p>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const canvas = document.querySelector('canvas');
+  const ctx = canvas.getContext('2d');
+  const atlas = [new Image(), new Image()];
+  const copy = [
+    'The heating element sits underneath the water.',
+    'See the coil below the jug? It heats the water. When steam reaches the switch, a metal disc bends and cuts the power.',
+  ];
+  let mode = 'rotate', angle = 0, scale = 1, x = 0, y = 0, inside = 0, drag, paint = 0;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  function draw() {
+    if (paint) return;
+    paint = requestAnimationFrame(() => {
+      paint = 0;
+      const frame = ((Math.round(angle / 5) % 72) + 72) % 72;
+      const image = atlas[inside];
+      const size = 360 * scale, offset = (360 - size) / 2;
+      ctx.clearRect(0, 0, 360, 360);
+      if (image.naturalWidth) ctx.drawImage(image, frame % 9 * 240, Math.floor(frame / 9) * 240, 240, 240, offset + x, offset + y, size, size);
+      $('status').textContent = image.naturalWidth
+        ? `${frame * 5}° · ${Math.round(scale * 100)}% · Drag to ${mode}`
+        : image.complete ? 'Turntable could not load.' : 'Loading the turntable…';
+    });
+  }
+  for (const [i, name] of ['assembled', 'exploded'].entries()) {
+    atlas[i].onload = atlas[i].onerror = draw;
+    atlas[i].src = `${name}.webp`;
+  }
+  for (const id of ['rotate', 'zoom', 'pan']) $(id).onclick = () => {
+    mode = id;
+    for (const m of ['rotate', 'zoom', 'pan']) $(m).setAttribute('aria-pressed', String(m === mode));
+    $('less').setAttribute('aria-label', {rotate:'Rotate left', zoom:'Zoom out', pan:'Pan left'}[mode]);
+    $('more').setAttribute('aria-label', {rotate:'Rotate right', zoom:'Zoom in', pan:'Pan right'}[mode]);
+    draw();
+  };
+  function step(n) {
+    if (mode === 'rotate') angle += n * 5;
+    if (mode === 'zoom') scale = clamp(scale + n * 0.15, 0.75, 1.75);
+    if (mode === 'pan') x = clamp(x + n * 16, -100, 100);
+    draw();
+  }
+  const speech = window.speechSynthesis;
+  $('less').onclick = () => step(-1);
+  $('more').onclick = () => step(1);
+  $('reset').onclick = () => { angle = x = y = 0; scale = 1; draw(); };
+  $('inside').onclick = () => {
+    inside = 1 - inside;
+    speech?.cancel();
+    $('inside').setAttribute('aria-pressed', String(!!inside));
+    $('inside').textContent = inside ? 'Reassemble' : 'Explode';
+    $('caption').textContent = copy[inside];
+    draw();
+  };
+  $('listen').onclick = () => {
+    if (!speech || !window.SpeechSynthesisUtterance) return;
+    speech.cancel();
+    const line = new SpeechSynthesisUtterance(copy[inside]);
+    line.lang = 'en-GB';
+    line.rate = 0.92;
+    speech.speak(line);
+  };
+  if (!speech || !window.SpeechSynthesisUtterance) $('listen').hidden = true;
+  canvas.addEventListener('pointerdown', e => {
+    if (drag || e.button !== 0) return;
+    drag = {id:e.pointerId, x:e.clientX, y:e.clientY};
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (drag?.id !== e.pointerId) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag.x = e.clientX; drag.y = e.clientY;
+    if (mode === 'rotate') angle += dx * 1.2;
+    if (mode === 'zoom') scale = clamp(scale * Math.exp(-dy / 190), 0.75, 1.75);
+    if (mode === 'pan') { x = clamp(x + dx, -100, 100); y = clamp(y + dy, -100, 100); }
+    draw();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => {
+    if (drag?.id === e.pointerId) drag = undefined;
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { drag = undefined; speech?.cancel(); }
+  });
+</script>
+</html>

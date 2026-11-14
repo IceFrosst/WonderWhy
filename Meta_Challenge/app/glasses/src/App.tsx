@@ -19,10 +19,14 @@ import type {ObjectInfo} from './content';
 import Explainer from './Explainer';
 import {arrangeExplore, bridgeHttpOrigin, exploreMediaFromShow, isExploreChapter, probeExploreMedia} from './explore';
 import type {ExploreMedia} from './explore';
+import kettleManifest from '../../bridge/media/kettle/manifest.json';
+import phoneManifest from '../../bridge/media/phone/manifest.json';
 
 type View =
   | {k: 'home'}
+  | {k: 'ask'}
   | {k: 'blank'}
+  | {k: 'capturing'}
   | {k: 'detecting'; reqId: string}
   | {
       k: 'explain';
@@ -63,6 +67,28 @@ interface DemoRun {
   timer?: number;
   due: number;
   remaining: number;
+}
+
+interface VoiceToolHost {
+  registerTool(tool: {
+    name: string;
+    description: string;
+    inputSchema: {
+      type: 'object';
+      properties: Record<string, {type: 'string'; description: string}>;
+      required?: string[];
+    };
+    annotations?: {readOnlyHint: boolean};
+    execute(args: {object?: unknown} | null | undefined): string;
+  }, options: {signal: AbortSignal}): unknown;
+}
+
+function spokenObject(text: unknown): 'phone' | 'kettle' | null {
+  if (typeof text !== 'string') return null;
+  const phone = /\b(?:smart\s*phone|phone)s?\b/i.test(text);
+  const kettle = /\bkettles?\b/i.test(text);
+  if (phone === kettle) return null;
+  return phone ? 'phone' : 'kettle';
 }
 
 const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/;
@@ -155,21 +181,23 @@ interface HomeScreenProps {
   startDemo: () => void;
   /** Ask the phone app (camera-only mode) to take a photo; the result comes back as a normal `show`. */
   takePhoto: () => void;
+  openAsk: () => void;
 }
 
 function clampHomeIndex(index: number, count: number): number {
   return Math.max(0, Math.min(count - 1, index));
 }
 
-function HomeScreen({connected, openObject, startDemo, takePhoto}: HomeScreenProps) {
+function HomeScreen({connected, openObject, startDemo, takePhoto, openAsk}: HomeScreenProps) {
   const columns = OBJECTS.length > 6 ? 3 : 2;
   const choices = useMemo(
     () => [
       ...(connected ? [{id: 'photo', label: 'Take photo', short: 'Photo', onClick: () => takePhoto()}] : []),
       ...OBJECTS.map(object => ({id: object.id, label: object.label, short: object.short, onClick: () => openObject(object.id)})),
       {id: 'demo', label: 'Demo', short: 'Demo', onClick: () => startDemo()},
+      {id: 'ask', label: 'Ask', short: 'Ask', onClick: openAsk},
     ],
-    [connected, openObject, startDemo, takePhoto],
+    [connected, openObject, startDemo, takePhoto, openAsk],
   );
   const rows: typeof choices[] = [];
   for (let index = 0; index < choices.length; index += columns) rows.push(choices.slice(index, index + columns));
@@ -179,7 +207,7 @@ function HomeScreen({connected, openObject, startDemo, takePhoto}: HomeScreenPro
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => buttonRefs.current[0]?.getElement()?.focus());
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [connected]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -276,6 +304,36 @@ function HomeScreen({connected, openObject, startDemo, takePhoto}: HomeScreenPro
   );
 }
 
+function AskScreen({onAsk, onBack, voiceStatus}: {
+  onAsk: (text: string) => boolean;
+  onBack: () => void;
+  voiceStatus: string;
+}) {
+  const [text, setText] = useState('');
+  const [invalid, setInvalid] = useState(false);
+  return (
+    <Page headerText="Ask Physics Lens" enableSystemBarInset={false}>
+      <form className="ask-form" onSubmit={event => {
+        event.preventDefault();
+        setInvalid(!onAsk(text));
+      }}>
+        <label htmlFor="lens-question">What should I explain?</label>
+        <input id="lens-question" type="text" autoFocus value={text} maxLength={160}
+          placeholder="How does a phone work?" onChange={event => {
+            setText(event.target.value);
+            setInvalid(false);
+          }} />
+        {invalid && <p role="alert">Ask about a smartphone or an electric kettle.</p>}
+        <div className="ask-actions">
+          <button type="submit">Show visual</button>
+          <button type="button" onClick={onBack}>Back</button>
+        </div>
+        <small role="status">{voiceStatus}</small>
+      </form>
+    </Page>
+  );
+}
+
 interface ConsentScreenProps {
   onAccept: () => void;
 }
@@ -344,6 +402,7 @@ function urlDemoSeconds(): number | null {
 
 export default function App() {
   const [view, setView] = useState<View>({k: 'home'});
+  const [voiceStatus, setVoiceStatus] = useState('Hey Meta · checking availability');
   const [connected, setConnected] = useState(false);
   const connectedRef = useRef(false);
   const librarySeq = useRef(0);
@@ -358,6 +417,7 @@ export default function App() {
   const bridgeRef = useRef<BridgeClient | null>(null);
   const cardTimer = useRef<number | undefined>(undefined);
   const detectTimer = useRef<number | undefined>(undefined);
+  const captureTimer = useRef<number | undefined>(undefined);
   const paintFrame = useRef<number | undefined>(undefined);
   const sketchTimer = useRef<number | undefined>(undefined);
   const earlySketch = useRef<{message: Extract<BridgeMsg, {type: 'sketch'}>; received: number} | null>(null);
@@ -382,11 +442,16 @@ export default function App() {
     if (c && ms) cardTimer.current = window.setTimeout(() => setCard(null), ms);
   }, []);
 
+  const [inspectionKey, setInspectionKey] = useState<number>();
+  const kettleSelectedAt = useRef<number | undefined>(undefined);
+  const [kettleMotionMs, setKettleMotionMs] = useState<number>();
   const setViewNow = useCallback((next: View | ((current: View) => View)) => {
     const resolved = typeof next === 'function' ? next(viewRef.current) : next;
+    if (resolved.k !== 'capturing') window.clearTimeout(captureTimer.current);
     viewRef.current = resolved;
     setView(resolved);
   }, []);
+  const openAsk = useCallback(() => setViewNow({k: 'ask'}), [setViewNow]);
 
   const openObject = useCallback((objectId: string, extra?: Partial<View & {k: 'explain'}>) => {
     keyRef.current += 1;
@@ -398,14 +463,39 @@ export default function App() {
   // Camera-only mode: the phone app keeps no Display, so this Web App stays in front. The bridge relays
   // `capture` to the phone app, which takes the photo; its result arrives here as `detecting` then `show`.
   const takePhoto = useCallback(() => {
+    if (!connectedRef.current || viewRef.current.k === 'capturing' || viewRef.current.k === 'detecting') return;
+    flashCard(null);
+    setViewNow({k: 'capturing'});
     bridgeRef.current?.send({type: 'capture', t_sent: Date.now()});
-  }, []);
+    captureTimer.current = window.setTimeout(() => {
+      if (viewRef.current.k !== 'capturing') return;
+      setViewNow({k: 'home'});
+      flashCard({
+        title: 'No photo arrived',
+        body: 'Open Physics Lens on your phone and check that the glasses are connected. Then try again.',
+      }, CARD_MS);
+    }, 35000);
+  }, [flashCard, setViewNow]);
+
+  useEffect(() => () => window.clearTimeout(captureTimer.current), []);
 
   const openLibrary = useCallback((objectId: string, extra?: Partial<View & {k: 'explain'}>) => {
     const base = findObject(objectId);
     const beats = exploreBeats(base);
     const seq = ++librarySeq.current;
-    if (!beats || !connectedRef.current) {
+    if (objectId === 'kettle' || objectId === 'phone') {
+      const manifest = objectId === 'kettle' ? kettleManifest : phoneManifest;
+      const media = exploreMediaFromShow({base: `/media/${objectId}`, lenses: manifest.lenses}, beats, bridgeHttpOrigin());
+      if (media) {
+        if (objectId === 'kettle') {
+          kettleSelectedAt.current = performance.now();
+          setKettleMotionMs(undefined);
+        }
+        openObject(objectId, {...extra, ...arrangeExplore(base, media)});
+        return;
+      }
+    }
+    if (!beats || !bridgeHttpOrigin()) {
       openObject(objectId, {...extra, ...arrangeExplore(base, null)});
       return;
     }
@@ -415,6 +505,63 @@ export default function App() {
       openObject(objectId, {...extra, ...arrangeExplore(base, media)});
     });
   }, [openObject]);
+
+  const openSpokenObject = useCallback((objectId: 'phone' | 'kettle') => {
+    flashCard(null);
+    openLibrary(objectId, {initialLens: 0, initialStep: 0});
+  }, [flashCard, openLibrary]);
+
+  useEffect(() => {
+    const host = (document as Document & {modelContext?: VoiceToolHost}).modelContext;
+    if (!host?.registerTool) {
+      setVoiceStatus('Hey Meta · WebMCP unavailable on this device');
+      return;
+    }
+    const lifetime = new AbortController();
+    void Promise.resolve().then(async () => {
+      if (lifetime.signal.aborted) return;
+      try {
+        await host.registerTool({
+          name: 'physics_lens_get_state',
+          description: 'Read the visual currently shown in Physics Lens and the topics you can open.',
+          annotations: {readOnlyHint: true},
+          inputSchema: {type: 'object', properties: {}},
+          execute: () => {
+            const current = viewRef.current;
+            return JSON.stringify({screen: current.k, visual: current.k === 'explain' ? current.info.label : null,
+              topics: ['smartphone', 'electric kettle']});
+          },
+        }, {signal: lifetime.signal});
+      } catch (error) {
+        console.warn('Physics Lens voice state registration failed', error);
+      }
+      if (lifetime.signal.aborted) return;
+      try {
+        await host.registerTool({
+          name: 'physics_lens_show_explanation',
+          description: 'Open the animated visual explanation on the glasses when asked how a smartphone or electric kettle works.',
+          inputSchema: {
+            type: 'object',
+            properties: {object: {type: 'string', description: 'The requested object. Use phone for a smartphone or mobile phone, and kettle for an electric kettle.'}},
+            required: ['object'],
+          },
+          execute: args => {
+            setVoiceStatus('Hey Meta · command received');
+            const objectId = spokenObject(args?.object);
+            if (!objectId) return JSON.stringify({error: true, message: 'Ask about a smartphone or an electric kettle.'});
+            openSpokenObject(objectId);
+            const label = objectId === 'phone' ? 'smartphone' : 'electric kettle';
+            return JSON.stringify({visual: label, next_action: 'Confirm the visual opened in one short sentence.'});
+          },
+        }, {signal: lifetime.signal});
+        if (!lifetime.signal.aborted) setVoiceStatus(current => current.endsWith('command received') ? current : 'Hey Meta · registered, waiting for a command');
+      } catch (error) {
+        if (!lifetime.signal.aborted) setVoiceStatus('Hey Meta · registration failed');
+        console.warn('Physics Lens voice tool registration failed', error);
+      }
+    });
+    return () => lifetime.abort();
+  }, [openSpokenObject]);
 
   const clearDetectTimer = useCallback(() => {
     window.clearTimeout(detectTimer.current);
@@ -656,7 +803,10 @@ export default function App() {
               translated ? localise(library, m) : library,
               exploreMediaFromShow(m.media, exploreBeats(library), bridgeHttpOrigin()),
             );
-            const base = arranged.info;
+            // For a new capture, open the rendered film. Keep follow-up links to their exact explanation.
+            const base = arranged.explore && !m.question && m.objectId !== 'phone'
+              ? {...arranged.info, chapters: arranged.info.chapters.slice(0, 1)}
+              : arranged.info;
             const hintLens =
               m.lensHint && typeof m.lensHint.id === 'string'
                 ? base.chapters.findIndex(chapter => `${base.id}.${chapter.lens ?? ''}` === m.lensHint?.id)
@@ -830,6 +980,10 @@ export default function App() {
       flashCard(null);
       return true;
     }
+    if (viewRef.current.k === 'explain' && inspectionKey === viewRef.current.key) {
+      setInspectionKey(undefined);
+      return true;
+    }
     if (viewRef.current.k !== 'home') {
       setViewNow({k: 'home'});
       return true;
@@ -840,6 +994,9 @@ export default function App() {
   const reqId = view.k === 'explain' && !view.acked ? view.reqId : undefined;
   const onRendered = useCallback(() => {
     if (reqId && !demoRun.current.active) {
+      if (window.parent !== window) {
+        window.parent.postMessage({type: 'lens:paint', reqId}, window.location.origin);
+      }
       bridgeRef.current?.send({type: 'rendered', reqId, t_rendered: Date.now()});
       const current = viewRef.current;
       if (current.k === 'explain' && current.reqId === reqId && !current.acked) setViewNow({...current, acked: true});
@@ -867,11 +1024,11 @@ export default function App() {
   let body;
   if (view.k === 'blank') {
     body = <div className="blank" aria-hidden="true" />;
-  } else if (view.k === 'detecting') {
+  } else if (view.k === 'detecting' || view.k === 'capturing') {
     body = (
       <div className="center" role="status" aria-live="polite">
         <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED}>
-          {'Looking\u2026'}
+          {view.k === 'capturing' ? 'Taking the photo…' : 'Looking…'}
         </TextView>
       </div>
     );
@@ -894,13 +1051,34 @@ export default function App() {
           followUpStep={view.followUpStep}
           demo={demoActive}
           paused={doffed}
+          inspecting={inspectionKey === view.key}
+          onInspect={() => setInspectionKey(view.key)}
+          onExitInspect={() => setInspectionKey(undefined)}
+          onNewCapture={connected ? takePhoto : () => setViewNow({k: 'home'})}
           onRendered={onRendered}
+          onMotion={() => {
+            if (view.objectId === 'kettle' && kettleSelectedAt.current !== undefined) {
+              setKettleMotionMs(Math.round(performance.now() - kettleSelectedAt.current));
+              kettleSelectedAt.current = undefined;
+            }
+            if (view.reqId && window.parent !== window) {
+              window.parent.postMessage({type: 'lens:motion', reqId: view.reqId}, window.location.origin);
+            }
+          }}
+          motionMs={view.objectId === 'kettle' ? kettleMotionMs : undefined}
           onState={onState}
         />
       </Page>
     );
+  } else if (view.k === 'ask') {
+    body = <AskScreen voiceStatus={voiceStatus} onBack={() => setViewNow({k: 'home'})} onAsk={text => {
+      const objectId = spokenObject(text);
+      if (!objectId) return false;
+      openSpokenObject(objectId);
+      return true;
+    }} />;
   } else {
-    body = <HomeScreen connected={connected} openObject={openLibrary} startDemo={startDemo} takePhoto={takePhoto} />;
+    body = <HomeScreen connected={connected} openObject={openLibrary} startDemo={startDemo} takePhoto={takePhoto} openAsk={openAsk} />;
   }
 
   if (consentRequired) body = <ConsentScreen onAccept={acceptConsent} />;

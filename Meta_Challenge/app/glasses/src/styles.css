@@ -549,3 +549,114 @@ body {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
+
+.xp-actions {
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.xp-actions button {
+  font: inherit;
+  color: white;
+  background: #171f23;
+  border: 1px solid #82959e;
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.xp-actions button:focus-visible {
+  outline: 2px solid #f9db76;
+  outline-offset: 2px;
+}
+
+.xp-inspect {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  background: #000;
+  color: white;
+  font-size: 18px;
+}
+
+body:has(.xp-inspect) {
+  touch-action: none;
+}
+
+.xp-inspect-header {
+  position: absolute;
+  inset: 14px 18px auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 1;
+}
+
+.xp-inspect h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.xp-inspect-header button {
+  border: 0;
+  background: #000;
+  color: #c4d5df;
+  font: inherit;
+  font-size: 16px;
+  padding: 6px;
+}
+
+.xp-inspect-header button:focus-visible {
+  outline: none;
+  color: #9befff;
+  text-decoration: underline;
+}
+
+.xp-inspect canvas {
+  width: min(100%, 544px, 86vh);
+  height: auto;
+  touch-action: none;
+}
+
+.xp-inspect:focus,
+.xp-inspect:focus-visible {
+  outline: none;
+}
+
+.xp-inspect-status {
+  position: absolute;
+  inset-block-start: 50%;
+  margin: 0;
+}
+.ask-form {
+  display: grid;
+  gap: 16px;
+  margin: 32px auto;
+  width: min(90%, 440px);
+  color: white;
+  font-size: 22px;
+}
+
+.ask-form input,
+.ask-actions button {
+  border: 1px solid #9da8ae;
+  border-radius: 12px;
+  background: #151a1d;
+  color: white;
+  padding: 12px;
+  font: inherit;
+}
+
+.ask-form :focus-visible {
+  outline: 3px solid #67e7ff;
+  outline-offset: 3px;
+}
+
+.ask-actions {
+  display: flex;
+  gap: 12px;
+}

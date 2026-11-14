@@ -5,6 +5,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.SystemClock
+import android.media.AudioAttributes
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import com.meta.wearable.dat.camera.addCamera
 import com.meta.wearable.dat.camera.removeCamera
 import com.meta.wearable.dat.camera.types.PhotoData
@@ -28,6 +31,10 @@ import com.meta.wearable.dat.display.Display
 import com.meta.wearable.dat.display.addDisplay
 import com.meta.wearable.dat.display.removeDisplay
 import com.meta.wearable.dat.display.types.DisplayState
+import com.meta.wearable.dat.display.types.VideoCodec
+import com.meta.wearable.dat.display.types.VideoPlayerState
+import com.meta.wearable.dat.display.types.VideoSource
+import com.meta.wearable.dat.display.views.VideoPlayer
 import com.meta.wearable.dat.inputs.addInputs
 import com.meta.wearable.dat.inputs.removeInputs
 import com.meta.wearable.dat.inputs.types.InputEvent
@@ -54,6 +61,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -64,6 +72,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Failure of one capture/detect run, with text for the glasses card. */
@@ -159,6 +168,7 @@ class GlassesController(
     private var sessionNo = 0
     /** First-run consent card on screen. */
     private var consentShown = false
+    private var consentForWeb = false
     private var sessionJobs = mutableListOf<Job>()
     /** Collectors of the current Inputs (state, errors, events); replaced when Inputs are added again. */
     private val inputsJobs = mutableListOf<Job>()
@@ -173,8 +183,8 @@ class GlassesController(
     /** Set while the "What should I explain?" card is up: the next final transcription (or a pinch = skip) ends it. */
     private var questionWait: CompletableDeferred<String?>? = null
     private var heardPartial = false
-    /** Ask "what should I explain?" after every photo. Off = send the photo at once (the earlier behaviour). */
-    var askWithPhoto = true
+    /** Optionally ask "what should I explain?" before submitting a native capture. */
+    var askWithPhoto = false
     /** Follows the glasses' state outside any session (a folded pair ends the session but keeps reporting). */
     private var deviceWatchJob: Job? = null
     /** The device watch saw the Bluetooth link go down and not come back yet. */
@@ -200,6 +210,7 @@ class GlassesController(
     // Screen state. Touched only on the main thread (inside [scope]).
     private var current: Detection? = null
     private var explainer: ExplainerState? = null
+    private var doneSelected = false
     /** True while [current] comes from the bundled library (offline or a "Seen today" replay), not from a photo. */
     private var currentSaved = false
     /** [current] is a "Seen today" replay: no offline tag, Back goes to idle (not the offline picker). */
@@ -211,6 +222,12 @@ class GlassesController(
     /** Answer card of a follow-up question, while it is on screen. */
     private var answerDet: Detection? = null
     private var answerPos: Pair<Int, Int>? = null
+    private var filmJob: Job? = null
+    private var activePlayer: VideoPlayer? = null
+    private var narrator: TextToSpeech? = null
+    private var narratorReady = false
+    private var narratorReleased = false
+    private var narrationId: String? = null
     /** Spoken questions (`session.addSpeech()`); listens only while a library result is on screen. */
     private var speech: Speech? = null
 
@@ -363,6 +380,7 @@ class GlassesController(
 
     /** Capabilities first, then the session: removing them from a stopped session does not free them. */
     private fun stopSession(s: DeviceSession) {
+        stopFilm()
         inputsJobs.forEach { it.cancel() }
         runCatching { speech?.stop() }
         runCatching { s.removeSpeech() }
@@ -373,6 +391,9 @@ class GlassesController(
 
     /** [keepAlerts]: the session ended by itself, so the wearer still needs to see why. */
     private fun teardown(status: String, keepAlerts: Boolean) {
+        webCaptureActive = false
+        stopFilm()
+        stopNarration()
         captureJob?.cancel()
         inputsJobs.forEach { it.cancel() }
         inputsJobs.clear()
@@ -391,6 +412,7 @@ class GlassesController(
         displayReady.value = false
         waitJob?.cancel()
         consentShown = false
+        consentForWeb = false
         _consent.value = false
         speech = null
         _speech.value = "-"
@@ -481,22 +503,36 @@ class GlassesController(
      * and play the result the bridge broadcasts to it. Set before Connect.
      */
     var cameraOnly = false
+    private var webCaptureActive = false
+    private var lastWebCapture = 0
+    private var webCaptureInitialised = false
 
     private suspend fun attachCapabilities(sess: DeviceSession) {
+        // Any connected Physics Lens session can serve a request made in the glasses Web App.
+        sessionJobs += scope.launch {
+            while (isActive && session === sess) {
+                delay(500)
+                if (sess.state.value != DeviceSessionState.STARTED || busy.get()) continue
+                if (!webCaptureInitialised) {
+                    // Take a baseline before accepting requests so reconnecting doesn't repeat a prior capture.
+                    val (_, latest) = bridge.pollCapture(Int.MAX_VALUE) ?: continue
+                    lastWebCapture = latest
+                    webCaptureInitialised = true
+                    continue
+                }
+                val (want, id) = bridge.pollCapture(lastWebCapture) ?: continue
+                if (id < lastWebCapture) lastWebCapture = 0 // the bridge restarted
+                if (want && id > lastWebCapture) {
+                    log("Web App asked for a photo (#$id)")
+                    tryTrigger(fromWeb = true)
+                    lastWebCapture = id
+                } else if (!want) lastWebCapture = id
+            }
+        }
         if (cameraOnly) {
             log("Camera only: no Display capability; results go to the Web App through the bridge")
             displayReady.value = true
             addInputsTo(sess)
-            // "Take photo" in the Web App reaches us through the bridge (GET /capture, polled each second).
-            sessionJobs += scope.launch {
-                var seen = bridge.pollCapture(0)?.second ?: 0
-                while (isActive && session === sess) {
-                    delay(1_000)
-                    val (want, id) = bridge.pollCapture(seen) ?: continue
-                    if (want && id > seen) { log("Web App asked for a photo (#$id)"); trigger() }
-                    seen = maxOf(seen, id)
-                }
-            }
             return
         }
         val addDisplayResult = sess.addDisplay()
@@ -608,6 +644,7 @@ class GlassesController(
     }
 
     private fun onHeard(r: TranscriptionResult) {
+        if (narrationId != null) return
         // A question spoken right after the photo goes with that photo, not to /ask.
         questionWait?.takeIf { it.isActive }?.let { w ->
             if (r.text.isNotBlank()) heardPartial = true
@@ -633,7 +670,7 @@ class GlassesController(
     /** Brings speech to [wantListening]; called again when speech reaches STOPPED or STARTED. */
     private fun applyListening() {
         val sp = speech ?: return
-        val want = wantListening
+        val want = wantListening && narrationId == null
         when (sp.state.value) {
             SpeechState.STOPPED -> if (want) sp.start().onFailure { e, _ -> log("Speech did not start: ${e.description}") }
             SpeechState.STARTED, SpeechState.STARTING -> if (!want) sp.stop()
@@ -647,6 +684,10 @@ class GlassesController(
         _device.value = "Worn: ${d.donState.name} · Hinge: ${d.hingeState.name} · Heat: ${d.thermalLevel.name} · Link: ${d.linkState.name}"
         val off = d.donState == DonState.DOFFED && lastDon != DonState.DOFFED
         val folded = d.hingeState == HingeState.CLOSED && lastHinge != HingeState.CLOSED
+        if (off || folded) {
+            stopFilm()
+            stopNarration()
+        }
         if ((off || folded) && busy.get()) {
             log("Glasses ${if (off) "taken off" else "folded"}: cancelling capture")
             captureJob?.cancel()
@@ -763,6 +804,7 @@ class GlassesController(
      * it early is what gave "Invalid display state for operation").
      */
     private suspend fun show(card: CardSpec, record: Boolean = true): Boolean {
+        if (webCaptureActive) return false // the requester owns the visible Web App
         if (record) {
             lastContent = card
             if (notice != null) {
@@ -795,6 +837,8 @@ class GlassesController(
     private suspend fun restore(): Boolean = show(lastContent ?: Cards.idle(), record = false)
 
     suspend fun showIdle() {
+        stopFilm()
+        stopNarration()
         setListening(false)
         _receipt.value = null
         show(Cards.idle())
@@ -810,14 +854,14 @@ class GlassesController(
     fun trigger() { tryTrigger() }
 
     /** True when the photo runs now or once the display is ready; false when refused (logged). */
-    private fun tryTrigger(): Boolean {
+    private fun tryTrigger(fromWeb: Boolean = false): Boolean {
         // A pinch while the question card is up means "no question, just explain it".
-        questionWait?.takeIf { it.isActive }?.let { it.complete(null); log("Question skipped"); return true }
+        if (skipQuestion()) return true
         val blocking = TriggerGate.blocking(active)
         val d = TriggerGate.decide(
             // While Connect is still creating the session, a trigger waits for the display like any other.
             connected = session != null || connecting,
-            displayReady = displayReady.value,
+            displayReady = fromWeb || displayReady.value,
             blocking = blocking,
             busy = busy.get(),
             needsConsent = TriggerGate.needsConsent(Prefs.consent(ctx), useFixture),
@@ -825,7 +869,7 @@ class GlassesController(
         when (d) {
             TriggerDecision.RUN -> Unit
             TriggerDecision.WAIT_DISPLAY -> { waitForDisplayThenTrigger(); return true }
-            TriggerDecision.CONSENT -> { log(TriggerGate.refusal(d, blocking)); scope.launch { showConsent() }; return false }
+            TriggerDecision.CONSENT -> { log(TriggerGate.refusal(d, blocking)); scope.launch { showConsent(fromWeb) }; return false }
             else -> { log(TriggerGate.refusal(d, blocking)); return false }
         }
         if (!busy.compareAndSet(false, true)) { log(TriggerGate.refusal(TriggerDecision.BUSY, null)); return false }
@@ -833,12 +877,16 @@ class GlassesController(
         consentShown = false
         _consent.value = false
         captureJob = launchExclusive {
+            val startedInCapture = sessionNo
+            webCaptureActive = fromWeb
             explainer = null
             picker = null
             answerDet = null
+            stopFilm()
+            stopNarration()
             setListening(false)
             lower(DeviceAlert.CAMERA_DENIED)
-            runCapture()
+            try { runCapture() } finally { if (sessionNo == startedInCapture && fromWeb) webCaptureActive = false }
         }
         return true
     }
@@ -882,35 +930,40 @@ class GlassesController(
 
     // ---- first-run consent (DESIGN.md states table, PROTOCOL device state `first_run`) ----
 
-    private suspend fun showConsent() {
+    private suspend fun showConsent(fromWeb: Boolean = false) {
         explainer = null
         picker = null
         answerDet = null
         setListening(false)
         consentShown = true
+        consentForWeb = fromWeb
         _consent.value = true
-        show(Cards.consent(onAgree = { agreeConsent() }, onNotNow = { if (navAllowed()) consentNotNow() }))
+        if (!fromWeb) show(Cards.consent(onAgree = { agreeConsent() }, onNotNow = { if (navAllowed()) consentNotNow() }))
     }
 
     /** Agree (pinch, the glasses button or the phone card): remembered in prefs, then the photo is taken. */
     fun agreeConsent() {
         if (!consentShown) return
+        val fromWeb = consentForWeb
+        consentForWeb = false
         consentShown = false
         _consent.value = false
         Prefs.setConsent(ctx, true)
         log("Consent given: photos allowed")
         lastNavAt = SystemClock.uptimeMillis() // the pinch that agreed must not also act on the next card
         // Refused (glasses off, no session): the consent card must not stay as the card to restore.
-        if (!tryTrigger()) scope.launch { showIdle() }
+        if (!tryTrigger(fromWeb)) scope.launch { if (!fromWeb) showIdle() }
     }
 
     /** Not now (the button or Back): idle card; the next trigger asks again. */
     private fun consentNotNow() {
         if (!consentShown) return
+        val fromWeb = consentForWeb
+        consentForWeb = false
         consentShown = false
         _consent.value = false
         log("Consent: not now (asked again on the next photo)")
-        scope.launch { showIdle() }
+        if (!fromWeb) scope.launch { showIdle() }
     }
 
     /** Phone dev button: forget the agreement so the next photo asks again. */
@@ -933,12 +986,15 @@ class GlassesController(
                 nextFixture()
             } else {
                 val tCapture = System.currentTimeMillis()
+                val cameraStart = SystemClock.elapsedRealtime()
                 val (jpeg, focus) = withProgress("Taking the photo", PHOTO_EXPECTED_MS) { withTimeout(30_000) { takePhotoJpeg() } }
-                log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
+                val photoReady = SystemClock.elapsedRealtime()
+                log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB ready in ${photoReady - cameraStart} ms")
                 onPhoto(jpeg)
                 lastPhotoKb = jpeg.size / 1024
                 question = listenForQuestion()
                 val sentAt = SystemClock.elapsedRealtime()
+                log("Submitting photo ${sentAt - photoReady} ms after JPEG was ready")
                 withProgress(if (question != null) "Thinking about your question" else "Thinking", DETECT_EXPECTED_MS) {
                     bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null }, question)
                 }.also { receivedAt = SystemClock.elapsedRealtime(); lastDetectMs = receivedAt - sentAt }
@@ -1023,14 +1079,17 @@ class GlassesController(
      * when the wearer pinches (skip), stays silent for [QUESTION_WAIT_MS], or speech is not available.
      */
     private suspend fun listenForQuestion(): String? {
-        if (!askWithPhoto || speech == null || cameraOnly) return null
+        if (!askWithPhoto || speech == null || cameraOnly || webCaptureActive) return null
         val w = CompletableDeferred<String?>()
         heardPartial = false
         questionWait = w
         try {
-            show(Cards.askWhat())
             setListening(true)
-            var q = withTimeoutOrNull(QUESTION_WAIT_MS) { w.await() }
+            var q = withTimeoutOrNull(QUESTION_WAIT_MS) {
+                // A slow display acknowledgement must not delay a pinch or a completed transcription.
+                val prompt = scope.launch { show(Cards.askWhat { if (questionWait === w) skipQuestion() }, record = false) }
+                try { w.await() } finally { prompt.cancel() }
+            }
             // Still talking at the deadline: wait for the end of the sentence.
             if (q == null && !w.isCompleted && heardPartial) q = withTimeoutOrNull(QUESTION_FINISH_MS) { w.await() }
             val clean = BridgeRequests.cleanQuestion(q)
@@ -1042,12 +1101,23 @@ class GlassesController(
         }
     }
 
+    private fun skipQuestion(): Boolean {
+        val wait = questionWait ?: return false
+        if (wait.complete(null)) {
+            lastNavAt = SystemClock.uptimeMillis()
+            log("Question skipped")
+        }
+        return true
+    }
+
     /** Error card: the title and "Try again in a moment." unless [detail] says what to do. */
     private suspend fun showError(title: String, detail: String = Cards.t(Lang.ERROR_BODY)) =
         show(Cards.error(title, ::trigger, detail))
 
     private fun done() {
+        if (!navAllowed()) return
         scope.launch {
+            current = null
             explainer = null
             picker = null
             answerDet = null
@@ -1232,6 +1302,9 @@ class GlassesController(
             }
         }
         resultReceipt = _receipt.value
+        if (source == ResultSource.BRIDGE && verdict is Verdict.Explainer && openAt == null) {
+            explainer?.let { playFilm(it, automatic = true) }
+        }
         return shown
     }
 
@@ -1259,8 +1332,10 @@ class GlassesController(
     }
 
     /** Shows [s] at once (with the still if cached), then swaps the still in when it arrives. */
-    private suspend fun showExplainer(s: ExplainerState): Boolean {
+    private suspend fun showExplainer(s: ExplainerState, keepFocus: Boolean = false): Boolean {
         val det = current ?: return false
+        if (!keepFocus) doneSelected = false
+        stopNarration()
         explainer = s
         answerDet = null
         setListening(AskFlow.target(det) is AskTarget.Object)
@@ -1268,6 +1343,10 @@ class GlassesController(
         media.prefetch(paths.filterNotNull())
         // The overview shows the first step's still of its lens.
         val path = paths.getOrNull(if (s.isOverview) 0 else s.step)
+        val firstStep = paths.firstOrNull()
+        if (s.isOverview && Explore.isExplore(s.track.lensId) && firstStep != null) {
+            scope.launch { runCatching { exploreBeats(det, s.track) } }
+        }
         // Explore: the still needs its beat's labels and number too (cardStill is null until they are loaded).
         val explore = Explore.isExplore(s.track.lensId)
         val cached = path?.let { cardStill(det, it, s) }
@@ -1278,7 +1357,8 @@ class GlassesController(
                 val bmp = runCatching { media.get(path) }.getOrNull()
                 beats?.await()
                 // Only if the wearer is still on this card; a failed still keeps the text card.
-                if (bmp != null && explainer === s && current === det) show(explainerCard(det, s, cardStill(det, path, s)))
+                if (bmp != null && explainer === s && current === det && filmJob?.isActive != true)
+                    show(explainerCard(det, s, cardStill(det, path, s)))
                 else if (bmp == null) log("Still unavailable: $path")
             }
         }
@@ -1347,12 +1427,142 @@ class GlassesController(
             summary = if (sk != null) sk.answer else det.summary ?: concepts[det.objectId],
             answer = if (sk != null) null else det.answer,
             still = still,
-            onPrimary = { scope.launch { explainerPrimary() } },
+            onPrimary = { scope.launch { if (explainer === s) explainerPrimary() } },
             saved = currentSaved && !currentReplay,
             sketch = sk != null,
             standIn = det.standIn,
             stillAlt = alt,
+            onDone = { if (explainer === s) done() },
+            doneSelected = doneSelected,
+            onPlay = if (s.isOverview && filmUrl(det, s) != null) {
+                { scope.launch { if (explainer === s) explainerPrimary() } }
+            } else null,
         )
+    }
+
+    private var failedAutomaticFilm = false
+
+    private fun filmUrl(det: Detection, s: ExplainerState): String? {
+        if (cameraOnly || webCaptureActive || currentSaved || useFixture || !Explore.isExplore(s.track.lensId)) return null
+        val media = det.media ?: return null
+        val clip = media.lenses[s.track.lensId]?.beatClips?.getOrNull(beatIndex(s)) ?: return null
+        if (!clip.endsWith(".mp4", ignoreCase = true)) return null
+        val path = DetectionParser.stillPath(media.base, clip) ?: return null
+        return bridge.config.baseUrl.trimEnd('/') + path
+    }
+
+    /** Play the first Explore beat in this DAT session, then return to the same explanation. */
+    private fun playFilm(s: ExplainerState, automatic: Boolean = false) {
+        val det = current ?: return
+        if (automatic && failedAutomaticFilm) return
+        val url = filmUrl(det, s) ?: return
+        val d = display?.takeIf { it.state.value == DisplayState.STARTED } ?: return
+        if (filmJob?.isActive == true) return
+        val player = VideoPlayer(VideoSource.Url(url), VideoCodec.MP4)
+        activePlayer = player
+        filmJob = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+            stopNarration()
+            setListening(false)
+            var played = false
+            try {
+                val sent = sendLock.withLock { d.sendContent { video(player = player) } }
+                if (sent.getOrNull() == true) {
+                    player.play()
+                    val started = withTimeoutOrNull(8_000) {
+                        combine(player.state, player.error) { state, error -> state to error }
+                            .first { (state, error) -> error != null || state == VideoPlayerState.PLAYING || state == VideoPlayerState.ENDED }
+                    }
+                    played = started != null && started.second == null
+                    if (played) {
+                        log("Explore film started: ${det.objectId}")
+                        _glasses.value = "Playing ${det.label} · pinch or Back to stop"
+                        withTimeoutOrNull(25_000) {
+                            combine(player.state, player.error) { state, error -> state == VideoPlayerState.ENDED || error != null }
+                                .first { it }
+                        }
+                    }
+                }
+                if (!played) {
+                    failedAutomaticFilm = true
+                    log("Explore film unavailable: ${player.error.value?.description ?: "display did not start it"}")
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                failedAutomaticFilm = true
+                log("Explore film unavailable: ${error.message}")
+            } finally {
+                if (activePlayer === player) {
+                    activePlayer = null
+                    filmJob = null
+                    player.close()
+                }
+            }
+            if (current === det && explainer === s && session != null) showExplainer(s.next())
+        }.also { it.start() }
+    }
+
+    private fun stopFilm(): Boolean {
+        val player = activePlayer ?: return false
+        activePlayer = null
+        filmJob?.cancel()
+        filmJob = null
+        player.close()
+        return true
+    }
+
+    fun readExplanation() {
+        if (narrationId != null) { stopNarration(); return }
+        val det = current ?: return
+        val step = explainer
+        val line = when {
+            answerDet != null -> AskFlow.answerLine(det)
+            step != null && !step.isOverview -> step.track.steps[step.step]
+            else -> det.answer ?: det.summary ?: concepts[det.objectId]
+        }.orEmpty()
+        if (line.isBlank()) return
+        val engine = narrator ?: TextToSpeech(ctx) { status ->
+            scope.launch {
+                if (narratorReleased) return@launch
+                narratorReady = status == TextToSpeech.SUCCESS
+                if (narratorReady && current === det && explainer === step) readExplanation()
+                else if (!narratorReady) log("Phone voice unavailable")
+            }
+        }.also { narrator = it }
+        if (!narratorReady) return
+        engine.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+        engine.language = Locale.forLanguageTag(lang)
+        engine.setSpeechRate(0.92f)
+        fun finished(id: String?) {
+            scope.launch { if (id == narrationId) { narrationId = null; applyListening() } }
+        }
+        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) = Unit
+            override fun onDone(utteranceId: String?) = finished(utteranceId)
+            @Deprecated("Android callback")
+            override fun onError(utteranceId: String?) = finished(utteranceId)
+            override fun onError(utteranceId: String?, errorCode: Int) = finished(utteranceId)
+        })
+        val id = SystemClock.elapsedRealtime().toString()
+        narrationId = id
+        applyListening()
+        if (engine.speak(line, TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) finished(id)
+    }
+
+    private fun stopNarration() {
+        if (narrationId == null) return
+        narrationId = null
+        narrator?.stop()
+        applyListening()
+    }
+
+    fun releaseNarrator() {
+        narratorReleased = true
+        stopNarration()
+        narrator?.shutdown()
+        narrator = null
+        narratorReady = false
     }
 
     // ---- follow-up question (PROTOCOL POST /ask) ----
@@ -1456,6 +1666,7 @@ class GlassesController(
             openLabel = pos?.let { (l, s) -> AskFlow.openLabel(tracks[l], s) },
             onPrimary = { scope.launch { answerPrimary() } },
             local = local,
+            onDone = ::done,
         ))
         setListening(true)
         setJournal(journalBook.addQuestion(det.objectId, text.question, text.answer))
@@ -1491,6 +1702,11 @@ class GlassesController(
     /** Pinch (`InputEvent.Select`). Public so the phone's mock buttons can drive it too. */
     fun onSelect() {
         scope.launch {
+            if (skipQuestion()) return@launch
+            if (activePlayer != null) {
+                if (navAllowed() && stopFilm()) explainer?.let { showExplainer(it.next()) }
+                return@launch
+            }
             when (route()) {
                 InputRoute.NOTICE -> if (navAllowed()) dismissNotice("pinch")
                 InputRoute.CONSENT -> if (navAllowed()) agreeConsent()
@@ -1506,7 +1722,16 @@ class GlassesController(
     /** Pinch and the primary button: the obvious next thing. */
     private suspend fun explainerPrimary() {
         val s = explainer ?: return
+        if (doneSelected) {
+            done()
+            return
+        }
         if (!navAllowed()) return
+        val det = current
+        if (s.isOverview && det != null && filmUrl(det, s) != null) {
+            playFilm(s)
+            return
+        }
         when (val m = s.pinch()) {
             is ExplainerState.Move.Show -> showExplainer(m.state)
             ExplainerState.Move.Again -> { explainer = null; trigger() }
@@ -1550,7 +1775,7 @@ class GlassesController(
      */
     fun onNav(dir: NavDirection) {
         scope.launch {
-            if (notice != null || answerDet != null || consentShown) return@launch
+            if (activePlayer != null || notice != null || answerDet != null || consentShown) return@launch
             picker?.let { p ->
                 val n = when (dir) {
                     NavDirection.LEFT -> p.move(-1)
@@ -1562,6 +1787,14 @@ class GlassesController(
                 return@launch
             }
             val s = explainer ?: return@launch
+            if (current?.objectId == "phone" && (dir == NavDirection.LEFT || dir == NavDirection.RIGHT)) {
+                val selectDone = dir == NavDirection.RIGHT
+                if (doneSelected != selectDone) {
+                    doneSelected = selectDone
+                    showExplainer(s, keepFocus = true)
+                }
+                return@launch
+            }
             val n = when (dir) {
                 NavDirection.LEFT -> s.switchLens(-1)
                 NavDirection.RIGHT -> s.switchLens(+1)
@@ -1578,6 +1811,11 @@ class GlassesController(
      */
     fun onBack() {
         scope.launch {
+            if (skipQuestion()) return@launch
+            if (stopFilm()) {
+                explainer?.let { showExplainer(it.next()) }
+                return@launch
+            }
             when (route()) {
                 InputRoute.NOTICE -> { dismissNotice("Back"); return@launch }
                 InputRoute.CONSENT -> { consentNotNow(); return@launch }

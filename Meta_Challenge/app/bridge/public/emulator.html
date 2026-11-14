@@ -62,6 +62,7 @@
     <button id="bGhost" title="touches" aria-label="Hide touches in clean view"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/></svg></button>
     <select id="sLang" aria-label="Language"><option>en</option><option>fi</option><option>sv</option><option>de</option><option>es</option><option>fr</option></select>
   </div>
+  <output id="timing" aria-live="polite">No capture measured</output>
 </div>
 <div id="start"><button id="go" aria-label="Start camera"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></div>
 <script>
@@ -113,11 +114,12 @@
     const init = { key: k, code: k, keyCode: codes[k], which: codes[k], bubbles: true, cancelable: true };
     const before = doc.body.innerText.slice(0, 400);
     const target = focused || doc.body;
-    target.dispatchEvent(new w.KeyboardEvent('keydown', init));
+    const action = focused?.matches('button, [role="button"], .xp-stage');
+    const handled = !target.dispatchEvent(new w.KeyboardEvent('keydown', init));
     target.dispatchEvent(new w.KeyboardEvent('keyup', init));
     // A real pinch selects the focused control. The toolkit arms on the key but does not fire on a synthetic one,
     // so click it, unless the app already reacted to the Enter (the screen changed).
-    if (k !== 'Enter' || !focused) return;
+    if (k !== 'Enter' || !action || (handled && !focused.matches('[role="button"]:not(button)'))) return;
     w.requestAnimationFrame(() => w.requestAnimationFrame(() => {
       if (focused.isConnected && doc.activeElement === focused && doc.body.innerText.slice(0, 400) === before) focused.click();
     }));
@@ -130,23 +132,62 @@
   const pad = $('pad');
   pad.addEventListener('mousedown', (e) => e.preventDefault()); // a tap must not pull focus out of the glasses
   let down = null; let maxTouches = 0; let longTimer = 0;
+  const inspectCanvas = () => {
+    try { return hud.contentDocument?.querySelector('.xp-inspect canvas'); } catch { return null; }
+  };
+  function dragFrame(type, event, d) {
+    const canvas = d.canvas;
+    if (!canvas?.isConnected) return;
+    const w = hud.contentWindow;
+    const stage = canvas.getBoundingClientRect();
+    const ratio = stage.width / Math.max(1, hud.getBoundingClientRect().width);
+    canvas.dispatchEvent(new w.PointerEvent(type, {
+      pointerId: event.pointerId, pointerType: 'touch', button: 0, bubbles: true,
+      clientX: stage.left + stage.width / 2 + (event.clientX - d.x) * ratio,
+      clientY: stage.top + stage.height / 2 + (event.clientY - d.y) * ratio,
+    }));
+  }
   pad.addEventListener('pointerdown', (e) => {
-    if (!down) { down = { x: e.clientX, y: e.clientY, t: performance.now(), done: false }; maxTouches = 0; }
+    if (!down) {
+      down = { x: e.clientX, y: e.clientY, pointerId: e.pointerId, canvas: inspectCanvas(), dragging: false, done: false };
+      maxTouches = 0;
+      pad.setPointerCapture(e.pointerId);
+    }
     maxTouches += 1;
     clearTimeout(longTimer);
     longTimer = setTimeout(() => { if (down && !down.done) { down.done = true; key('Escape'); mark(down.x, down.y, 'back'); } }, 550);
   });
+  pad.addEventListener('pointermove', (e) => {
+    if (!down || down.pointerId !== e.pointerId || down.done) return;
+    if (Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8 && !down.dragging) return;
+    clearTimeout(longTimer);
+    if (!down.canvas || maxTouches !== 1) return;
+    if (!down.dragging) {
+      down.dragging = true;
+      dragFrame('pointerdown', {pointerId: e.pointerId, clientX: down.x, clientY: down.y}, down);
+    }
+    dragFrame('pointermove', e, down);
+  });
   pad.addEventListener('pointerup', (e) => {
+    if (down?.pointerId !== e.pointerId && maxTouches < 2) return;
     clearTimeout(longTimer);
     if (!down) return; const d = down; down = null; if (d.done) return;
     const dx = e.clientX - d.x; const dy = e.clientY - d.y; const dist = Math.hypot(dx, dy);
-    if (maxTouches >= 2) { key('Escape'); mark(d.x, d.y, 'back'); return; }
+    if (maxTouches >= 2) {
+      if (d.dragging) dragFrame('pointercancel', {pointerId: d.pointerId, clientX: d.x, clientY: d.y}, d);
+      key('Escape'); mark(d.x, d.y, 'back'); return;
+    }
+    if (d.dragging) { dragFrame('pointerup', e, d); return; }
     if (dist < 24) { key('Enter'); mark(d.x, d.y); return; }
     const horizontal = Math.abs(dx) > Math.abs(dy);
     const k = horizontal ? (dx > 0 ? 'ArrowRight' : 'ArrowLeft') : (dy > 0 ? 'ArrowDown' : 'ArrowUp');
     key(k); mark(e.clientX, e.clientY, '', { ArrowRight: '›', ArrowLeft: '‹', ArrowUp: '˄', ArrowDown: '˅' }[k]);
   });
-  pad.addEventListener('pointercancel', () => { clearTimeout(longTimer); down = null; });
+  pad.addEventListener('pointercancel', (e) => {
+    clearTimeout(longTimer);
+    if (down?.dragging) dragFrame('pointercancel', e, down);
+    down = null;
+  });
   addEventListener('keydown', (e) => {
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.key)) { e.preventDefault(); key(e.key); }
   });
@@ -159,15 +200,45 @@
     return c.toDataURL('image/jpeg', 0.85).split(',')[1];
   }
   let busy = false;
+  let captureTiming = null;
+  addEventListener('message', event => {
+    if (event.origin !== location.origin || event.source !== hud.contentWindow || !captureTiming ||
+        event.data?.reqId !== captureTiming.id) return;
+    const stage = { 'lens:paint': 'paintMs', 'lens:motion': 'motionMs' }[event.data.type];
+    if (!stage) return;
+    captureTiming[stage] = Math.round(performance.now() - captureTiming.start);
+    renderTiming();
+  });
+  function renderTiming() {
+    if (!captureTiming) return;
+    const {encodeMs, detectMs, responseMs, paintMs, motionMs, error} = captureTiming;
+    $('timing').textContent = [
+      `Frame + encode ${encodeMs} ms`,
+      detectMs == null ? null : `Server model ${detectMs} ms`,
+      responseMs == null ? null : `Capture to response ${responseMs} ms`,
+      paintMs == null ? null : `Capture to preview ${paintMs} ms`,
+      motionMs == null ? null : `Capture to motion ${motionMs} ms`,
+      error,
+    ].filter(Boolean).join(' · ');
+  }
   async function photo() {
     const v = $('cam'); if (busy || !v.videoWidth) return; busy = true; $('busy').className = 'on';
+    const start = performance.now();
     const t_capture = Date.now(); const vw = v.videoWidth; const vh = v.videoHeight; const side = Math.min(vw, vh) * 0.5;
     const imageBase64 = jpeg(0, 0, vw, vh, 1280);
     const focusBase64 = jpeg((vw - side) / 2, (vh - side) / 2, side, side, 512);
+    const reqId = crypto.randomUUID ? crypto.randomUUID() : String(t_capture);
+    captureTiming = {id: reqId, start, encodeMs: Math.round(performance.now() - start)};
+    renderTiming();
     try {
-      const r = await fetch('/detect', { method: 'POST', headers: authHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ reqId: crypto.randomUUID ? crypto.randomUUID() : String(t_capture), imageBase64, focusBase64, lang: $('sLang').value, t_capture, preUploadMs: Date.now() - t_capture }) });
+      const r = await fetch('/detect', { method: 'POST', headers: authHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ reqId, imageBase64, focusBase64, lang: $('sLang').value, t_capture, preUploadMs: captureTiming.encodeMs }) });
+      const result = await r.json();
+      captureTiming.responseMs = Math.round(performance.now() - start);
+      captureTiming.detectMs = result.timings?.detectMs;
+      if (!r.ok) captureTiming.error = result.error || `HTTP ${r.status}`;
       if (r.status === 401) $('dot').className = 'bad';
-    } catch { $('dot').className = 'bad'; }
+    } catch { $('dot').className = 'bad'; captureTiming.error = 'Bridge unavailable'; }
+    renderTiming();
     busy = false; $('busy').className = '';
   }
   $('shot').addEventListener('click', photo);

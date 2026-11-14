@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
                         bmp.width * (1 - f) / 2, bmp.height * (1 - f) / 2, bmp.width * (1 + f) / 2, bmp.height * (1 + f) / 2, paint)
                     photoView.setImageBitmap(bmp)
                     photoView.visibility = View.VISIBLE
-                    photoLabel.text = "Last photo sent (${jpeg.size / 1024} KB, not saved). Box: what you aim at"
+                    photoLabel.text = "Last photo received from glasses (${jpeg.size / 1024} KB). Box: what you aim at"
                 }
             },
             requestPermission = { perm ->
@@ -166,6 +166,7 @@ class MainActivity : ComponentActivity() {
         )
         controller.useFixture = Prefs.fixture(this)
         controller.cameraOnly = Prefs.cameraOnly(this)
+        controller.askWithPhoto = Prefs.askWithPhoto(this)
         buildUi()
         // After buildUi: setLanguage logs, and the log view must exist (a saved language crashed the start).
         controller.setLanguage(Lang.effective(Prefs.lang(this), Locale.getDefault()))
@@ -179,6 +180,7 @@ class MainActivity : ComponentActivity() {
      * stayed, and the next Connect failed with "A session already exists for this device".
      */
     override fun onDestroy() {
+        controller.releaseNarrator()
         if (isFinishing) {
             controller.disconnect()
             if (rig.running) rig.stop()
@@ -326,6 +328,19 @@ class MainActivity : ComponentActivity() {
             setPadding(dp(4), 0, 0, 0)
         }
         root.addView(row(title, languageChip(), connectBtn).apply { gravity = Gravity.CENTER_VERTICAL })
+        val displayModeHelp = label(
+            if (Prefs.cameraOnly(this)) "Open Physics Lens on the glasses and select Take photo."
+            else "Look at an object and pinch to open its cards.",
+            14f, MUTED,
+        )
+        root.addView(switch("Film on glasses (Web App)", Prefs.cameraOnly(this)) { on ->
+            Prefs.setCameraOnly(this, on)
+            controller.cameraOnly = on
+            if (sessionOrConnecting()) disconnect()
+            displayModeHelp.text = if (on) "Tap Connect, then open Physics Lens on the glasses and select Take photo."
+            else "Tap Connect, then look at an object and pinch."
+        })
+        root.addView(displayModeHelp)
 
         // One status line: "Glasses connected · 100% · Bridge online"; a failing part in hot.
         statusLine = label("", 14f, MUTED).apply { setPadding(dp(4), dp(4), dp(4), 0) }
@@ -391,6 +406,7 @@ class MainActivity : ComponentActivity() {
                 setMargins(dp(4), dp(16), dp(4), dp(4))
             }
         })
+        root.addView(button("Read explanation") { controller.readExplanation() })
 
         // Follow-up question about the object on screen (PROTOCOL POST /ask), same path as a spoken one.
         questionField = field("", "Ask a follow-up, e.g. why does it curve?", password = false).apply {
@@ -465,12 +481,10 @@ class MainActivity : ComponentActivity() {
             updateStatus()
         }
         dev.addView(fixtureSwitch)
-        val cameraOnlySwitch = switch("Camera only (Web App shows the result)", Prefs.cameraOnly(this)) { on ->
-            Prefs.setCameraOnly(this, on)
-            controller.cameraOnly = on
-            log(if (on) "Camera only: Disconnect + Connect, then open the Web App on the glasses" else "Camera only off: cards on the glasses again")
-        }
-        dev.addView(cameraOnlySwitch)
+        dev.addView(switch("Ask a question before sending a photo", Prefs.askWithPhoto(this)) { on ->
+            Prefs.setAskWithPhoto(this, on)
+            controller.askWithPhoto = on
+        })
         // Team tools: the real-glasses checklist (Glasses_Test.md) and emptying "Seen today".
         dev.addView(row(
             button("Glasses check") { openCheck() },
@@ -516,7 +530,7 @@ class MainActivity : ComponentActivity() {
         consentView = label("")
         listOf(regView, sessionView, displayView, speechView, batteryView, deviceView, consentView).forEach { dev.addView(it) }
 
-        photoLabel = label("Last photo sent: none yet", 14f).apply { setPadding(0, dp(8), 0, 0) }
+        photoLabel = label("Last photo received from glasses: none yet", 14f).apply { setPadding(0, dp(8), 0, 0) }
         dev.addView(photoLabel)
         photoView = android.widget.ImageView(this).apply { adjustViewBounds = true; visibility = View.GONE }
         dev.addView(photoView, LinearLayout.LayoutParams(dp(135), dp(240)).apply { topMargin = dp(4) })

@@ -5,6 +5,7 @@ import {emitNav, onNav} from './bus';
 import type {NavAction} from './bus';
 import type {Chapter, ObjectInfo} from './content';
 import ExploreView from './ExploreView';
+import InspectView from './InspectView';
 import {isExploreChapter, parseExploreSpec} from './explore';
 import type {ExploreMedia} from './explore';
 import {createScene} from './scenes';
@@ -27,7 +28,13 @@ interface Props {
   followUpStep?: number;
   demo?: boolean;
   paused?: boolean;
+  inspecting: boolean;
+  onInspect: () => void;
+  onExitInspect: () => void;
+  onNewCapture: () => void;
   onRendered: () => void;
+  onMotion: () => void;
+  motionMs?: number;
   onState: (
     step: number,
     param: number | undefined,
@@ -91,7 +98,13 @@ export default function Explainer({
   followUpStep,
   demo = false,
   paused = false,
+  inspecting,
+  onInspect,
+  onExitInspect,
+  onNewCapture,
   onRendered,
+  onMotion,
+  motionMs,
   onState,
 }: Props) {
   const objectId = info.id;
@@ -112,6 +125,7 @@ export default function Explainer({
   const isExploreRef = useRef(isExplore);
   isExploreRef.current = isExplore;
   const [replay, setReplay] = useState(0);
+  const [filmPaused, setFilmPaused] = useState(false);
   const [sceneInstance, setSceneInstance] = useState<Scene | null | undefined>(undefined);
   const [readouts, setReadouts] = useState<Readout[]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -124,6 +138,7 @@ export default function Explainer({
   const positionRef = useRef<Position>({info, lens: startingLens, step: startingStep});
   positionRef.current = {info, lens, step};
   const btnRef = useRef<ButtonHandle>(null);
+  const homeRef = useRef<ButtonHandle>(null);
   const cb = useRef({onRendered, onState});
   cb.current = {onRendered, onState};
 
@@ -302,6 +317,7 @@ export default function Explainer({
 
   // Arrow keys and bridge `nav` messages share one bus.
   useEffect(() => {
+    if (inspecting) return;
     const off = onNav((a: NavAction) => {
       const current = positionRef.current;
       const chapters = current.info.chapters;
@@ -324,6 +340,8 @@ export default function Explainer({
         scene.setParam(knob.axis, a === 'up' ? 1 : -1);
         forceReadoutsRef.current = true;
         reportState();
+      } else if (a === 'next' && isExploreRef.current && chapters.length === 1 && current.step >= lastStep) {
+        onNewCapture();
       } else if (a === 'next') {
         if (current.step < lastStep) goPosition(current.lens, current.step + 1);
         else goPosition((current.lens + 1) % chapters.length, 0);
@@ -344,12 +362,71 @@ export default function Explainer({
       ArrowDown: 'down',
     };
     const onKey = (e: KeyboardEvent): void => {
+      const active = document.activeElement;
+      const inFilmControls = active?.closest('.xp-actions');
+      if (isExplore && !inFilmControls && !demo && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) {
+        if (e.key === 'ArrowRight' && objectId === 'kettle') {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          onInspect();
+          return;
+        }
+        const control = document.querySelector<HTMLButtonElement>(
+          e.key === 'ArrowRight' ? '.xp-actions [data-film-home]' : '.xp-actions button',
+        );
+        if (control) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          control.focus();
+          return;
+        }
+      }
+      if (isExplore && inFilmControls) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (!e.repeat && document.activeElement instanceof HTMLButtonElement) document.activeElement.click();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          document.querySelector<HTMLElement>('.xp-stage')?.focus();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          const controls = Array.from(document.querySelectorAll<HTMLButtonElement>('.xp-actions button'));
+          const index = controls.findIndex(button => button === document.activeElement);
+          const target = controls[index + (e.key === 'ArrowLeft' ? -1 : 1)];
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          target?.focus();
+        }
+        return;
+      }
+      if (!isExplore && e.key === 'ArrowRight') {
+        const home = homeRef.current?.getElement();
+        if (home) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          home.focus();
+          return;
+        }
+      }
+      if (!isExplore && e.key === 'ArrowLeft' && (
+        objectId === 'phone' || homeRef.current?.getElement()?.contains(active)
+      )) {
+        const stepButton = btnRef.current?.getElement();
+        if (stepButton) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          stepButton.focus();
+          return;
+        }
+      }
       const a = keys[e.key];
       if (a) {
         e.preventDefault();
         e.stopPropagation();
         emitNav(a);
       } else if (e.key === 'Enter') {
+        if (document.activeElement?.closest('.ex-dock [role="button"], .ex-dock button')) return;
         // Pinch normally arrives as a click on the focused button; this covers lost focus.
         const el = btnRef.current?.getElement();
         if (!el || !el.contains(document.activeElement)) {
@@ -363,13 +440,13 @@ export default function Explainer({
       off();
       window.removeEventListener('keydown', onKey, true);
     };
-  }, [goPosition, reportState]);
+  }, [goPosition, reportState, inspecting, isExplore, onNewCapture, onInspect, objectId, demo]);
 
   // Keep a focus target so pinch (Enter) always lands on the step button.
   useEffect(() => {
     const t = window.setTimeout(() => {
       const el = btnRef.current?.getElement();
-      if (el && !el.contains(document.activeElement)) el.focus();
+      if (el && !document.activeElement?.closest('.ex-dock')) el.focus();
     }, FOCUS_DELAY_MS);
     return () => window.clearTimeout(t);
   }, [lens, step, objectId]);
@@ -403,24 +480,34 @@ export default function Explainer({
 
   if (isExplore && chapter && exploreSpec && explore) {
     return (
-      <ExploreView
-        key={`${objectId}.${lens}`}
-        name={lang && lang !== 'en' ? info.label : (info.short ?? info.label)}
-        captions={chapter.captions}
-        spec={exploreSpec}
-        media={explore}
-        step={step}
-        replay={replay}
-        isSketch={isSketch}
-        autoPlay={!demo}
-        paused={paused}
-        standIn={standIn}
-        demo={demo}
-        lang={lang}
-        onAuto={autoAdvance}
-        onRendered={exploreRendered}
-        followUp={showFollowUp && question && answer ? {question, answer} : null}
-      />
+      <>
+        <ExploreView
+          key={`${objectId}.${lens}`}
+          name={lang && lang !== 'en' ? info.label : (info.short ?? info.label)}
+          captions={chapter.captions}
+          spec={exploreSpec}
+          media={explore}
+          step={step}
+          replay={replay}
+          isSketch={isSketch}
+          autoPlay={!demo}
+          paused={paused || inspecting || filmPaused}
+          inspecting={inspecting}
+          filmPaused={filmPaused}
+          onToggleFilm={() => setFilmPaused(value => !value)}
+          onHome={() => emitNav('done')}
+          onInspect={objectId === 'kettle' && !demo ? onInspect : undefined}
+          finalCapture={info.chapters.length === 1}
+          standIn={standIn}
+          demo={demo}
+          lang={lang}
+          onAuto={autoAdvance}
+          onRendered={exploreRendered}
+          onMotion={onMotion}
+          followUp={showFollowUp && question && answer ? {question, answer} : null}
+        />
+        {inspecting && <InspectView motionMs={motionMs} onBack={onExitInspect} />}
+      </>
     );
   }
 
@@ -532,6 +619,7 @@ export default function Explainer({
       <div className="ex-dock">
         <ButtonRail>
           <Button ref={btnRef} title={buttonTitle} onClick={() => emitNav(known ? 'next' : 'done')} />
+          {known && <Button ref={homeRef} title="Home" onClick={() => emitNav('done')} />}
         </ButtonRail>
       </div>
     </div>

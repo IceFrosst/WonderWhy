@@ -60,7 +60,9 @@ class OfflinePickerTest {
             assertTrue("${o.id}: $v", v is Verdict.Explainer)
             val tracks = (v as Verdict.Explainer).tracks
             // No media here: an Explore lens is skipped (as the Web App does), the 2D lenses follow in order.
-            val twoD = o.lenses.filter { it.kind != Explore.KIND }
+            val twoD = o.lenses.filter {
+                it.kind != Explore.KIND && (o.id != "phone" || it.kind in setOf("inside", "whatif"))
+            }
             assertEquals(twoD.size.coerceAtMost(DetectionParser.MAX_LENSES), tracks.size)
             assertEquals(twoD.first().steps, tracks.first().steps)
             assertTrue(tracks.none { Explore.isExplore(it.lensId) })

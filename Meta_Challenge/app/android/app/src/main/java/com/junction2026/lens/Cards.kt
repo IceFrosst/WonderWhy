@@ -60,9 +60,10 @@ object Cards {
     }
 
     /** Right after the photo: the wearer can say what to explain in it. English only for now. */
-    fun askWhat(): CardSpec = CardSpec.of(centered = true) {
+    fun askWhat(onSkip: () -> Unit): CardSpec = CardSpec.of(onSkip, centered = true) {
         heading("What should I explain?")
-        muted("Say it now, or pinch to skip")
+        muted("Say a question, or pinch to skip.")
+        actions("Skip")
     }
 
     /** "Looking…", centred (DESIGN.md states table). */
@@ -143,6 +144,9 @@ object Cards {
         standIn: Boolean = false,
         /** Words drawn in [still] (an Explore beat's number and labels), for the phone's text mirror. */
         stillAlt: String? = null,
+        onDone: (() -> Unit)? = null,
+        onPlay: (() -> Unit)? = null,
+        doneSelected: Boolean = false,
     ): CardSpec {
         val primary = when {
             s.isOverview -> t(Lang.SHOW_STEPS)
@@ -151,7 +155,7 @@ object Cards {
             else -> t(Lang.AGAIN)
         }
         val many = s.tracks.size > 1
-        return CardSpec.of(onPrimary) {
+        return CardSpec.of(onPlay ?: onPrimary, onDone ?: {}) {
             heading(label)
             // Sketch: the tag is text on every card (the glasses have no "hot" text colour anyway).
             if (sketch) meta(t(Lang.SKETCH))
@@ -168,7 +172,8 @@ object Cards {
                 body(stepCaption(s))
                 if (many) metaMuted(lensBar(s))
             }
-            actions(primary)
+            actions(if (onPlay != null) "Play film" else primary,
+                onDone?.let { if (doneSelected) "› ${t(Lang.DONE)}" else t(Lang.DONE) })
         }
     }
 
@@ -197,12 +202,13 @@ object Cards {
         onPrimary: () -> Unit,
         /** The phone answered by itself from the saved cards (bridge has no `/ask` or is offline). */
         local: Boolean = false,
-    ): CardSpec = CardSpec.of(onPrimary) {
+        onDone: (() -> Unit)? = null,
+    ): CardSpec = CardSpec.of(onPrimary, onDone ?: {}) {
         heading(a.title)
         metaMuted("${t(Lang.QUESTION_PREFIX)} ${a.question}")
         if (local) metaMuted(t(Lang.PHONE_ANSWER))
         body(a.answer)
-        actions(openLabel ?: t(Lang.SHOW_STEPS))
+        actions(openLabel ?: t(Lang.SHOW_STEPS), onDone?.let { t(Lang.DONE) })
     }
 
     /** A card with a decision: title, one line, two actions (DESIGN.md card anatomy). */
