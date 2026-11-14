@@ -39,8 +39,8 @@ The guidebook's peer review uses different criteria (Innovation, Impact, Impleme
 | 2 | Name one number only if we have a source. TODO (human): none yet, leave it out |
 | 3 | Source for the camera rule: Web Apps get no camera, only the phone app does ([Platform_Notes](Platform_Notes.md)). Do not claim a Meta AI "look and tell" feature does not exist, say it talks and we show |
 | 4 | Show only what is TESTED. Real-glasses steps appear only if [Glasses_Test.md](Glasses_Test.md) passed. Say "recorded" for any pre-recorded part. The follow-up question is typed or injected in the simulator unless the real-microphone test passed. Hands-free demo mode (`?demo=1`) and the [video kit](app/glasses/docs/video-kit.md) clips are fallback footage: say "recorded" |
-| 5 | Numbers allowed: 30 fps, 212 KB gzipped, about 50 ms bridge to scene ([app README](app/README.md), laptop, headless Chrome). Detection: 18 of 18 photos right, but on a dev stand-in, not Gemini; say so. Detection time only from a Gemini `npm run bench`. Say plainly: camera app and Web App cannot run together on the glasses |
-| 6 | Truth sources: [android README](app/android/README.md), [PROTOCOL](app/shared/PROTOCOL.md). The photo goes to the bridge and a model provider. Say so. First-run consent card: TESTED in the glasses Web App, PLANNED in the Android app. Live bridge lock: only say "locked" after the droplet is redeployed |
+| 5 | Numbers allowed: 30 fps, 214 KB gzipped, about 50 ms bridge to scene ([app README](app/README.md), laptop, headless Chrome). Detection: 18 of 18 photos right, but on a dev stand-in, not Gemini; say so. Detection time only from a Gemini `npm run bench`. Say plainly: camera app and Web App cannot run together on the glasses |
+| 6 | Truth sources: [android README](app/android/README.md), [PROTOCOL](app/shared/PROTOCOL.md). The photo goes to the bridge and a model provider. Say so. First-run consent card: TESTED in the glasses Web App (headless Chrome) and in the Android app (emulator, mock glasses); not on real glasses. Live bridge lock: only say "locked" after the droplet is redeployed |
 | 7 | No pilot has run. Say "planned". Translations are machine-made, say so if the Finnish demo is shown |
 
 ## Demo path (slide 4)
@@ -66,7 +66,7 @@ The guidebook's peer review uses different criteria (Innovation, Impact, Impleme
 | Why not a phone? | A phone works, but you stop, unlock and aim. Glasses keep your hands on the object. We have not compared them in a user test |
 | How do you handle privacy? | One photo per pinch, not saved on the phone, sent to our bridge and a model provider. The microphone listens only while an answer is on screen. No account, no history. Consent card exists in the Web App; not yet in the phone app |
 | How would it scale or who pays? | Schools and science centres first. We have no pricing and no pilot yet |
-| How did you test it? | Headless Chrome at 600x600 (116 screens and states, 30 fps), 94 Android JVM tests, an emulator and a Pixel 8 with Meta's mock glasses, Meta's test gate. TODO (human): add the real-glasses result from [Glasses_Test.md](Glasses_Test.md) |
+| How did you test it? | Headless Chrome at 600x600 (125 of 125 screens and states, 30 fps), 112 Android JVM tests, an emulator and a Pixel 8 with Meta's mock glasses, Meta's test gate. TODO (human): add the real-glasses result from [Glasses_Test.md](Glasses_Test.md) |
 
 ## TODO (human)
 - Team names, repo and demo QR on slide 8.

@@ -8,7 +8,7 @@ updated: 2026-11-14
 # Submission text (Sun 15 Nov, matches what is built)
 
 > [!summary]
-> Text for the Junction Platform. **FINAL by Sun 10:00**, draft projects are not reviewed ([guidebook](../Research/Sources/Junction_2026_Participant_Guidebook.pdf), p. 12). Nothing here has run on real glasses yet. State comes from [app/README](app/README.md), [android README](app/android/README.md), the [handover](../Overnight/handover/meta.md) and the overnight status files (updated Sat 14 Nov, about 02:30 UTC).
+> Text for the Junction Platform. **FINAL by Sun 10:00**, draft projects are not reviewed ([guidebook](../Research/Sources/Junction_2026_Participant_Guidebook.pdf), p. 12). Nothing here has run on real glasses yet. State comes from [app/README](app/README.md), [android README](app/android/README.md), the [handover](../Overnight/handover/meta.md) and the overnight status files (updated Sat 14 Nov, about 03:40 UTC).
 
 ## Status labels used below
 | Label | Meaning |
@@ -52,31 +52,32 @@ Counts below were made on 14 Nov from `shared/objects.json` (7 objects, 29 lense
 
 | Claim | Status | On what |
 |---|---|---|
-| 7 objects (guitar, ball, bicycle, kettle, pendulum, phone, metal spoon) with 29 lenses in total (3 to 5 each: Motion, Inside, Cutaway, Zoom, What if, Compare, Flow, The number), all prerendered | **TESTED** | Laptop, headless Chrome at 600x600 on black: `npm run test:states`, 116 screens and scene steps pass ([glasses docs](app/glasses/docs/README.md)). Not on glasses |
+| 7 objects (guitar, ball, bicycle, kettle, pendulum, phone, metal spoon) with 29 lenses in total (3 to 5 each: Motion, Inside, Cutaway, Zoom, What if, Compare, Flow, The number), all prerendered | **TESTED** | Laptop, headless Chrome at 600x600 on black: `npm run test:states`, 125 of 125 screens and scene steps pass ([glasses docs](app/glasses/docs/README.md)). Not on glasses |
 | Scenes run at 30 fps | **TESTED** | Headless Chrome, lowest lens median 29.9 fps ([glasses docs](app/glasses/docs/README.md)). Not measured on glasses |
-| First load 212 KB gzipped, 5 requests (limit 300 KB, 15) | **TESTED** | `app/README` 14 Nov; the 02:03 state run says 211300 bytes. Meta's test gate passes ([app README](app/README.md)) |
+| First load 214 KB gzipped, 5 requests (limit 300 KB, 15) | **TESTED** | Desktop status 03:20 UTC, after the glasses polish (214 KB); 5 requests and Meta's test gate measured at 211 to 212 KB earlier ([app README](app/README.md), [desktop status](../Overnight/status/desktop.md)) |
 | Bridge: identified result to scene painted about 50 ms | **TESTED** | Laptop, headless Chrome, 13 Nov ([app README](app/README.md)). Excludes the model and Bluetooth |
 | Detection accuracy: 18 of 18 test photos right (7 objects plus 4 unrelated, "unknown") | **TESTED** on a **dev stand-in** | Claude Haiku through a local command line on the desktop, 1 run each, Wikimedia photos ([app README](app/README.md)). **Not Gemini**, not the demo provider |
 | Detection time p50 5.8 s, p90 7.8 s | **TESTED** on a **dev stand-in** | Same run. This is the stand-in's process start, not the demo provider's speed. Gemini time: **not measured** (no key on a test machine). TODO (human): run `npm run bench` with the key and paste |
 | Aim: model looks at the centre crop as well as the full photo | **TESTED** | One run, kettle and guitar in one frame: centre crop "kettle" 3 of 3, full photo alone "guitar" 3 of 3 ([PROTOCOL](app/shared/PROTOCOL.md)). Small sample |
 | Android app: connect, pinch, one photo, bridge `/detect`, result card | **TESTED** in **mock mode** | Pixel 8, Android 17, Meta Mock Device Kit, 14 Nov. The phone camera stands in for the glasses ([android README](app/android/README.md)) |
 | Android app end to end with the real prompt path | **TESTED** | Emulator, Mock Device Kit, local bridge, real model through a dev stand-in: kettle detected 0.97, device and error cards ([evidence](../Overnight/evidence/android-emulator/README.md), MrNetwork's Mac and the desktop) |
-| Android JVM tests | **TESTED** | 94 JVM tests pass (`testDebugUnitTest`, [android README](app/android/README.md)) |
-| Bridge node tests | **TESTED** | 52 bridge tests (desktop status, 01:55 UTC). A security fix round (15 findings, 3 serious) was still in progress then: TODO (human): re-run `npm test` in `app/bridge/` and quote the count |
-| Android on real Ray-Ban Display: registration deep link, camera and microphone permission, inputs, HEIC photos, speech | **BUILT** | Untested ([android README](app/android/README.md), "Not done yet") |
+| Android JVM tests | **TESTED** | 112 JVM tests pass (`testDebugUnitTest`, [android README](app/android/README.md)) |
+| Android: `POST /rendered` latency ack sent; bridge URL and token edits apply at once; scripted smoke walk | **TESTED** | Emulator, Mock Device Kit, local bridge: `GET /latency` listed the phone's request ids; the smoke script `tools/emulator_smoke.sh` ran twice in a row ([android README](app/android/README.md)) |
+| Bridge node tests | **TESTED** | 70 bridge tests (desktop status, 02:28 UTC), after the security fix round (15 findings, 3 serious, each with a test; the three serious ones re-attacked by hand on a local server). TODO (human): re-run `npm test` in `app/bridge/` and quote the count |
+| Android on real Ray-Ban Display: registration deep link, camera and microphone permission, inputs, HEIC photos, speech | **BUILT** | Untested ([android README](app/android/README.md), "Real glasses") |
 | Web App installed on the glasses by QR | **BUILT** | Untested on glasses. Plan: [Glasses_Test.md](Glasses_Test.md) |
 | Stills and clips export: 90 stills (600x600 cards with title and caption) and 29 clips (264x264 H.264, 3 s per step), served at `/media/` | **TESTED** (files made, all clips decode) | Laptop. Shown on a phone only as stills in the Android emulator. **Clips are not played by the Android app** (not built); not shown on real glasses |
 | Phone-only route: the Android app shows scenes by itself as stills | **TESTED** in mock mode | Emulator, real `/media/` stills, 14 Nov ([android README](app/android/README.md)). Real glasses: **BUILT**, untested |
 | Bridge lock (`LENS_TOKEN`, header and WebSocket), key in the URL fragment (`#k=`) | **TESTED** locally | Local bridge: locked and unlocked in a browser, wrong-token card on the emulator. **Live droplet: not locked.** Deployed version is f7c7c15, unlocked, provider `mock` ([desktop status](../Overnight/status/desktop.md)). TODO (human): deploy the fixed bridge, then lock, then add the key |
 | `GET /last` handover route, heartbeat, "Took too long" timeout, "Not sure" card | **TESTED** | Local bridge and scripted bridge, headless Chrome (state check: `replay`, `heartbeat`, `took-too-long`, `not-sure`). Whether the handover works on real glasses: **unknown** |
 | Language (`lang`): fi, sv, de, es, fr, plus English | **TESTED** in Finnish | Bridge with the checked-in translations; emulator in Finnish (library, card text). Texts are **machine-translated, not read by a native speaker** ([PROTOCOL](app/shared/PROTOCOL.md), [i18n](app/shared/i18n/README.md)). Drawings and still labels stay English. Android fixed card text is English and Finnish only |
-| Follow-up questions (`POST /ask`): answer plus a jump to the right lens and step | **TESTED** | Bridge: with no model, word matching got 4 of 7 test questions right; through the dev stand-in 3 of 3 hard ones right (about 6 s each). Glasses: state check `follow-up`. Android: against a test stub and the phone's own fallback; re-test on the real bridge was still running (Android status 02:10). TODO (human): check |
-| Spoken question | **TESTED** only with the kit's injected text | Emulator, `simulateTranscription`. **Real microphone and speech recognition: untested**. Mic only listens while a result is on screen |
-| Sketch for unknown objects ("Sketch · unverified") | **TESTED** | Fixture mode on the emulator; one real run through the dev stand-in (a stapler, 25 s, drawn at 600x600 on the glasses page). **Not run on Gemini.** Off by default. The phone app shows sketch text only, no drawings |
-| Offline saved cards (6 library objects, English and Finnish) | **TESTED** | Emulator, bridge stopped. Spoon is not yet in the phone's saved list (the app README says 6). No stills offline |
+| Follow-up questions (`POST /ask`): answer plus a jump to the right lens and step | **TESTED** | Bridge: with no model, word matching got 4 of 7 test questions right; through the dev stand-in 3 of 3 hard ones right (about 6 s each). Glasses: state check `follow-up`. Android: on the emulator against the real `/ask` on a local bridge with no model (word matching; phone field, kit speech, Finnish; answer card with lens hint, pinch opens it), plus the phone's own fallback and a test stub for error cards. Not run from the phone against a real model. TODO (human): check |
+| Spoken question | **TESTED** only with the kit's injected text | Emulator, `simulateTranscription`, answered by the real `/ask` on a local bridge with no model. **Real microphone and speech recognition: untested**. Mic only listens while a result is on screen |
+| Sketch for unknown objects ("Sketch · unverified") | **TESTED** | Fixture mode on the emulator; real runs through the dev stand-in: 3 of 3 valid sketches (stapler, potted plant, bistro table; the stapler took 25 s, drawn at 600x600 on the glasses page). **Not run on Gemini.** Off by default. The phone app shows sketch text only, no drawings |
+| Offline saved cards (7 library objects, English and Finnish) | **TESTED** | Emulator, bridge stopped (picker "3/7"). No stills offline. The hosted bridge still serves 6 objects ([android README](app/android/README.md)) |
 | Device states as cards (take off, fold, battery low, hot, Bluetooth drop, camera denied, other app takes over) | **TESTED** in mock | Emulator, Mock Device Kit. "Other app takes over" is simulated (no kit call). How real glasses report these: untested. Glasses Web App has its own cards: state check |
-| First-run consent card | **TESTED** in the glasses Web App (headless Chrome, state check `consent`); **PLANNED** in the Android app | No consent text in the Android source as of 14 Nov. TODO (human): re-check before submitting |
-| Hands-free demo mode (`?demo=1` / `nav demo`) and a video kit (clean and captioned 1080 clips, branch `idea/video-kit`) | **BUILT** | Desktop only ([desktop status](../Overnight/status/desktop.md)). Not a product feature |
+| First-run consent card | **TESTED** in the glasses Web App (headless Chrome, state check `consent`) and in the Android app (English and Finnish card) | Android: emulator, Mock Device Kit: card on glasses and phone, Not now asks again, Agree sends the photo. Not on real glasses. TODO (human): re-check before submitting |
+| Hands-free demo mode (`?demo=1` / `nav demo`) and a video kit (clean and captioned 1080 clips, branch `idea/video-kit`) | Demo mode **TESTED** (headless Chrome state check); video kit **BUILT** | Desktop only ([desktop status](../Overnight/status/desktop.md)). Not a product feature |
 | Photo transfer glasses to phone over Bluetooth | **Not measured** | Cannot be simulated ([app README](app/README.md)) |
 | End-to-end time from pinch to card | **Not measured** | Stopwatch test in [Glasses_Test.md](Glasses_Test.md). No README states a measured number |
 | Phone app and Web App at the same time on the glasses | **Not possible** | Booth answer, 14 Nov ([Booth_Questions](Booth_Questions.md)). Handover between them: unknown, first glasses test |
@@ -94,7 +95,7 @@ Meta Wearables Device Access Toolkit 1.0.1 (Android, Kotlin, speech module `mwda
 | Photo not stored on the phone | Yes: "never stored on disk". The phone screen shows the last photo sent, held in memory | [android README](app/android/README.md) |
 | Photo leaves the phone | Yes: sent to our bridge, then to the model provider for identification | [PROTOCOL](app/shared/PROTOCOL.md) |
 | Photo not stored on the bridge | Not stated in a README. Code read shows only the dev-only `pi` provider writes a temp file; the dev `claude` stand-in also uses temp files (desktop security review). Latency log keeps timings and object ids, not images. TODO (human): confirm no logging of images | `bridge/detect.js` |
-| First-run consent card | Glasses Web App: **TESTED** (headless Chrome). Android app: **PLANNED** | [glasses docs](app/glasses/docs/README.md), [android README](app/android/README.md) |
+| First-run consent card | Glasses Web App: **TESTED** (headless Chrome). Android app: **TESTED** on an emulator with mock glasses | [glasses docs](app/glasses/docs/README.md), [android README](app/android/README.md) |
 | Bridge access | Locked by a token when `LENS_TOKEN` is set. The fixed bridge refuses to start with a model key and no token. The live droplet is not locked yet | [PROTOCOL](app/shared/PROTOCOL.md), [desktop status](../Overnight/status/desktop.md) |
 | Spoken questions and language | The question text goes to the bridge and the model provider; the microphone listens only while a result is on screen | [android README](app/android/README.md) |
 
@@ -102,7 +103,7 @@ Meta Wearables Device Access Toolkit 1.0.1 (Android, Kotlin, speech module `mwda
 - Never run on real glasses. Real-glasses plan: [Glasses_Test.md](Glasses_Test.md).
 - Camera lives in the phone app and animations live in the Web App. They cannot run together, so the full loop on glasses depends on the handover test.
 - 7 objects. Others show "Not sure", or a generated sketch tagged unverified when that switch is on.
-- Physics is prerendered and checked by the team. Sketches and model answers are not checked.
+- Physics is prerendered and checked by the team; the lens captions also went through an independent physics fact-check (18 captions corrected, curves recomputed). Sketches and model answers are not checked.
 - Detection numbers come from a dev stand-in, not Gemini. Translations are machine-made.
 - The live bridge is unlocked and on `mock` until a human deploys the fixed version.
 
