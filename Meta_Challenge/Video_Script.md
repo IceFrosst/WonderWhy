@@ -88,9 +88,12 @@ Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pas
 | 14 | 0:31-0:38 | GLASS + RENDER | Comparison answer: how the two printers differ (custom animation) | | *Keep asking. It goes deeper.* | Music |
 
 ## Act 5: everyday life has a backstage (0:38-0:46) — montage
+
+**Sauna choice (22:44): S2 Journey**, selected by IceFrost's screenshot. Full 5 s composite; [source on the animation branch](https://github.com/IceFrosst/Junction-2026/tree/claude/confident-keller-pxs2tu/Meta_Challenge/video/act5_sauna/S2_journey). Fixed display: water → hot stones → steam → condensation on skin. Current viewing cut `cinematic_v3.mp4` is **1:45.17**; no other clips trimmed. Printer/glasses placeholders remain; final 1:30 timing and audio review are still pending. **Checked:** full audio/video decode, unchanged clip order and all non-sauna durations; local preview responds. **Next:** incorporate the printer explanations.
+
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 15 | 0:38-0:42 | REAL + RENDER | Sauna: water on hot stones, steam rising (phone; glasses stay outside) | Lines: steam rising, heat flowing up | *Why steam bites* | Hiss |
+| 15 | 5 s (S2) | REAL + RENDER | Sauna stove footage + **S2 Journey** explanation (glasses stay outside) | Fixed display follows water onto stones, steam rising and condensing on skin; no water/steam in the real footage | *Why steam bites.* (baked in) | Room tone retained; hiss SFX still pending |
 | 16 | 0:42-0:47 | REAL + RENDER | Gym air bike with the B1 Airflow explanation (`act5_bike/final/B1_airflow.mp4`, 5 s) | Air streams off the fan blades; push harder, more air, more resistance | *Push harder, air pushes back harder.* | Whirr, beat |
 
 ## Act 6: how it works (0:46-0:54)
@@ -122,7 +125,7 @@ All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index:
 | 8 earbuds in palm | `icefrost/PXL_20261114_145509708.mp4` (5 s) | open earbuds case on a table | ok |
 | 8 alt | `mrnetwork/IMG_5560.MOV` (10 s) | hand with the glasses' charging case | b-roll |
 | 11-13 printers | `icefrost/PXL_20261114_153800338.mp4`, `PXL_20261114_153844169.mp4` (8 s each) | Prusa Core One printing + second printer beside it | ok (identify printer 2 for the comparison) |
-| 15 sauna | `icefrost/PXL_20261114_135130437.mp4` (15 s; trim `icefrost-trims/PXL_20261114_135130437~2.mp4`) | sauna benches, stove | ok (check for water/steam moment) |
+| 15 sauna | `icefrost/PXL_20261114_135130437.mp4` (15 s; trim `icefrost-trims/PXL_20261114_135130437~2.mp4`) | sauna benches, stove; **no water pour or visible steam** | S2 Journey selected and inserted; 5 s composite rendered from the 4K trim |
 | 16 gym bike | `mrnetwork/A001_11141614_C103.MOV` (trim: `icefrost-trims/A001_11141614_C103~2.mp4`) (13 s, 24 fps) | someone on an **air bike** (fan wheel) | ok, but **it is a fan bike, not a magnet bike**: change the line to air resistance (*The harder you push, the harder the air pushes back*) or film a magnet spin bike |
 | 18 / 21 / 23 band, glasses on a face | `mrnetwork/IMG_5557.MOV` (24 s), `IMG_5561.MOV` (8 s) | facing camera with glasses; at the table with glasses | ok |
 | 19-23 share scene | `icefrost/PXL_20261114_153315589.mp4` (12 s) | 0-2 s glasses held out over the table (19), 3-5 s friend turns them over (20), 6.5 s puts them on (23), 8-11 s looks, smiles at camera (23/24) | ok; shots 21-22 (IceFrost pinches at the pair, GLASS of the glasses explaining themselves) still to record |
