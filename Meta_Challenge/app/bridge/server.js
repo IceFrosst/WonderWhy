@@ -1,25 +1,31 @@
 import http from 'node:http';
 import { readFileSync, appendFileSync, existsSync, statSync } from 'node:fs';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
-import { detect, loadObjects, OBJECTS_PATH, pickProvider } from './detect.js';
+import { detect, detectTimeout, loadObjects, pickProvider } from './detect.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const BODY_LIMIT = 5 * 1024 * 1024;
 const STAGES = ['captureToReceivedMs', 'detectMs', 'detectedToRenderedMs', 'totalMs'];
-
-// Serve the built glasses Web App (../glasses/dist) at / so one host covers app + bridge.
 const GLASSES_DIST = path.resolve(here, '..', 'glasses', 'dist');
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
-function serveGlasses(pathname, res) {
-  const rel = pathname === '/' ? 'index.html' : decodeURIComponent(pathname).replace(/^\/+/, '');
-  const file = path.resolve(GLASSES_DIST, rel);
-  if (!file.startsWith(GLASSES_DIST + path.sep) || !existsSync(file) || !statSync(file).isFile()) return false;
-  const cache = rel.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache';
-  res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': cache });
+const MEDIA_EXTS = new Set(['.png', '.jpg', '.mp4', '.json', '.webp']);
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.webp': 'image/webp', '.woff2': 'font/woff2', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
+
+function serveFile(root, rel, res, headers, cache, allowedExts) {
+  let decoded;
+  try { decoded = decodeURIComponent(rel).replace(/^[/\\]+/, ''); } catch { return false; }
+  const file = path.resolve(root, decoded);
+  if (!file.startsWith(root + path.sep) || (allowedExts && !allowedExts.has(path.extname(file).toLowerCase())) || !existsSync(file) || !statSync(file).isFile()) return false;
+  res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream', 'cache-control': cache, ...headers });
   res.end(readFileSync(file));
   return true;
+}
+
+function serveGlasses(pathname, res, headers) {
+  const rel = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  return serveFile(GLASSES_DIST, rel, res, headers, rel.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
 }
 
 function pct(arr, p) {
@@ -28,26 +34,81 @@ function pct(arr, p) {
   return s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)];
 }
 
-export function start({ port = Number(process.env.PORT) || 8787, latencyLog = process.env.LATENCY_LOG || path.join(here, 'latency.jsonl') } = {}) {
-  const objects = loadObjects();
-  const byId = Object.fromEntries(objects.map((o) => [o.id, o]));
-  const glasses = new Set();
-  const phones = new Set();
-  const pending = new Map(); // reqId -> show message
-  const records = [];
-  let lastProvider = null;
+function positive(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
-  const send = (set, msg) => { const t = JSON.stringify(msg); for (const c of set) if (c.readyState === 1) c.send(t); };
+function validJpegBase64(value) {
+  if (typeof value !== 'string' || !value.length || value.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) return false;
+  const bytes = Buffer.from(value, 'base64');
+  return bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xd8;
+}
+
+function sameToken(actual, expected) {
+  if (!expected || typeof actual !== 'string') return !expected;
+  const a = Buffer.from(actual); const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+export function start({
+  port = Number(process.env.PORT) || 8787,
+  latencyLog = process.env.LATENCY_LOG || path.join(here, 'latency.jsonl'),
+  token = process.env.LENS_TOKEN || '',
+  allowedOrigins = process.env.LENS_ALLOWED_ORIGINS || '',
+  helloTimeoutMs = 5000,
+  heartbeatMs = positive(process.env.HEARTBEAT_MS, 10000),
+  lastTtlMs = positive(process.env.LAST_TTL_MS, 120000),
+  minConfidence = positive(process.env.MIN_CONFIDENCE, 0.6),
+  objects = loadObjects(),
+  detectFn = detect,
+  provider = pickProvider(),
+  detectTimeoutMs = detectTimeout(process.env, provider),
+  mediaRoot = path.join(here, 'media'),
+} = {}) {
+  const byId = Object.fromEntries(objects.map((o) => [o.id, o]));
+  const mediaBase = path.resolve(mediaRoot);
+  const originAllowlist = new Set(String(allowedOrigins).split(',').map((s) => s.trim()).filter(Boolean));
+  const glasses = new Set(); const phones = new Set();
+  const pending = new Map(); const records = []; const timers = new Set();
+  let lastProvider = null; let lastShow = null; let lastShowAt = 0; let closing = false;
+
+  const timer = (fn, ms, interval = false) => {
+    const t = interval ? setInterval(fn, ms) : setTimeout(() => { timers.delete(t); fn(); }, ms);
+    t.unref(); timers.add(t); return t;
+  };
+  const clearTimer = (t) => { if (!t) return; clearTimeout(t); clearInterval(t); timers.delete(t); };
+  const sendOne = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
+  const send = (set, msg) => { const text = JSON.stringify(msg); for (const ws of set) if (ws.readyState === 1) ws.send(text); };
   const both = (msg) => { send(glasses, msg); send(phones, msg); };
 
-  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type' };
-  const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', ...cors }); res.end(JSON.stringify(obj)); };
+  function cors(req) {
+    const headers = { 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type, x-lens-token', vary: 'Origin' };
+    if (!token) headers['access-control-allow-origin'] = '*';
+    else {
+      const origin = req.headers.origin;
+      const proto = String(req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http')).split(',')[0].trim();
+      const own = req.headers.host ? `${proto}://${req.headers.host}` : '';
+      if (origin && (origin === own || originAllowlist.has(origin))) headers['access-control-allow-origin'] = origin;
+    }
+    return headers;
+  }
+  const json = (req, res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', ...cors(req) }); res.end(JSON.stringify(obj)); };
+  const authorized = (req) => !token || sameToken(req.headers['x-lens-token'], token);
+
+  function currentLast() {
+    if (!lastShow) return { show: null, ageMs: null };
+    const ageMs = Date.now() - lastShowAt;
+    if (ageMs >= lastTtlMs) { lastShow = null; lastShowAt = 0; return { show: null, ageMs: null }; }
+    return { show: lastShow, ageMs };
+  }
 
   function summary() {
     const out = { count: records.length, provider: lastProvider };
-    for (const s of STAGES) {
-      const v = records.map((r) => r[s]).filter((x) => typeof x === 'number');
-      out[s] = { p50: pct(v, 50), p90: pct(v, 90) };
+    for (const stage of STAGES) {
+      const values = records.map((r) => r[stage]).filter((x) => typeof x === 'number');
+      out[stage] = { p50: pct(values, 50), p90: pct(values, 90) };
     }
     out.recent = records.slice(-10);
     return out;
@@ -55,108 +116,157 @@ export function start({ port = Number(process.env.PORT) || 8787, latencyLog = pr
 
   function readBody(req) {
     return new Promise((resolve, reject) => {
-      let size = 0; const chunks = [];
-      req.on('data', (c) => { size += c.length; if (size > BODY_LIMIT) { reject(Object.assign(new Error('Body too large'), { status: 413 })); req.destroy(); } else chunks.push(c); });
-      req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-      req.on('error', reject);
+      let size = 0; let failed = false; const chunks = [];
+      req.on('data', (chunk) => {
+        if (failed) return;
+        size += chunk.length;
+        if (size > BODY_LIMIT) { failed = true; reject(Object.assign(new Error('Body too large'), { status: 413 })); }
+        else chunks.push(chunk);
+      });
+      req.on('end', () => { if (!failed) resolve(Buffer.concat(chunks).toString('utf8')); });
+      req.on('error', (e) => { if (!failed) reject(e); });
     });
+  }
+
+  function objectFields(obj) {
+    if (!obj || !Array.isArray(obj.chapters) || !obj.chapters.length) return {};
+    const lenses = obj.chapters.map((chapter) => ({
+      id: `${obj.id}.${chapter.lens}`, kind: chapter.lens, title: chapter.title,
+      lead: chapter.lead || '', steps: Array.isArray(chapter.captions) ? chapter.captions : [],
+    }));
+    return {
+      ...(typeof obj.answer === 'string' ? { summary: obj.answer } : {}),
+      steps: lenses[0].steps,
+      lenses,
+    };
+  }
+
+  function mediaFields(objectId) {
+    const manifest = path.join(mediaBase, objectId, 'manifest.json');
+    if (!manifest.startsWith(mediaBase + path.sep) || !existsSync(manifest) || !statSync(manifest).isFile()) return {};
+    try {
+      const data = JSON.parse(readFileSync(manifest, 'utf8'));
+      return data && data.lenses && typeof data.lenses === 'object' ? { media: { base: `/media/${objectId}`, lenses: data.lenses } } : {};
+    } catch { return {}; }
+  }
+
+  function runDetect(args) {
+    let timeout;
+    const deadline = new Promise((_, reject) => { timeout = timer(() => { const e = new Error(`Detection timed out after ${detectTimeoutMs} ms`); e.code = 'detect_timeout'; reject(e); }, detectTimeoutMs); });
+    return Promise.race([Promise.resolve().then(() => detectFn(args)), deadline]).finally(() => clearTimer(timeout));
   }
 
   async function handleDetect(req, res) {
     let body;
     try { body = JSON.parse(await readBody(req) || '{}'); }
-    catch (e) { return json(res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
-    const reqId = body.reqId || crypto.randomUUID();
-    const t_received = Date.now();
-    const t_capture = Number(body.t_capture) || t_received;
-    // Measured on the sender's own clock (capture -> request sent). Avoids phone/server clock skew.
+    catch (e) { return json(req, res, e.status || 400, { error: e.status ? 'too_large' : 'bad_json' }); }
+    const reqId = body.reqId || randomUUID();
+    const t_received = Date.now(); const t_capture = Number(body.t_capture) || t_received;
     const preUploadMs = Number.isFinite(Number(body.preUploadMs)) ? Math.max(0, Number(body.preUploadMs)) : null;
-    both({ type: 'detecting', reqId, t_sent: Date.now() });
+    both({ type: 'detecting', reqId, timeoutMs: detectTimeoutMs + 2000, t_sent: Date.now() });
+    if (!body.forceObjectId && provider !== 'mock' && !validJpegBase64(body.imageBase64)) {
+      both({ type: 'error', code: 'bad_image', message: 'A valid JPEG image is required', reqId });
+      return json(req, res, 400, { error: 'bad_image' });
+    }
     try {
-      const r = await detect({ imageBase64: body.imageBase64, focusBase64: body.focusBase64, question: body.question, forceObjectId: body.forceObjectId, objects });
-      if (r.provider !== 'forced') lastProvider = { provider: r.provider, model: r.model };
-      const t_detected = Date.now();
-      const obj = byId[r.objectId];
+      // Optional centre crop ("aim"): the model classifies what is in it. A broken crop is dropped, not fatal.
+      const focusBase64 = validJpegBase64(body.focusBase64) ? body.focusBase64 : undefined;
+      const result = await runDetect({ imageBase64: body.imageBase64, focusBase64, question: body.question, forceObjectId: body.forceObjectId, objects, provider, timeoutMs: detectTimeoutMs });
+      if (result.provider !== 'forced') lastProvider = { provider: result.provider, model: result.model };
+      const t_detected = Date.now(); const obj = byId[result.objectId];
       const show = {
-        type: 'show', reqId, objectId: r.objectId, label: obj ? obj.label : 'Unknown object', confidence: r.confidence,
+        type: 'show', reqId, objectId: result.objectId, label: obj ? obj.label : 'Unknown object', confidence: result.confidence,
         ...(body.question ? { question: body.question } : {}),
-        ...(r.answer ? { answer: r.answer } : {}),
-        timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: r.detectMs, model: r.model },
+        ...(result.answer ? { answer: result.answer } : {}),
+        ...(!body.forceObjectId && result.provider !== 'forced' && result.objectId !== 'unknown' && obj && result.confidence < minConfidence ? { lowConfidence: true } : {}),
+        ...objectFields(obj), ...mediaFields(result.objectId),
+        timings: { t_capture, t_received, t_detected, preUploadMs, detectMs: result.detectMs, model: result.model },
         t_sent: Date.now(),
       };
-      pending.set(reqId, show);
-      if (pending.size > 200) pending.delete(pending.keys().next().value);
-      both(show);
-      json(res, 200, show);
+      pending.set(reqId, show); if (pending.size > 200) pending.delete(pending.keys().next().value);
+      lastShow = show; lastShowAt = Date.now();
+      both(show); json(req, res, 200, show);
     } catch (e) {
       const code = e.code === 'detect_timeout' ? 'detect_timeout' : 'detect_failed';
-      both({ type: 'error', code, message: e.message });
-      json(res, 502, { error: code, message: e.message, reqId });
+      both({ type: 'error', code, message: e.message, reqId });
+      json(req, res, 502, { error: code, message: e.message, reqId });
     }
   }
 
   const server = http.createServer(async (req, res) => {
-    const url = new URL(req.url, 'http://x');
-    if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
+    const url = new URL(req.url, 'http://x'); const headers = cors(req);
+    if (req.method === 'OPTIONS') { res.writeHead(204, headers); return res.end(); }
     try {
-      if (req.method === 'GET' && url.pathname === '/phone') {
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...cors });
-        return res.end(readFileSync(path.join(here, 'public', 'phone.html')));
-      }
-      if (req.method === 'GET' && url.pathname === '/objects') {
-        res.writeHead(200, { 'content-type': 'application/json', ...cors });
-        return res.end(readFileSync(OBJECTS_PATH));
-      }
-      if (req.method === 'GET' && url.pathname === '/latency') return json(res, 200, summary());
-      if (req.method === 'GET' && url.pathname === '/health') return json(res, 200, { ok: true, provider: pickProvider(), glasses: glasses.size, phones: phones.size });
+      const protectedRoute = (req.method === 'POST' && url.pathname === '/detect') || (req.method === 'GET' && ['/last', '/latency'].includes(url.pathname));
+      if (protectedRoute && !authorized(req)) return json(req, res, 401, { error: 'unauthorized' });
+      if (req.method === 'GET' && url.pathname === '/phone') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', ...headers }); return res.end(readFileSync(path.join(here, 'public', 'phone.html'))); }
+      if (req.method === 'GET' && url.pathname === '/objects') return json(req, res, 200, { objects });
+      if (req.method === 'GET' && url.pathname === '/last') return json(req, res, 200, currentLast());
+      if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
+      if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), provider, glasses: glasses.size, phones: phones.size });
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
-      if (req.method === 'GET' && serveGlasses(url.pathname, res)) return;
-      json(res, 404, { error: 'not_found' });
-    } catch (e) { json(res, 500, { error: 'server_error', message: e.message }); }
+      if (req.method === 'GET' && url.pathname.startsWith('/media/') && serveFile(mediaBase, url.pathname.slice(7), res, headers, 'public, max-age=300', MEDIA_EXTS)) return;
+      if (req.method === 'GET' && serveGlasses(url.pathname, res, headers)) return;
+      json(req, res, 404, { error: 'not_found' });
+    } catch (e) { json(req, res, 500, { error: 'server_error', message: e.message }); }
   });
 
   const wss = new WebSocketServer({ server, path: '/ws', maxPayload: BODY_LIMIT });
   wss.on('connection', (ws) => {
-    let role = null;
-    ws.on('close', () => { glasses.delete(ws); phones.delete(ws); });
+    let role = null; let authenticated = false; let missedBeats = 0;
+    const failAuth = () => { sendOne(ws, { type: 'error', code: 'unauthorized', message: 'Bridge locked' }); ws.close(4401, 'Bridge locked'); };
+    const helloTimer = timer(failAuth, helloTimeoutMs);
+    ws.on('pong', () => { missedBeats = 0; });
+    ws.on('close', () => { clearTimer(helloTimer); glasses.delete(ws); phones.delete(ws); });
     ws.on('message', (data) => {
-      let m; try { m = JSON.parse(data.toString()); } catch { return; }
-      if (m.type === 'hello') {
-        glasses.delete(ws); phones.delete(ws);
-        role = m.client === 'glasses' ? 'glasses' : m.client === 'phone' ? 'phone' : null;
-        if (role === 'glasses') glasses.add(ws); else if (role === 'phone') phones.add(ws);
+      let message; try { message = JSON.parse(data.toString()); } catch { return; }
+      if (message.type === 'hello') {
+        if (!sameToken(message.token, token)) return failAuth();
+        const nextRole = message.client === 'glasses' ? 'glasses' : message.client === 'phone' ? 'phone' : null;
+        if (!nextRole) return;
+        glasses.delete(ws); phones.delete(ws); role = nextRole; authenticated = true; clearTimer(helloTimer);
+        if (role === 'glasses') {
+          glasses.add(ws); const last = currentLast();
+          if (last.show) sendOne(ws, { ...last.show, replay: true, ageMs: last.ageMs });
+        } else phones.add(ws);
         return;
       }
-      if (role === 'phone' && ['nav', 'clear', 'device', 'error'].includes(m.type)) return send(glasses, m);
-      if (role === 'glasses' && m.type === 'state') return send(phones, m);
-      if (role === 'glasses' && m.type === 'rendered') {
-        const show = pending.get(m.reqId);
-        if (!show) return;
-        pending.delete(m.reqId);
-        const t = show.timings;
-        // Every duration uses one clock. Server clock: detected -> 'rendered' ack arrives
-        // (includes the trip to the glasses, first paint, and the ack's trip back).
-        const t_ack = Date.now();
-        const pre = t.preUploadMs ?? Math.max(0, t.t_received - t.t_capture); // fallback only valid on one machine
-        const rec = {
-          reqId: m.reqId, objectId: show.objectId, model: t.model,
-          captureToReceivedMs: pre,
-          detectMs: t.detectMs,
-          detectedToRenderedMs: t_ack - t.t_detected,
-          totalMs: pre + (t_ack - t.t_received),
-          at: t_ack,
+      if (!authenticated) return;
+      if (role === 'phone' && message.type === 'clear') { lastShow = null; lastShowAt = 0; return send(glasses, message); }
+      if (role === 'phone' && ['nav', 'device', 'error'].includes(message.type)) return send(glasses, message);
+      if (role === 'glasses' && message.type === 'state') return send(phones, message);
+      if (role === 'glasses' && message.type === 'rendered') {
+        const show = pending.get(message.reqId); if (!show) return; pending.delete(message.reqId);
+        const timing = show.timings; const t_ack = Date.now();
+        const pre = timing.preUploadMs ?? Math.max(0, timing.t_received - timing.t_capture);
+        const record = {
+          reqId: message.reqId, objectId: show.objectId, model: timing.model,
+          captureToReceivedMs: pre, detectMs: timing.detectMs,
+          detectedToRenderedMs: t_ack - timing.t_detected,
+          totalMs: pre + (t_ack - timing.t_received), at: t_ack,
         };
-        records.push(rec);
-        try { appendFileSync(latencyLog, JSON.stringify(rec) + '\n'); } catch (e) { console.error('latency log failed', e.message); }
-        send(phones, { type: 'latency', ...rec });
+        records.push(record);
+        try { appendFileSync(latencyLog, JSON.stringify(record) + '\n'); } catch (e) { console.error('latency log failed', e.message); }
+        send(phones, { type: 'latency', ...record });
       }
     });
+    ws.beat = () => {
+      if (!authenticated || ws.readyState !== 1) return;
+      if (missedBeats >= 2) return ws.terminate();
+      missedBeats += 1; sendOne(ws, { type: 'ping', t_sent: Date.now() }); ws.ping();
+    };
   });
+  timer(() => { for (const ws of wss.clients) ws.beat?.(); }, heartbeatMs, true);
 
   return new Promise((resolve) => {
     server.listen(port, () => resolve({
       server, port: server.address().port,
-      close: () => new Promise((r) => { for (const c of wss.clients) c.terminate(); wss.close(); server.close(() => r()); }),
+      close: () => new Promise((done) => {
+        if (closing) return done(); closing = true;
+        for (const t of timers) { clearTimeout(t); clearInterval(t); } timers.clear();
+        for (const ws of wss.clients) ws.terminate();
+        wss.close(); server.close(() => done()); server.closeAllConnections();
+      }),
     }));
   });
 }

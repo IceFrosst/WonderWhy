@@ -18,6 +18,10 @@ export function pickProvider(env = process.env) {
   return 'mock';
 }
 
+export function detectTimeout(env = process.env, provider = pickProvider(env)) {
+  return Number(env.DETECT_TIMEOUT_MS) || (provider === 'pi' ? 25000 : 8000);
+}
+
 export function buildPrompt(objects, question, hasFocus = false) {
   const list = objects.map((o) => `- ${o.id}: ${o.detect_hint}`).join('\n');
   const q = question
@@ -136,7 +140,7 @@ export async function detect({ imageBase64, focusBase64, question, forceObjectId
   }
   const prov = provider || pickProvider(env);
   // pi starts a process per photo, so it needs longer than a direct API call.
-  timeoutMs = timeoutMs || Number(env.DETECT_TIMEOUT_MS) || (prov === 'pi' ? 25000 : 8000);
+  timeoutMs = timeoutMs || detectTimeout(env, prov);
   if (prov === 'mock') {
     return { objectId: 'unknown', confidence: 0, answer: 'Mock mode: no model key set. Use the object buttons.', model: 'mock', provider: 'mock', detectMs: Date.now() - t0 };
   }

@@ -40,14 +40,18 @@ iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:6px;ba
 </div></main>
 <script>
 const $=id=>document.getElementById(id);
+const pageUrl=new URL(location.href);let tokenFromUrl=pageUrl.searchParams.get('k');
+if(tokenFromUrl!==null){localStorage.setItem('lens.token',tokenFromUrl);pageUrl.searchParams.delete('k');history.replaceState(null,'',pageUrl.pathname+pageUrl.search+pageUrl.hash);}
+const lensToken=localStorage.getItem('lens.token')||'';
+const authHeaders=h=>lensToken?{...h,'X-Lens-Token':lensToken}:h;
 const wsUrl=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws';
-let ws;const rows=[];
+let ws,locked=false;const rows=[];
 function connect(){ws=new WebSocket(wsUrl);
- ws.onopen=()=>ws.send(JSON.stringify({type:'hello',client:'phone',ua:navigator.userAgent}));
+ ws.onopen=()=>ws.send(JSON.stringify({type:'hello',client:'phone',ua:navigator.userAgent,token:lensToken}));
  ws.onmessage=e=>{const m=JSON.parse(e.data);
   if(m.type==='latency'){const r=rows.find(x=>x.reqId===m.reqId);if(r)Object.assign(r,m);else rows.push(m);render();refreshSummary();}
   if(m.type==='state')$('status').textContent='Glasses at '+m.objectId+' step '+m.step;};
- ws.onclose=()=>setTimeout(connect,1000);}
+ ws.onclose=e=>{if(e.code===4401){locked=true;$('status').innerHTML='<span class="bad">Bridge locked: open this page with ?k=&lt;token&gt;</span>';return;}if(!locked)setTimeout(connect,1000);};}
 const send=m=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify(m));else $('status').textContent='WebSocket not connected';};
 connect();
 function mkBtns(el,list,fn){list.forEach(([label,val])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>fn(val);$(el).appendChild(b);});}
@@ -71,7 +75,7 @@ async function capture(force){
  if(!force&&!img){$('status').innerHTML='<span class="bad">No camera frame</span>';busy=false;return;}
  const d=Number($('delay').value);if(d)await new Promise(r=>setTimeout(r,d));
  $('status').textContent='Sending…';
- try{const r=await fetch('/detect',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,t_capture,preUploadMs:Date.now()-t_capture})});
+ try{const r=await fetch('/detect',{method:'POST',headers:authHeaders({'content-type':'application/json'}),body:JSON.stringify({reqId,imageBase64:img,question:$('q').value.trim()||undefined,forceObjectId:force||undefined,t_capture,preUploadMs:Date.now()-t_capture})});
   const j=await r.json();
   if(!r.ok){$('status').innerHTML='<span class="bad">'+(j.error||r.status)+': '+(j.message||'')+'</span>';}
   else{$('status').innerHTML='<span class="ok">'+j.objectId+' ('+Math.round(j.confidence*100)+'%) via '+j.timings.model+'</span>'+(j.answer?' - '+j.answer:'');
@@ -83,11 +87,12 @@ $('cap').onclick=()=>capture();
 addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){e.preventDefault();capture();}});
 const f=v=>v==null?'…':Math.round(v);
 function render(){$('rows').innerHTML=rows.slice(-10).reverse().map(r=>`<tr><td>${r.reqId.slice(0,6)}</td><td>${r.objectId}</td><td>${f(r.captureToReceivedMs)}</td><td>${f(r.detectMs)}</td><td>${f(r.detectedToRenderedMs)}</td><td>${f(r.totalMs)}</td></tr>`).join('');}
-async function refreshSummary(){try{const s=await (await fetch('/latency')).json();
+async function refreshSummary(){try{const s=await (await fetch('/latency',{headers:authHeaders({})})).json();
  const p=k=>`${k.replace('Ms','')}: p50 ${f(s[k].p50)} / p90 ${f(s[k].p90)}`;
  $('sum').textContent=`n=${s.count} | `+['captureToReceivedMs','detectMs','detectedToRenderedMs','totalMs'].map(p).join(' | ');
  if(s.provider)$('prov').textContent='model: '+s.provider.model;}catch{}}
 refreshSummary();
-$('mgo').onclick=()=>$('mirror').src=$('murl').value;
-$('mirror').src=$('murl').value;
+function mirrorUrl(){const u=new URL($('murl').value,location.href);if(lensToken)u.searchParams.set('k',lensToken);return u.href;}
+$('mgo').onclick=()=>$('mirror').src=mirrorUrl();
+$('mirror').src=mirrorUrl();
 </script></body></html>

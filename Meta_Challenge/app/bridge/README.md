@@ -15,6 +15,11 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 | Var | Meaning |
 |---|---|
 | `PORT` | default 8787 |
+| `LENS_TOKEN` | Optional bridge key. Unset/blank keeps local development open; when set it protects detection, replay/latency reads, and WebSocket clients |
+| `LENS_ALLOWED_ORIGINS` | Comma-separated extra browser origins allowed by CORS while the bridge is locked; the bridge's own origin is always allowed |
+| `MIN_CONFIDENCE` | Library matches below this become `lowConfidence`; default 0.6 |
+| `LAST_TTL_MS` | How long `/last` and glasses replay retain a `show`; default 120000 |
+| `HEARTBEAT_MS` | App and WebSocket heartbeat interval; default 10000 |
 | `DETECT_PROVIDER` | `anthropic` / `gemini` / `mock` / `pi`; unset = anthropic if key, else gemini if key, else mock |
 | `PI_DETECT_MODEL`, `DETECT_TIMEOUT_MS` | Only for `pi`: runs the local `pi` CLI with that machine's model login (no API key). Dev only: about 7 s per photo, default model `anthropic/claude-haiku-4-5`, default timeout 25 s |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | default model `claude-haiku-5-5` |
@@ -22,7 +27,16 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 | `LATENCY_LOG` | path of the JSONL log, default `latency.jsonl` |
 
 ## Endpoints
-`GET /phone`, `GET /objects`, `GET /health`, `GET /latency`, `POST /detect`, WebSocket `/ws`.
+
+Open: `GET /health`, `GET /objects`, `GET /phone`, the glasses app at `/`, and exported files under `GET /media/*`.
+
+Protected when `LENS_TOKEN` is set: `POST /detect`, `GET /last`, and `GET /latency`. Send the key in `X-Lens-Token`. WebSocket `/ws` clients send it as `token` in their first `hello` frame.
+
+`GET /last` returns the most recent `show` while it is inside `LAST_TTL_MS`. A late glasses connection receives the same show with `replay: true` and `ageMs`; a phone `clear` removes it.
+
+## Lock it
+
+Set `LENS_TOKEN` to a private random value and open the phone stand-in once as `http://localhost:8787/phone?k=<token>`. The page stores the key locally, removes it from the address bar, authenticates its API and WebSocket traffic, and passes it to the embedded glasses preview. Add any separate browser origins to `LENS_ALLOWED_ORIGINS` as a comma-separated list. Never commit the key or put it in a checked-in QR code.
 
 ## Reading latency
 `curl localhost:8787/latency` returns `{count, provider, captureToReceivedMs, detectMs, detectedToRenderedMs, totalMs}` with `p50`/`p90` each, plus the last 10 `recent` records. Every completed request (after the glasses send `rendered`) is also a line in `latency.jsonl`. `captureToReceivedMs` includes the phone page's simulated Bluetooth delay slider.
