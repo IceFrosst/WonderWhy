@@ -1,6 +1,69 @@
 {
   "objectId": "ball",
   "lenses": {
+    "ball.explore": {
+      "kind": "explore",
+      "title": "How it works",
+      "beats": [
+        {
+          "clip": "explore/b1.mp4",
+          "still": "explore/s1.png",
+          "clean": "explore/c1.png"
+        },
+        {
+          "clip": "explore/b2.mp4",
+          "still": "explore/s2.png",
+          "clean": "explore/c2.png"
+        },
+        {
+          "clip": "explore/b3.mp4",
+          "still": "explore/s3.png",
+          "clean": "explore/c3.png"
+        },
+        {
+          "clip": "explore/b4.mp4",
+          "still": "explore/s4.png",
+          "clean": "explore/c4.png"
+        },
+        {
+          "clip": "explore/b5.mp4",
+          "still": "explore/s5.png",
+          "clean": "explore/c5.png"
+        },
+        {
+          "clip": "explore/b6.mp4",
+          "still": "explore/s6.png",
+          "clean": "explore/c6.png"
+        }
+      ],
+      "stills": [
+        "explore/s1.png",
+        "explore/s2.png",
+        "explore/s3.png",
+        "explore/s4.png",
+        "explore/s5.png",
+        "explore/s6.png"
+      ],
+      "clean": [
+        "explore/c1.png",
+        "explore/c2.png",
+        "explore/c3.png",
+        "explore/c4.png",
+        "explore/c5.png",
+        "explore/c6.png"
+      ],
+      "tracks": "explore/tracks.json",
+      "captions": [
+        "Every thrown ball curves back to the ground. Two forces shape the whole flight.",
+        "Inside the cover: a rubber bladder of air pumped above the outside pressure.",
+        "Gravity pulls down all the time, so the upward speed shrinks, stops, then reverses.",
+        "Air pushes against the motion and steals speed, so the real throw lands shorter.",
+        "On a bounce the squeezed air works like a spring and throws the ball back up.",
+        "Thrown at 10 metres per second and 45 degrees, it lands about 10 metres away."
+      ],
+      "size": 600,
+      "fps": 30
+    },
     "ball.motion": {
       "kind": "motion",
       "title": "Projectile motion",
