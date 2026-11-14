@@ -5,7 +5,9 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 6, 1:22)
+# Video script: "Never stop asking why" (draft 7, 1:22)
+
+> **Name:** to be chosen (placeholder **[NAME]**; "Physics Lens" is out).
 
 > [!summary]
 > Story in colour: **gold (child) → grey (adult, headphones on, shut off) → gold + glowing lines (glasses)**. Every shot readable muted.
@@ -14,7 +16,7 @@ updated: 2026-11-14
 > **Edit rule:** waits are cut out, not shown. Small corner tag on the glasses shots: *Recorded on the glasses · edited for time*.
 
 ## All on-screen lines, in order
-*Why is the grass green?* · *How does the world work?* · *You used to ask why.* · *Then you stopped.* · **Look at anything.** · **See how it really works.** · **Feed your curiosity. Grow.** · *Ask anything* · *Opens the part you asked about* · *Keep asking. It goes deeper.* · *Why steam bites* · *Lighter than it feels* · *It sees it. AI names it. Real physics explains it.* · *Try it.* · *Even this?* · *It even explains itself.* · **Never stop asking why.** · End card: **Physics Lens. See how the world really works.**
+*Why is the grass green?* · *How does the world work?* · *You used to ask why.* · *Then you stopped.* · **Look at anything.** · **See how it really works.** · **Feed your curiosity. Grow your understanding of the world.** · *Ask anything* · *Opens the part you asked about* · *Keep asking. It goes deeper.* · *Why steam bites* · *Lighter than it feels* · *It sees it. AI names it. Real physics explains it.* · *Try it.* · *Even this?* · *It even explains itself.* · **Never stop asking why.** · End card: **[NAME]. See how the world really works.**
 
 ## Act 1: the child (0:00-0:04) — gold, dreamy
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -37,7 +39,7 @@ Desaturated and cold. **Headphones on the whole act**: every outside sound is mu
 | 7 | 0:11-0:12 | REAL | Pulls the earbuds out | | | **The crowd floods back in, full and loud** |
 | 8 | 0:12-0:14 | REAL | Looks at the earbuds in the hand, puzzled, pinches with the band | Close on the hand and earbuds | | IceFrost: "Wait, how did these block all that?" · click |
 | 9 | 0:14-0:17 | REAL + RENDER | The noise wave, an opposite "anti-noise" wave, the two merging into a **flat line** | Fade in at the fixed square | **See how it really works.** | Music in, bright; the crowd dips under it |
-| 10 | 0:17-0:20 | GLASS | The real recording of the same answer on the glasses, yellow system frame left in | Corner tag | **Feed your curiosity. Grow.** · *Physics Lens* | Music continues |
+| 10 | 0:17-0:20 | GLASS | The real recording of the same answer on the glasses, yellow system frame left in | Corner tag | **Feed your curiosity. Grow your understanding of the world.** · *[NAME]* | Music continues |
 
 ## Act 4: a real run with a follow-up — 3D printer (0:20-0:38)
 | # | Time | Source | Shot | Effect | Text | Audio |
@@ -60,14 +62,16 @@ Desaturated and cold. **Headphones on the whole act**: every outside sound is mu
 | 18 | 0:50-0:54 | REAL | Quick cuts: the band pinch, the phone in a pocket, the glasses on a face | | *Pinch. One photo. Answer in your view.* | Music |
 
 ## Act 7: share it, never stop (0:54-1:22) — bookend
+Filmed by a third person: IceFrost already wears one pair; a friend sits next to IceFrost.
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
-| 19 | 0:54-0:57 | REAL | IceFrost hands the glasses to a friend at the table | | *Try it.* | IceFrost: "Here, try this." |
-| 20 | 0:57-1:02 | REAL | The friend puts them on, looks at something, pinches: a real wow reaction | | | Real laugh or "no way" |
-| 21 | 1:02-1:05 | REAL | IceFrost, glasses back on, looks down at the own wrist band, pinches | Close on the band | *Even this?* | Click |
-| 22 | 1:05-1:12 | GLASS + RENDER | The glasses explain themselves: muscle signals read at the wrist; light bent into one eye | | *It even explains itself.* | Music builds |
-| 23 | 1:12-1:16 | REAL → AI | IceFrost smiles; match cut to the child in the grass, now with glowing lines on the blade | Grade fully gold | **Never stop asking why.** | Kid, happy: "Why?" · last note |
-| 24 | 1:16-1:22 | Title | Black, logo | Fade in | **Physics Lens. See how the world really works.** · Meta Ray-Ban Display · Junction 2026 | One click, silence |
+| 19 | 0:54-0:57 | REAL | IceFrost (glasses on) hands a **second pair** to the friend | Wide two-shot | *Try it.* | IceFrost: "Here, try these." |
+| 20 | 0:57-1:00 | REAL | The friend turns them over, sceptical | Close on the friend | | Friend: "Wait, how do these even work?" |
+| 21 | 1:00-1:02 | REAL | IceFrost looks at the pair in the friend's hands and pinches | Close on the band | *Even this?* | Click |
+| 22 | 1:02-1:08 | GLASS + RENDER | The glasses explain themselves: the band reads tiny muscle signals at the wrist; the display bends light into one eye | | *It even explains itself.* | Music builds |
+| 23 | 1:08-1:12 | REAL | The friend puts them on, looks at something, pinches: a real wow reaction | | | Real laugh or "no way" |
+| 24 | 1:12-1:16 | REAL → AI | Both smile; match cut to the child in the grass, now with glowing lines on the blade | Grade fully gold | **Never stop asking why.** | Kid, happy: "Why?" · last note |
+| 25 | 1:16-1:22 | Title | Black, logo | Fade in | **[NAME]. See how the world really works.** · Meta Ray-Ban Display · Junction 2026 | One click, silence |
 
 ## To make
 | What | How | By |
@@ -75,7 +79,7 @@ Desaturated and cold. **Headphones on the whole act**: every outside sound is mu
 | AI child shots 1, 2, 23 (one consistent style) | Image + image-to-video (needs `/login grok-build`) | Sat evening |
 | Kid's voice (3 lines) | A real child over a call, or a teammate pitched up | Sat evening |
 | Your lines (4) | Record on set, or as clean voiceover later | During filming |
-| REAL shots 3-8, 11, 13, 15, 16, 18-21, 23 | Phone; tripod for 9, 15, 16 plates (dark space right of the object); earbuds with noise cancelling | Sat; shot 4 before dark |
+| REAL shots 3-8, 11, 13, 15, 16, 18-21, 23, 24 (Act 7 needs a camera operator and a **second Display pair** from Meta) | Phone; tripod for 9, 15, 16 plates (dark space right of the object); earbuds with noise cancelling | Sat; shot 4 before dark |
 | GLASS shots 10, 12, 14, 22 | "Record display" in Meta AI, two takes each | Once each object is in the library |
 | How-it-works diagram (17) | Rendered in the same glowing style | Sat evening |
 | New library objects + clean renders: earbuds, 3D printer (incl. the follow-up answer), sauna, gym machine, Neural Band / display | Alex's team | Sat ~18:00 |
