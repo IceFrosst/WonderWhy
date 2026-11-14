@@ -2,7 +2,7 @@
 tags:
   - type/project
   - topic/junction-2026
-updated: 2026-11-13
+updated: 2026-11-14
 ---
 
 # Meta challenge: AI Glasses for Everyone, Everyday
@@ -36,7 +36,7 @@ Notes:
 
 **Going to the Meta booth? Take [Booth_Questions](Booth_Questions.md).**
 
-**Plan:** [Plan](Plan.md) (Fable 5.2 review, hour-by-hour plan, booth questions).
+**Plan:** [Plan](Plan.md) (Fable 5.2 review, hour-by-hour plan, booth questions). **Build:** [app/README](app/README.md). **Submit:** [Submission](Submission.md), [Deck](Deck.md), [Glasses_Test](Glasses_Test.md).
 
 ## The brief (full text: [Brief](Brief.md), Discord: [Discord_Notes](Discord_Notes.md))
 - Show how a first-person view enables new or better everyday interactions.
@@ -54,9 +54,11 @@ Notes:
 ## Idea shortlist
 _To fill in._ Candidates: [Wearables_Research](../Research/Wearables_Research.md#other-glasses-ideas-not-yet-picked).
 
-## Status
+## Status (Sat 14 Nov)
 | Item | State |
 |---|---|
-| Idea chosen | Draft: explanation mode |
-| Booth questions answered | No |
-| Code | None yet |
+| Idea chosen | **Physics Lens** (explanation mode). Name still open |
+| Booth questions answered | Partly: [Booth_Questions](Booth_Questions.md) |
+| Code | Built overnight in [app/](app/README.md): 7 objects, 29 lenses, bridge, glasses Web App, Android app. Tested in simulators and an emulator only. **Never run on real glasses** |
+| Docs | [Submission](Submission.md) (claims with test setups), [Deck](Deck.md), [Glasses_Test](Glasses_Test.md) (first real-glasses test) |
+| Open for humans | Name, video, repo URL, live bridge deploy and lock, a Finnish read of the translations |
