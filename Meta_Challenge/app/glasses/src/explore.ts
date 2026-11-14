@@ -1,15 +1,19 @@
-// Explore lens (shared/MODEL3D.md): pre-rendered 3D beats streamed from the bridge's /media.
+// Explore lens (shared/MODEL3D.md): live 3D beats with optional streamed media fallbacks.
 // This file holds the untrusted-data side: the media entry, tracks.json and the chapter spec.
 import {bridgeUrl} from './bridge';
 import type {Chapter, ObjectInfo} from './content';
 
 export const EXPLORE_LENS = 'explore';
 export const EXPLORE_SCENE = 'model3d';
-const MAX_PARTS = 32;
-const MAX_BEATS = 6;
-const MAX_LABELS = 3;
+// MODEL3D.md limits (v2: 96 parts, 8 beats, 4 labels per beat, dur 3 to 16 s).
+const MAX_PARTS = 96;
+const MAX_BEATS = 8;
+const MAX_LABELS = 4;
+const MAX_DUR = 16;
 const DEFAULT_DUR = 6;
-const PROBE_MS = 800;
+// A slow bridge must not drop a film object to its 2D lenses: wait this long, and do not remember a
+// timeout or network error (only the bridge's real answer).
+const PROBE_MS = 2500;
 
 /** Absolute URLs of one object's Explore beats. */
 export interface ExploreMedia {
@@ -29,6 +33,8 @@ export interface ExploreBeat {
   /** Text of the beat's `dim` effects, in order (drawn by the glasses: the video has no text). */
   dims: string[];
   focus: string[];
+  callouts: Array<{text: string; side: 'l' | 'r' | null}>;
+  move: number;
   number: ExploreNumber | null;
   dur: number;
 }
@@ -40,6 +46,8 @@ export interface ExploreSpec {
 }
 
 export interface TrackLabel {
+  kind: 'label' | 'callout';
+  text: string;
   part: string;
   side: 'l' | 'r' | null;
   focus: boolean;
@@ -127,10 +135,14 @@ export function parseExploreSpec(spec: unknown, beatCount: number): ExploreSpec 
       .map(item => cleanText((item as Record<string, unknown>).text, 24) ?? '');
     beats.push({
       labels: idList(beat.labels, MAX_LABELS, parts),
+      callouts: (Array.isArray(beat.callouts) ? beat.callouts : []).slice(0, 3)
+        .filter(isRecord).map(item => ({text: cleanText(item.text, 28) ?? '',
+          side: item.side === 'l' ? 'l' as const : item.side === 'r' ? 'r' as const : null})),
+      move: Math.max(0, Math.min(3, finite(beat.move) ?? 0.8)),
       dims,
       focus: idList(beat.focus, MAX_PARTS, parts),
       number,
-      dur: dur === null ? DEFAULT_DUR : Math.min(12, Math.max(3, dur)),
+      dur: dur === null ? DEFAULT_DUR : Math.min(MAX_DUR, Math.max(3, dur)),
     });
     // Note: tracks.json `dur` is the clip length (move + beat), so the beat clock uses this one.
   }
@@ -168,12 +180,12 @@ export function bridgeHttpOrigin(): string | null {
 
 /** A list of paths, or of per-beat records (`{clip, still, clean}` from render3d) read at `keys`. */
 function pathList(v: unknown, keys: string[] = ['clip', 'video', 'mp4', 'file']): Array<string | null> | null {
-  if (!Array.isArray(v) || !v.length) return null;
+  if (!Array.isArray(v)) return null;
   const out = v.slice(0, MAX_BEATS).map(item => {
     if (isRecord(item)) return safePath(keys.map(key => item[key]).find(value => value !== undefined));
     return safePath(item);
   });
-  return out.some(Boolean) ? out : null;
+  return out;
 }
 
 /**
@@ -202,10 +214,10 @@ export function exploreMediaFrom(entry: unknown, base: string, origin: string, b
   const out: ExploreMedia = {videos: [], stills: [], tracks: resolve(safePath(entry.tracks) ?? `${dir}/tracks.json`)};
   for (let index = 0; index < beats; index++) {
     out.videos.push(resolve(videos ? (videos[index] ?? null) : `${dir}/b${index + 1}.mp4`));
-    out.stills.push(resolve(stills ? (stills[index] ?? null) : `${dir}/c${index + 1}.png`));
+    out.stills.push(resolve(stills?.[index] ?? `${dir}/c${index + 1}.png`));
   }
-  // Every beat needs a picture: a video, or at least its still.
-  return out.videos.every((video, index) => video || out.stills[index]) ? out : null;
+  // Partial manifests are useful too: missing beats still have the live spec and caption.
+  return out;
 }
 
 /** The Explore entry of a `show.media` (or a sketch's `media`): the first lens key ending in `.explore`. */
@@ -228,32 +240,39 @@ export async function probeExploreMedia(objectId: string, beats: number): Promis
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), PROBE_MS);
   let media: ExploreMedia | null = null;
+  let answered = false;
   try {
     const response = await fetch(`${origin}/media/${objectId}/manifest.json`, {signal: controller.signal, cache: 'no-cache'});
     if (response.ok) media = exploreMediaFromShow({base: `/media/${objectId}`, lenses: (await response.json())?.lenses}, beats, origin);
+    answered = true;
   } catch {
     media = null;
   } finally {
     window.clearTimeout(timer);
   }
-  probeCache.set(objectId, {at: performance.now(), media});
+  if (answered) probeCache.set(objectId, {at: performance.now(), media});
   return media;
 }
 
-/**
- * Puts the Explore chapter first when it has a usable spec and media, and drops it otherwise
- * (no blank stage: the object opens on its next lens).
- */
+/** A valid spec is enough to play; media is optional and only supplies fallbacks. */
 export function arrangeExplore(info: ObjectInfo, media: ExploreMedia | null): {info: ObjectInfo; explore: ExploreMedia | null} {
-  const index = info.chapters.findIndex(isExploreChapter);
-  if (index < 0) return {info, explore: null};
-  const chapter = info.chapters[index];
+  const chapter = info.chapters.find(isExploreChapter);
+  if (!chapter) return {info, explore: null};
+  if (parseExploreSpec(chapter.spec, chapter.captions.length)) return {info: {...info, chapters: [chapter]}, explore: media};
   const others = info.chapters.filter(item => !isExploreChapter(item) &&
     (info.id !== 'phone' || item.lens === 'whatif' || item.lens === 'inside'));
-  const usable = media !== null && parseExploreSpec(chapter.spec, chapter.captions.length) !== null &&
-    media.videos.length === chapter.captions.length;
-  if (!usable) return {info: {...info, chapters: others}, explore: null};
-  return {info: {...info, chapters: [chapter, ...others.filter(item => info.id !== 'phone' || item.lens !== 'inside')]}, explore: media};
+  return {info: {...info, chapters: others}, explore: null};
+}
+
+/** No manifest: try the conventional clean still, without requesting nonexistent videos. */
+export function fallbackExploreMedia(objectId: string, beats: number): ExploreMedia {
+  const origin = bridgeHttpOrigin();
+  return {
+    videos: Array(beats).fill(null),
+    stills: Array.from({length: beats}, (_, i) => origin && ID_RE.test(objectId)
+      ? `${origin}/media/${objectId}/explore/c${i + 1}.png` : null),
+    tracks: null,
+  };
 }
 
 function sample(v: unknown): [number, number, number] | null {
@@ -279,14 +298,15 @@ export function parseTracks(v: unknown): Tracks | null {
       if (!isRecord(item)) continue;
       const part = typeof item.part === 'string' ? item.part : typeof item.id === 'string' ? item.id : null;
       const list = item.track ?? item.points ?? item.samples ?? item.anchor ?? item.xy;
-      if (!part || !Array.isArray(list)) continue;
+      const kind = item.kind === 'callout' ? 'callout' : 'label';
+      if ((!part && kind !== 'callout') || !Array.isArray(list)) continue;
       const samples = list.slice(0, 2000).map(sample).filter((s): s is [number, number, number] => s !== null)
         .sort((a, b) => a[0] - b[0]);
       if (!samples.length) continue;
       for (const s of samples) maxCoord = Math.max(maxCoord, Math.abs(s[1]), Math.abs(s[2]));
       const sideRaw = typeof item.side === 'string' ? item.side.toLowerCase() : '';
       const side = sideRaw === 'l' || sideRaw === 'left' ? 'l' : sideRaw === 'r' || sideRaw === 'right' ? 'r' : null;
-      labels.push({part, side, focus: item.focus === true, samples});
+      labels.push({part: part ?? '', kind, text: cleanText(item.text, 32) ?? '', side, focus: item.focus === true, samples});
     }
     const dims: TrackDim[] = [];
     for (const item of (Array.isArray(beat.dims) ? beat.dims : []).slice(0, 4)) {
@@ -300,7 +320,7 @@ export function parseTracks(v: unknown): Tracks | null {
     const loopFrom = finite(beat.loopFrom) ?? finite(beat.loop_from);
     const move = finite(beat.move) ?? finite(beat.moveDur);
     beats.push({
-      dur: dur === null ? null : Math.min(12, Math.max(3, dur)),
+      dur: dur === null ? null : Math.min(MAX_DUR + 4, Math.max(3, dur)),
       dims,
       loopFrom: loopFrom === null ? 0 : Math.max(0, loopFrom),
       move: move === null ? 0.8 : Math.min(3, Math.max(0, move)),

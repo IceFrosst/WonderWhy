@@ -375,7 +375,7 @@ class PointBatch {
 // Spec normalisation (tolerant: unknown prims and fx are skipped, unknown ids ignored).
 
 // v2 limits (MODEL3D.md "Limits v2"); a v1 spec inside the v1 limits renders exactly as before.
-export const LIMITS = {parts: 96, beats: 8, fx: 6, labels: 4, points: 128, dur: [3, 16], move: [0.5, 4], stagger: [0, 4]};
+export const LIMITS = {parts: 96, beats: 8, fx: 6, labels: 4, callouts: 3, points: 128, dur: [3, 16], move: [0.5, 4], stagger: [0, 4]};
 const FX_TYPES = ['arrow', 'flow', 'heat', 'waves', 'trail', 'dim', 'sine', 'steam', 'beam', 'glow'];
 const ANIM_KINDS = ['spin', 'swing', 'shake', 'slide', 'pulse'];
 const frames = seconds => Math.round(seconds * FPS) / FPS; // whole frames, so loops close exactly
@@ -434,6 +434,19 @@ function normalise(spec) {
       return known;
     });
     const move = frames(clamp(num(raw?.move, 0.8), ...LIMITS.move));
+    const labels = idList(raw?.labels, LIMITS.labels);
+    const callouts = [];
+    for (const item of Array.isArray(raw?.callouts) ? raw.callouts : []) {
+      const to = typeof item?.to === 'string' && ids.has(item.to) ? item.to : vec3(item?.to, null);
+      if (to === null) {
+        warnings.push(`beat ${index + 1}: unknown or invalid callout target ${JSON.stringify(item?.to)} (skipped)`);
+        continue;
+      }
+      if (typeof item.text !== 'string' || !item.text.trim()) continue;
+      callouts.push({to, text: Array.from(item.text).slice(0, 28).join(''), side: ['l', 'r'].includes(item.side) ? item.side : null});
+    }
+    const calloutLimit = Math.min(LIMITS.callouts, LIMITS.labels - labels.length);
+    if (callouts.length > calloutLimit) warnings.push(`beat ${index + 1}: at most 3 callouts and 4 labels + callouts (extras skipped)`);
     let cut = null;
     if (raw?.cut && typeof raw.cut === 'object') {
       const normal = new THREE.Vector3(...vec3(raw.cut.normal, [1, 0, 0]));
@@ -455,7 +468,8 @@ function normalise(spec) {
       cut,
       focus: new Set(idList(raw?.focus)),
       ghost: new Set(idList(raw?.ghost)),
-      labels: idList(raw?.labels, LIMITS.labels),
+      labels,
+      callouts: callouts.slice(0, calloutLimit),
       play: new Set(idList(raw?.play)),
       fx,
       number: raw?.number && typeof raw.number === 'object' ? raw.number : null,
@@ -496,9 +510,11 @@ function normaliseAnim(anim) {
 // ---------------------------------------------------------------------------------------------
 // The renderer.
 
-class Explore {
-  constructor(canvas) {
+export class Explore {
+  constructor(canvas, {live = false} = {}) {
     this.canvas = canvas;
+    this.live = live;
+    this.view = {yaw: 0, pitch: 0, explode: null};
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,
@@ -513,6 +529,8 @@ class Explore {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x000000);
     this.camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 5000);
+    // Live rendering uses the canvas framebuffer directly: no MSAA target or postprocessing.
+    if (live) return;
     const target = new THREE.WebGLRenderTarget(SIZE, SIZE, {
       type: THREE.HalfFloatType,
       samples: 4,
@@ -569,7 +587,7 @@ class Explore {
       this.envMap ??= studioEnvironment(r);
       this.scene.environment = this.envMap;
       this.scene.environmentIntensity = REAL.envIntensity;
-      this.composer = this.realComposer();
+      this.composer = this.live ? null : this.realComposer();
       this.lights = new StudioLights();
       this.lights.addTo(this.scene);
     } else {
@@ -600,6 +618,8 @@ class Explore {
 
   load(spec) {
     this.clear();
+    this.labelLayouts = new Map();
+    this.pointBindings = new Map();
     const {parts, beats, warnings, real} = normalise(spec);
     this.setStyle(real);
     this.parts = parts;
@@ -816,6 +836,13 @@ class Explore {
     return {dur: Number(end.toFixed(3)), loopFrom: beat.move, frames: Math.round(end * FPS), loopFrame: Math.round(beat.move * FPS), beatDur: beat.dur};
   }
 
+  /** Camera offsets in degrees; null explode restores the beat's own explode animation. */
+  setView({yaw = 0, pitch = 0, explode = null} = {}) {
+    const next = {yaw: num(yaw, 0), pitch: num(pitch, 0), explode: finite(explode) ? clamp(explode, 0, 1) : null};
+    if (Object.keys(next).some(key => next[key] !== this.view[key])) this.labelLayouts?.clear();
+    this.view = next;
+  }
+
   /**
    * Explode at clip time t: a number (the v1 path), or per part when the beat staggers or explodes
    * only some parts. Staggered parts leave one after another in `order` (equal orders together) and
@@ -904,10 +931,12 @@ class Explore {
       const amplitude = (beat.turn * L) / Math.PI; // peak speed = turn deg/s
       yaw += (amplitude * (1 - Math.cos((TAU * (t - move)) / L))) / 2;
     }
-    const pitch = lerp(from.pitch, cur.cam.pitch, ramp);
+    let pitch = lerp(from.pitch, cur.cam.pitch, ramp);
+    yaw += this.view.yaw;
+    if (this.view.pitch) pitch = clamp(pitch + this.view.pitch, -89, 89);
     const dist = Math.exp(lerp(Math.log(from.dist), Math.log(cur.cam.dist), ramp));
     const target = from.target.clone().lerp(cur.cam.target, ramp);
-    const explode = this.explodeState(b, t, ramp);
+    const explode = this.view.explode ?? this.explodeState(b, t, ramp);
 
     // Anims: the current beat's play list fades in, the previous one fades out.
     const animOf = part => {
@@ -1104,7 +1133,8 @@ class Explore {
     this.drawFx(state, heat);
     this.drawAnswerGlow(state);
     this.fxWide.commit();
-    this.composer.render();
+    if (this.live) this.renderer.render(this.scene, this.camera);
+    else this.composer.render();
   }
 
   /** On a beat with a number, the focus parts breathe a soft green halo (the answer). */
@@ -1212,7 +1242,8 @@ class Explore {
     this.drawFx(state, heat);
     this.drawAnswerGlow(state);
     this.fxWide.commit();
-    this.composer.render();
+    if (this.live) this.renderer.render(this.scene, this.camera);
+    else this.composer.render();
   }
 
   /**
@@ -1742,13 +1773,60 @@ class Explore {
     return [(p.x + 1) * 0.5 * SIZE, (1 - p.y) * 0.5 * SIZE];
   }
 
-  /** Label tracks for beat b: side and anchor screen positions at 10 Hz over the whole clip. */
-  labelTracks(b) {
+  /** Bind an explicit model-space point to the closest assembled part's surface. */
+  pointBinding(point) {
+    const key = point.join(',');
+    if (this.pointBindings.has(key)) return this.pointBindings.get(key);
+    const assembled = this.partWorlds(() => null, 0);
+    const target = new THREE.Vector3(...point);
+    const v = new THREE.Vector3();
+    let nearest = null;
+    let distance = Infinity;
+    for (const part of this.parts) {
+      const world = assembled.get(part.id);
+      for (let i = 0; i < part.edges.verts.length; i += 3) {
+        v.fromArray(part.edges.verts, i).applyMatrix4(world);
+        const d = v.distanceToSquared(target);
+        if (d < distance) {
+          nearest = part;
+          distance = d;
+        }
+      }
+    }
+    const binding = nearest
+      ? {id: nearest.id, local: target.applyMatrix4(assembled.get(nearest.id).clone().invert())}
+      : {id: null, local: target};
+    this.pointBindings.set(key, binding);
+    return binding;
+  }
+
+  labelPoint(label, side, state) {
+    if (label.binding) {
+      const p = label.binding.local.clone();
+      return label.binding.id ? p.applyMatrix4(state.worlds.get(label.binding.id)) : p;
+    }
+    return new THREE.Vector3().fromArray(label.part.edges.verts, label.vertex[side] * 3).applyMatrix4(state.worlds.get(label.id));
+  }
+
+  /** Shared anchor/column choices for offline tracks and exact live frame projections. */
+  labelLayout(b, sampled = true) {
+    const key = sampled ? b : `live:${b}`;
+    if (this.labelLayouts.has(key)) return this.labelLayouts.get(key);
     const beat = this.beats[b];
     const plan = this.plan(b);
     const rest = this.frameState(b, beat.move);
     const midX = this.project(this.rest[b].cam.target)[0];
-    const chosen = beat.labels.map(id => {
+    const items = [
+      ...beat.labels.map(id => ({kind: 'label', to: id, text: this.byId.get(id).label})),
+      ...beat.callouts.map(callout => ({...callout, kind: 'callout'})),
+    ];
+    const chosen = items.map(item => {
+      if (Array.isArray(item.to)) {
+        const binding = this.pointBinding(item.to);
+        const [cx, cy] = this.project(this.labelPoint({binding}, null, rest));
+        return {...item, binding, cx, cy, dx: cx - midX};
+      }
+      const id = item.to;
       const part = this.byId.get(id);
       const world = rest.worlds.get(id);
       const verts = part.edges.verts;
@@ -1770,7 +1848,7 @@ class Explore {
       }
       cx /= screen.length;
       cy /= screen.length;
-      return {id, part, screen, cx, cy, dx: cx - midX};
+      return {...item, id, part, screen, cx, cy, dx: cx - midX};
     });
     // Each label gets an anchor for either column: the part's point furthest towards that side
     // near the part's middle height. Both are sampled at 10 Hz over the whole clip.
@@ -1787,26 +1865,28 @@ class Explore {
       }
       return best;
     };
-    for (const label of chosen) label.vertex = {l: pickAnchor(label, 'l'), r: pickAnchor(label, 'r')};
+    for (const label of chosen) if (!label.binding) label.vertex = {l: pickAnchor(label, 'l'), r: pickAnchor(label, 'r')};
     const times = [];
-    for (let k = 0; k * 0.1 <= plan.dur + 1e-9; k++) times.push(Number((k * 0.1).toFixed(1)));
+    if (!sampled) times.push(beat.move); // Column selection stays cheap during Turn it drags.
+    else for (let k = 0; k * 0.1 <= plan.dur + 1e-9; k++) times.push(Number((k * 0.1).toFixed(1)));
     for (const label of chosen) label.tracks = {l: [], r: []};
     for (const t of times) {
       const state = this.frameState(b, t);
       for (const label of chosen) {
         for (const side of ['l', 'r']) {
-          const v = new THREE.Vector3().fromArray(label.part.edges.verts, label.vertex[side] * 3).applyMatrix4(state.worlds.get(label.id));
+          const v = this.labelPoint(label, side, state);
           const [x, y] = this.project(v);
           label.tracks[side].push([t, Number(x.toFixed(1)), Number(y.toFixed(1))]);
         }
       }
     }
     // Choose sides: labels go to the side their part is on, and two labels on one side are never
-    // within 26 px of each other at any sampled time. Try every assignment (at most 3 labels).
+    // within 26 px of each other at any sampled time. Try every assignment (at most 4 items).
     const clash = (a, sa, c, sc) => sa === sc && a.tracks[sa].some((p, i) => Math.abs(p[2] - c.tracks[sc][i][2]) < 26);
     let best = null;
     for (let mask = 0; mask < 1 << chosen.length; mask++) {
       const sides = chosen.map((_, i) => (mask >> i) & 1 ? 'r' : 'l');
+      if (chosen.some((label, i) => label.side && label.side !== sides[i])) continue;
       let cost = 0;
       chosen.forEach((label, i) => {
         const natural = label.dx < 0 ? 'l' : 'r';
@@ -1824,7 +1904,29 @@ class Explore {
       label.anchor = label.tracks[label.side];
     });
     const warnings = best && best.clashes ? [`${best.clashes} label pair(s) closer than 26 px on one side`] : [];
-    return {labels: chosen.map(label => ({part: label.id, side: label.side, anchor: label.anchor})), warnings};
+    const layout = {chosen, warnings};
+    this.labelLayouts.set(key, layout);
+    return layout;
+  }
+
+  /** Label and callout tracks: same margin layout, anchors sampled at 10 Hz. */
+  labelTracks(b) {
+    const {chosen, warnings} = this.labelLayout(b);
+    return {labels: chosen.map(label => ({
+      kind: label.kind, text: label.text, part: label.id,
+      ...(label.kind === 'callout' ? {to: label.to} : {}),
+      side: label.side, anchor: label.anchor,
+    })), warnings};
+  }
+
+  /** Current anchor positions in 600x600 pixels; text rows use the same 26 px margin spacing. */
+  labelsAt(b, t) {
+    const {chosen} = this.labelLayout(b, !this.live);
+    const state = this.frameState(b, t);
+    return chosen.map(label => {
+      const [x, y] = this.project(this.labelPoint(label, label.side, state));
+      return {kind: label.kind, text: label.text, side: label.side, x, y};
+    });
   }
 
   dimTracks(b) {
@@ -1851,7 +1953,7 @@ class Explore {
 
 let explore = null;
 
-window.R3D = {
+const offlineAPI = {
   init() {
     const canvas = document.getElementById('stage');
     explore = new Explore(canvas);
@@ -1956,4 +2058,10 @@ window.R3D = {
     return drawCard(explore.canvas, meta);
   },
 };
-window.R3D_READY = true;
+// Install the offline driver only when this module is the page's entry script. Importing Explore
+// from the Web App leaves its DOM and window.R3D untouched.
+if (typeof window !== 'undefined' && typeof document !== 'undefined' &&
+    Array.from(document.scripts).some(script => script.type === 'module' && script.src === import.meta.url)) {
+  window.R3D = offlineAPI;
+  window.R3D_READY = true;
+}

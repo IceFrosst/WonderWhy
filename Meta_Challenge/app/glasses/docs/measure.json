@@ -1,128 +1,133 @@
 {
-  "date": "2026-11-14T08:12:27.880Z",
-  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "date": "2026-11-14T20:11:19.087Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
   "bundle": {
-    "jsGzipBytes": 205260,
-    "cssGzipBytes": 18931,
-    "totalGzipBytes": 224191,
-    "requests": 5
+    "jsGzipBytes": 226354,
+    "cssGzipBytes": 19273,
+    "lazyGzipBytes": 137029,
+    "totalGzipBytes": 245627,
+    "requests": 4
   },
   "fps": {
     "guitar.motion": {
-      "min": 29.91,
-      "median": 29.97
+      "min": 29.76,
+      "median": 30
     },
     "guitar.whatif": {
-      "min": 29.8,
-      "median": 29.91
+      "min": 29.72,
+      "median": 29.86
     },
     "guitar.flow": {
-      "min": 29.81,
-      "median": 30.01
+      "min": 29.69,
+      "median": 30
     },
     "guitar.number": {
-      "min": 29.87,
-      "median": 29.98
+      "min": 29.71,
+      "median": 30
     },
     "ball.motion": {
-      "min": 29.87,
-      "median": 29.94
+      "min": 29.67,
+      "median": 30
     },
     "ball.compare": {
-      "min": 29.8,
-      "median": 30.05
+      "min": 29.56,
+      "median": 30
     },
     "ball.whatif": {
-      "min": 29.8,
-      "median": 29.9
+      "min": 29.77,
+      "median": 29.89
     },
     "ball.flow": {
-      "min": 29.79,
-      "median": 29.94
+      "min": 29.68,
+      "median": 30
     },
     "ball.number": {
-      "min": 29.86,
-      "median": 29.95
+      "min": 29.67,
+      "median": 30
     },
     "bicycle.motion": {
-      "min": 29.91,
+      "min": 29.69,
       "median": 30
     },
     "bicycle.whatif": {
-      "min": 29.83,
-      "median": 29.9
+      "min": 29.86,
+      "median": 29.93
     },
     "bicycle.flow": {
-      "min": 29.84,
-      "median": 29.94
+      "min": 29.72,
+      "median": 30
     },
     "bicycle.number": {
-      "min": 29.88,
-      "median": 29.96
+      "min": 29.74,
+      "median": 30
     },
     "kettle.motion": {
-      "min": 29.93,
-      "median": 29.94
+      "min": 29.64,
+      "median": 30
     },
     "kettle.cutaway": {
-      "min": 29.8,
-      "median": 29.99
+      "min": 29.7,
+      "median": 30
     },
     "kettle.whatif": {
-      "min": 29.9,
-      "median": 29.92
+      "min": 29.82,
+      "median": 29.91
     },
     "kettle.flow": {
       "min": 29.88,
-      "median": 30.03
+      "median": 30
     },
     "kettle.number": {
-      "min": 29.87,
-      "median": 29.96
+      "min": 29.57,
+      "median": 30
     },
     "pendulum.motion": {
-      "min": 29.81,
-      "median": 30.01
+      "min": 29.96,
+      "median": 30
     },
     "pendulum.whatif": {
-      "min": 29.8,
-      "median": 29.92
+      "min": 29.68,
+      "median": 29.84
     },
     "pendulum.flow": {
-      "min": 29.89,
-      "median": 29.93
+      "min": 29.91,
+      "median": 30
     },
     "pendulum.number": {
-      "min": 29.87,
-      "median": 29.96
+      "min": 29.67,
+      "median": 30
     },
     "phone.inside": {
-      "min": 29.85,
-      "median": 29.97
+      "min": 29.96,
+      "median": 30
     },
     "phone.whatif": {
-      "min": 29.9,
-      "median": 29.9
-    },
-    "phone.flow": {
-      "min": 29.96,
-      "median": 29.97
-    },
-    "phone.number": {
-      "min": 29.86,
-      "median": 29.95
+      "min": 29.68,
+      "median": 29.84
     },
     "spoon.zoom": {
-      "min": 29.87,
-      "median": 29.98
+      "min": 29.88,
+      "median": 30
     },
     "spoon.flow": {
-      "min": 29.9,
-      "median": 29.97
+      "min": 29.69,
+      "median": 30
     },
     "spoon.number": {
-      "min": 29.9,
-      "median": 29.96
+      "min": 29.62,
+      "median": 30
+    },
+    "earbuds.motion": {
+      "min": 29.56,
+      "median": 30
+    },
+    "earbuds.flow": {
+      "min": 29.77,
+      "median": 30
+    },
+    "earbuds.number": {
+      "min": 29.66,
+      "median": 30
     }
   },
   "states": [
@@ -362,6 +367,36 @@
       "screenshot": "states/47-explore-home.png"
     },
     {
+      "name": "scene-guitar-explore-s1",
+      "ok": true,
+      "screenshot": "states/scene-guitar-explore-s1.png"
+    },
+    {
+      "name": "scene-guitar-explore-s2",
+      "ok": true,
+      "screenshot": "states/scene-guitar-explore-s2.png"
+    },
+    {
+      "name": "scene-guitar-explore-s3",
+      "ok": true,
+      "screenshot": "states/scene-guitar-explore-s3.png"
+    },
+    {
+      "name": "scene-guitar-explore-s4",
+      "ok": true,
+      "screenshot": "states/scene-guitar-explore-s4.png"
+    },
+    {
+      "name": "scene-guitar-explore-s5",
+      "ok": true,
+      "screenshot": "states/scene-guitar-explore-s5.png"
+    },
+    {
+      "name": "scene-guitar-explore-s6",
+      "ok": true,
+      "screenshot": "states/scene-guitar-explore-s6.png"
+    },
+    {
       "name": "scene-guitar-motion-s1",
       "ok": true,
       "screenshot": "states/scene-guitar-motion-s1.png"
@@ -420,6 +455,36 @@
       "name": "scene-guitar-number-s3",
       "ok": true,
       "screenshot": "states/scene-guitar-number-s3.png"
+    },
+    {
+      "name": "scene-ball-explore-s1",
+      "ok": true,
+      "screenshot": "states/scene-ball-explore-s1.png"
+    },
+    {
+      "name": "scene-ball-explore-s2",
+      "ok": true,
+      "screenshot": "states/scene-ball-explore-s2.png"
+    },
+    {
+      "name": "scene-ball-explore-s3",
+      "ok": true,
+      "screenshot": "states/scene-ball-explore-s3.png"
+    },
+    {
+      "name": "scene-ball-explore-s4",
+      "ok": true,
+      "screenshot": "states/scene-ball-explore-s4.png"
+    },
+    {
+      "name": "scene-ball-explore-s5",
+      "ok": true,
+      "screenshot": "states/scene-ball-explore-s5.png"
+    },
+    {
+      "name": "scene-ball-explore-s6",
+      "ok": true,
+      "screenshot": "states/scene-ball-explore-s6.png"
     },
     {
       "name": "scene-ball-motion-s1",
@@ -495,6 +560,36 @@
       "name": "scene-ball-number-s3",
       "ok": true,
       "screenshot": "states/scene-ball-number-s3.png"
+    },
+    {
+      "name": "scene-bicycle-explore-s1",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-explore-s1.png"
+    },
+    {
+      "name": "scene-bicycle-explore-s2",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-explore-s2.png"
+    },
+    {
+      "name": "scene-bicycle-explore-s3",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-explore-s3.png"
+    },
+    {
+      "name": "scene-bicycle-explore-s4",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-explore-s4.png"
+    },
+    {
+      "name": "scene-bicycle-explore-s5",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-explore-s5.png"
+    },
+    {
+      "name": "scene-bicycle-explore-s6",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-explore-s6.png"
     },
     {
       "name": "scene-bicycle-motion-s1",
@@ -662,6 +757,36 @@
       "screenshot": "states/scene-kettle-number-s3.png"
     },
     {
+      "name": "scene-pendulum-explore-s1",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-explore-s1.png"
+    },
+    {
+      "name": "scene-pendulum-explore-s2",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-explore-s2.png"
+    },
+    {
+      "name": "scene-pendulum-explore-s3",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-explore-s3.png"
+    },
+    {
+      "name": "scene-pendulum-explore-s4",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-explore-s4.png"
+    },
+    {
+      "name": "scene-pendulum-explore-s5",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-explore-s5.png"
+    },
+    {
+      "name": "scene-pendulum-explore-s6",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-explore-s6.png"
+    },
+    {
       "name": "scene-pendulum-motion-s1",
       "ok": true,
       "screenshot": "states/scene-pendulum-motion-s1.png"
@@ -722,6 +847,36 @@
       "screenshot": "states/scene-pendulum-number-s3.png"
     },
     {
+      "name": "scene-phone-explore-s1",
+      "ok": true,
+      "screenshot": "states/scene-phone-explore-s1.png"
+    },
+    {
+      "name": "scene-phone-explore-s2",
+      "ok": true,
+      "screenshot": "states/scene-phone-explore-s2.png"
+    },
+    {
+      "name": "scene-phone-explore-s3",
+      "ok": true,
+      "screenshot": "states/scene-phone-explore-s3.png"
+    },
+    {
+      "name": "scene-phone-explore-s4",
+      "ok": true,
+      "screenshot": "states/scene-phone-explore-s4.png"
+    },
+    {
+      "name": "scene-phone-explore-s5",
+      "ok": true,
+      "screenshot": "states/scene-phone-explore-s5.png"
+    },
+    {
+      "name": "scene-phone-explore-s6",
+      "ok": true,
+      "screenshot": "states/scene-phone-explore-s6.png"
+    },
+    {
       "name": "scene-phone-inside-s1",
       "ok": true,
       "screenshot": "states/scene-phone-inside-s1.png"
@@ -762,39 +917,34 @@
       "screenshot": "states/scene-phone-whatif-s2.png"
     },
     {
-      "name": "scene-phone-flow-s1",
+      "name": "scene-spoon-explore-s1",
       "ok": true,
-      "screenshot": "states/scene-phone-flow-s1.png"
+      "screenshot": "states/scene-spoon-explore-s1.png"
     },
     {
-      "name": "scene-phone-flow-s2",
+      "name": "scene-spoon-explore-s2",
       "ok": true,
-      "screenshot": "states/scene-phone-flow-s2.png"
+      "screenshot": "states/scene-spoon-explore-s2.png"
     },
     {
-      "name": "scene-phone-flow-s3",
+      "name": "scene-spoon-explore-s3",
       "ok": true,
-      "screenshot": "states/scene-phone-flow-s3.png"
+      "screenshot": "states/scene-spoon-explore-s3.png"
     },
     {
-      "name": "scene-phone-flow-s4",
+      "name": "scene-spoon-explore-s4",
       "ok": true,
-      "screenshot": "states/scene-phone-flow-s4.png"
+      "screenshot": "states/scene-spoon-explore-s4.png"
     },
     {
-      "name": "scene-phone-number-s1",
+      "name": "scene-spoon-explore-s5",
       "ok": true,
-      "screenshot": "states/scene-phone-number-s1.png"
+      "screenshot": "states/scene-spoon-explore-s5.png"
     },
     {
-      "name": "scene-phone-number-s2",
+      "name": "scene-spoon-explore-s6",
       "ok": true,
-      "screenshot": "states/scene-phone-number-s2.png"
-    },
-    {
-      "name": "scene-phone-number-s3",
-      "ok": true,
-      "screenshot": "states/scene-phone-number-s3.png"
+      "screenshot": "states/scene-spoon-explore-s6.png"
     },
     {
       "name": "scene-spoon-zoom-s1",
@@ -840,6 +990,56 @@
       "name": "scene-spoon-number-s3",
       "ok": true,
       "screenshot": "states/scene-spoon-number-s3.png"
+    },
+    {
+      "name": "scene-earbuds-motion-s1",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-motion-s1.png"
+    },
+    {
+      "name": "scene-earbuds-motion-s2",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-motion-s2.png"
+    },
+    {
+      "name": "scene-earbuds-motion-s3",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-motion-s3.png"
+    },
+    {
+      "name": "scene-earbuds-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-flow-s1.png"
+    },
+    {
+      "name": "scene-earbuds-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-flow-s2.png"
+    },
+    {
+      "name": "scene-earbuds-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-flow-s3.png"
+    },
+    {
+      "name": "scene-earbuds-flow-s4",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-flow-s4.png"
+    },
+    {
+      "name": "scene-earbuds-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-number-s1.png"
+    },
+    {
+      "name": "scene-earbuds-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-number-s2.png"
+    },
+    {
+      "name": "scene-earbuds-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-earbuds-number-s3.png"
     }
   ],
   "failures": []

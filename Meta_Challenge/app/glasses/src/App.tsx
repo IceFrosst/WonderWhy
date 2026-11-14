@@ -17,7 +17,7 @@ import {emitNav, onNav, setKeyGate} from './bus';
 import {OBJECTS, findObject, mergeSpecText, sketchToObject} from './content';
 import type {ObjectInfo} from './content';
 import Explainer from './Explainer';
-import {arrangeExplore, bridgeHttpOrigin, exploreMediaFromShow, isExploreChapter, probeExploreMedia} from './explore';
+import {arrangeExplore, bridgeHttpOrigin, exploreMediaFromShow, isExploreChapter, parseExploreSpec, probeExploreMedia} from './explore';
 import type {ExploreMedia} from './explore';
 import kettleManifest from '../../bridge/media/kettle/manifest.json';
 import phoneManifest from '../../bridge/media/phone/manifest.json';
@@ -120,7 +120,7 @@ function exploreBeats(info: ObjectInfo): number {
   return info.chapters.find(isExploreChapter)?.captions.length ?? 0;
 }
 
-/** A sketch's Explore chapter plays only when its rendered media came with it (`sketch.media`). */
+/** A sketch's spec plays live; its media supplies optional fallbacks. */
 function arrangeSketch(info: ObjectInfo, raw: unknown, showMedia?: unknown): {info: ObjectInfo; explore: ExploreMedia | null} {
   const own = typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as {media?: unknown}).media : undefined;
   const origin = bridgeHttpOrigin();
@@ -190,22 +190,29 @@ function clampHomeIndex(index: number, count: number): number {
 
 function HomeScreen({connected, openObject, startDemo, takePhoto, openAsk}: HomeScreenProps) {
   const columns = OBJECTS.length > 6 ? 3 : 2;
-  const choices = useMemo(
-    () => [
+  const choices = useMemo(() => {
+    const objects = new URLSearchParams(window.location.search).get('all') === '1'
+      ? OBJECTS
+      : ['earbuds', 'phone', 'printer3d', 'sauna', 'spinbike', 'glasses'].flatMap(id => OBJECTS.filter(object => object.id === id));
+    return [
       ...(connected ? [{id: 'photo', label: 'Take photo', short: 'Photo', onClick: () => takePhoto()}] : []),
-      ...OBJECTS.map(object => ({id: object.id, label: object.label, short: object.short, onClick: () => openObject(object.id)})),
-      {id: 'demo', label: 'Demo', short: 'Demo', onClick: () => startDemo()},
       {id: 'ask', label: 'Ask', short: 'Ask', onClick: openAsk},
-    ],
-    [connected, openObject, startDemo, takePhoto, openAsk],
-  );
-  const rows: typeof choices[] = [];
-  for (let index = 0; index < choices.length; index += columns) rows.push(choices.slice(index, index + columns));
+      ...objects.map(object => ({id: object.id, label: object.label, short: object.short, onClick: () => openObject(object.id)})),
+      {id: 'demo', label: 'Demo', short: 'Demo', onClick: () => startDemo()},
+    ];
+  }, [connected, openObject, startDemo, takePhoto, openAsk]);
+  const rows = useMemo(() => {
+    const actionCount = connected ? 2 : 1;
+    const result = [choices.slice(0, actionCount)];
+    for (let index = actionCount; index < choices.length; index += columns) result.push(choices.slice(index, index + columns));
+    return result;
+  }, [choices, columns, connected]);
   const buttonRefs = useRef<Array<ButtonHandle | null>>([]);
   const [shortLabels, setShortLabels] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => buttonRefs.current[0]?.getElement()?.focus());
+    const index = choices.findIndex(choice => choice.id === (connected ? 'photo' : 'ask'));
+    const frame = window.requestAnimationFrame(() => buttonRefs.current[index]?.getElement()?.focus());
     return () => window.cancelAnimationFrame(frame);
   }, [connected]);
 
@@ -232,8 +239,16 @@ function HomeScreen({connected, openObject, startDemo, takePhoto, openAsk}: Home
         return Boolean(element && element.contains(document.activeElement));
       });
       const start = current < 0 ? 0 : current;
-      const delta = action === 'left' ? -1 : action === 'right' ? 1 : action === 'up' ? -columns : columns;
-      const next = clampHomeIndex(start + delta, choices.length);
+      let rowIndex = 0;
+      let column = start;
+      while (column >= rows[rowIndex].length) column -= rows[rowIndex++].length;
+      if (action === 'left' || action === 'right') {
+        column = clampHomeIndex(column + (action === 'left' ? -1 : 1), rows[rowIndex].length);
+      } else {
+        rowIndex = clampHomeIndex(rowIndex + (action === 'up' ? -1 : 1), rows.length);
+        column = clampHomeIndex(column, rows[rowIndex].length);
+      }
+      const next = rows.slice(0, rowIndex).reduce((count, row) => count + row.length, 0) + column;
       buttonRefs.current[next]?.getElement()?.focus({preventScroll: true});
     };
     const off = onNav(action => {
@@ -257,7 +272,7 @@ function HomeScreen({connected, openObject, startDemo, takePhoto, openAsk}: Home
       off();
       window.removeEventListener('keydown', onKey, true);
     };
-  }, [choices.length, columns]);
+  }, [rows]);
 
   let flatIndex = 0;
   return (
@@ -286,8 +301,9 @@ function HomeScreen({connected, openObject, startDemo, takePhoto, openAsk}: Home
                 const title = columns === 3 || shorten ? (choice.short ?? choice.label.trim().split(/\s+/)[0]) : choice.label;
                 return (
                   <Button
-                    className="home-object-button"
+                    className={`home-object-button${rowIndex === 0 ? ' home-action-button' : ''}`}
                     enforceMaxWidth
+                    width={columns === 3 ? 160 : 240}
                     key={choice.id}
                     ref={handle => { buttonRefs.current[index] = handle; }}
                     title={title}
@@ -515,9 +531,11 @@ export default function App() {
     if (c && ms) cardTimer.current = window.setTimeout(() => setCard(null), ms);
   }, []);
 
-  const [inspectionKey, setInspectionKey] = useState<number>();
-  const kettleSelectedAt = useRef<number | undefined>(undefined);
-  const [kettleMotionMs, setKettleMotionMs] = useState<number>();
+  // Turn it on the film of view `key` (Back closes it before it leaves the film).
+  const [turnKey, setTurnKey] = useState<number>();
+  // Test hook: ms from opening a film to its first moving frame.
+  const filmOpenedAt = useRef<number | undefined>(undefined);
+  const [filmMs, setFilmMs] = useState<number>();
   const setViewNow = useCallback((next: View | ((current: View) => View)) => {
     const resolved = typeof next === 'function' ? next(viewRef.current) : next;
     if (resolved.k !== 'capturing') window.clearTimeout(captureTimer.current);
@@ -532,7 +550,7 @@ export default function App() {
   }, [setViewNow]);
 
   // A library object opened on the glasses (home, demo): the bridge's media folder says whether
-  // its Explore beats exist. Without them the object opens on its next lens.
+  // optional video fallbacks exist. A live spec opens immediately.
   // Camera-only mode: the phone app keeps no Display, so this Web App stays in front. The bridge relays
   // `capture` to the phone app, which takes the photo; its result arrives here as `detecting` then `show`.
   const takePhoto = useCallback(() => {
@@ -561,10 +579,8 @@ export default function App() {
       const manifest = objectId === 'kettle' ? kettleManifest : phoneManifest;
       const media = exploreMediaFromShow({base: `/media/${objectId}`, lenses: manifest.lenses}, beats, bridgeHttpOrigin());
       if (media) {
-        if (objectId === 'kettle') {
-          kettleSelectedAt.current = performance.now();
-          setKettleMotionMs(undefined);
-        }
+        filmOpenedAt.current = performance.now();
+        setFilmMs(undefined);
         openObject(objectId, {...extra, ...arrangeExplore(base, media)});
         return;
       }
@@ -573,12 +589,26 @@ export default function App() {
       openObject(objectId, {...extra, ...arrangeExplore(base, null)});
       return;
     }
+    const chapter = base.chapters.find(isExploreChapter);
+    if (chapter && parseExploreSpec(chapter.spec, beats)) {
+      filmOpenedAt.current = performance.now();
+      setFilmMs(undefined);
+      openObject(objectId, {...extra, ...arrangeExplore(base, null)});
+      // Probe only for fallbacks; never delay a spec-only explanation or restart its beat.
+      const opened = viewRef.current;
+      void probeExploreMedia(objectId, beats).then(media => {
+        if (media && seq === librarySeq.current && viewRef.current === opened && opened.k === 'explain') {
+          setViewNow({...opened, explore: media});
+        }
+      });
+      return;
+    }
     const before = viewRef.current;
     void probeExploreMedia(objectId, beats).then(media => {
       if (seq !== librarySeq.current || viewRef.current !== before) return;
       openObject(objectId, {...extra, ...arrangeExplore(base, media)});
     });
-  }, [openObject]);
+  }, [openObject, setViewNow]);
 
   const openSpokenObject = useCallback((objectId: 'phone' | 'kettle') => {
     flashCard(null);
@@ -878,16 +908,16 @@ export default function App() {
               translated ? localise(library, m) : library,
               exploreMediaFromShow(m.media, exploreBeats(library), bridgeHttpOrigin()),
             );
-            // For a new capture, open the rendered film. Keep follow-up links to their exact explanation.
-            const base = arranged.explore && !m.question && m.objectId !== 'phone'
-              ? {...arranged.info, chapters: arranged.info.chapters.slice(0, 1)}
-              : arranged.info;
-            const hintLens =
+            // An object with an Explore film shows only the film (arrangeExplore); a follow-up answer
+            // whose hint names another lens is shown on the film's first beat.
+            const base = arranged.info;
+            const namedLens =
               m.lensHint && typeof m.lensHint.id === 'string'
                 ? base.chapters.findIndex(chapter => `${base.id}.${chapter.lens ?? ''}` === m.lensHint?.id)
                 : -1;
+            const hintLens = namedLens < 0 && arranged.explore && m.question && m.answer ? 0 : namedLens;
             const validHint = hintLens >= 0;
-            const hintStep = validHint
+            const hintStep = namedLens >= 0
               ? Math.min(
                   Math.max(Number.isFinite(m.lensHint?.step) ? Math.trunc(m.lensHint?.step ?? 1) : 1, 1),
                   base.chapters[hintLens].captions.length,
@@ -1069,8 +1099,8 @@ export default function App() {
       flashCard(null);
       return true;
     }
-    if (viewRef.current.k === 'explain' && inspectionKey === viewRef.current.key) {
-      setInspectionKey(undefined);
+    if (viewRef.current.k === 'explain' && turnKey === viewRef.current.key) {
+      setTurnKey(undefined);
       return true;
     }
     if (viewRef.current.k !== 'home') {
@@ -1144,21 +1174,21 @@ export default function App() {
           followUpStep={view.followUpStep}
           demo={demoActive}
           paused={doffed}
-          inspecting={inspectionKey === view.key}
-          onInspect={() => setInspectionKey(view.key)}
-          onExitInspect={() => setInspectionKey(undefined)}
-          onNewCapture={connected ? takePhoto : () => setViewNow({k: 'home'})}
+          turning={turnKey === view.key}
+          onTurn={() => setTurnKey(view.key)}
+          onExitTurn={() => setTurnKey(undefined)}
+          onNewPhoto={connected ? takePhoto : undefined}
           onRendered={onRendered}
           onMotion={() => {
-            if (view.objectId === 'kettle' && kettleSelectedAt.current !== undefined) {
-              setKettleMotionMs(Math.round(performance.now() - kettleSelectedAt.current));
-              kettleSelectedAt.current = undefined;
+            if (filmOpenedAt.current !== undefined) {
+              setFilmMs(Math.round(performance.now() - filmOpenedAt.current));
+              filmOpenedAt.current = undefined;
             }
             if (view.reqId && window.parent !== window) {
               window.parent.postMessage({type: 'lens:motion', reqId: view.reqId}, window.location.origin);
             }
           }}
-          motionMs={view.objectId === 'kettle' ? kettleMotionMs : undefined}
+          filmMs={filmMs}
           onState={onState}
         />
       </Page>

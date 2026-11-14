@@ -127,14 +127,14 @@ export class EarbudsScene implements Scene {
     const left = Math.round(Math.abs(1 - m) * 100);
     if (this.step >= 3) {
       return [
-        {label: 'Noise + flipped noise', value: m > 0.9 ? 'almost silence' : 'some noise left'},
+        {label: 'Sum', value: m > 0.9 ? 'almost silence' : 'noise left'},
         {label: 'Match', value: `${Math.round(this.match)} %`},
         {label: 'Hum left', value: `${left} %`},
       ];
     }
     return [
-      {label: 'Microphone', value: 'hears the noise'},
-      {label: 'Speaker', value: 'plays it flipped'},
+      {label: 'Mic', value: 'hears noise'},
+      {label: 'Speaker', value: 'flips it'},
       {label: 'Match', value: `${Math.round(this.match)} %`},
     ];
   }

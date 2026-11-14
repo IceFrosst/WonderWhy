@@ -287,17 +287,22 @@ async function listFiles(directory) {
   return files;
 }
 
+/** What the first load fetches: the scripts and styles index.html names (lazy chunks are reported apart). */
 async function bundleMeasure() {
   let jsGzipBytes = 0;
   let cssGzipBytes = 0;
+  let lazyGzipBytes = 0;
+  const html = await readFile(path.join(DIST, 'index.html'), 'utf8');
+  const firstLoad = new Set([...html.matchAll(/(?:src|href)="\/?([^"]+\.(?:js|css))"/g)].map(match => path.join(DIST, match[1])));
   for (const file of await listFiles(DIST)) {
     const extension = path.extname(file).toLowerCase();
     if (extension !== '.js' && extension !== '.css') continue;
     const bytes = gzipSync(await readFile(file)).length;
-    if (extension === '.js') jsGzipBytes += bytes;
+    if (!firstLoad.has(file)) lazyGzipBytes += bytes;
+    else if (extension === '.js') jsGzipBytes += bytes;
     else cssGzipBytes += bytes;
   }
-  return {jsGzipBytes, cssGzipBytes, totalGzipBytes: jsGzipBytes + cssGzipBytes, requests: 0};
+  return {jsGzipBytes, cssGzipBytes, lazyGzipBytes, totalGzipBytes: jsGzipBytes + cssGzipBytes, requests: 0};
 }
 
 async function visibleText(page) {
@@ -497,7 +502,11 @@ async function exploreLayoutProblems(page) {
         if (hit(boxes[i], boxes[j])) problems.push(`labels "${boxes[i].text}" and "${boxes[j].text}" overlap`);
       }
     }
-    if (top && top.top < 23.5) problems.push('top line is inside the 24 px margin');
+    const name = rect('.xp-name');
+    if (name && (name.top < 8 || name.left < 23.5)) problems.push('top line name is outside its band (8 px top, 24 px side)');
+    const row = rect('.xp-actions');
+    if (row && (row.left < 23.5 || row.right > width - 23.5 || row.bottom > height - 12)) problems.push('button row leaves its margin');
+    if (row && caption && caption.bottom > row.top) problems.push('caption overlaps the button row');
     if (caption && (caption.bottom > height - 23.5 || caption.left < 23.5 || caption.right > width - 23.5)) {
       problems.push('caption leaves the 24 px margin');
     }
@@ -508,6 +517,27 @@ async function exploreLayoutProblems(page) {
     if (number && number.left < 23.5) problems.push('number leaves the 24 px margin');
     return problems;
   });
+}
+
+/** The 2D lens is on step `step` (1-based): its caption's aria-label starts "Step n/". */
+async function waitStep(session, step) {
+  try {
+    await session.page.waitForFunction(n => document.querySelector('.ex-caption')?.getAttribute('aria-label')?.startsWith(`Step ${n}/`),
+      step, {timeout: WAIT_MS});
+    return true;
+  } catch {
+    session.check(false, `expected step ${step}, found "${await session.page.locator('.ex-caption').getAttribute('aria-label').catch(() => 'no caption')}"`);
+    return false;
+  }
+}
+
+/** Where a screen is: its name plus the beat or step it shows. */
+function positionOf(page) {
+  return page.evaluate(() => [
+    document.querySelector('.ex-title, .xp-name')?.textContent?.trim() ?? '',
+    document.querySelector('.xp-beats')?.getAttribute('aria-label') ?? '',
+    document.querySelector('.ex-caption')?.getAttribute('aria-label') ?? '',
+  ].join(' | '));
 }
 
 function stateFile(index, name) {
@@ -693,16 +723,17 @@ async function main() {
     await simple('home-connected', {}, async session => {
       await session.expectText('Bridge connected', {exact: true});
       const objectButtons = await session.page.locator('.home-object-button').count();
+      // Take photo (connected only), one per object, Demo and Ask.
       session.check(
-        objectButtons === objects.length + 1,
-        `expected ${objects.length} object buttons and one Demo button, found ${objectButtons}; text "${await visibleText(session.page)}"`,
+        objectButtons === objects.length + 3,
+        `expected Take photo, ${objects.length} object buttons, Demo and Ask, found ${objectButtons}; text "${await visibleText(session.page)}"`,
       );
     });
 
     await simple('home-offline', {offline: true}, async session => {
       await session.expectText('Bridge offline (demo)', {exact: true});
       const objectButtons = await session.page.locator('.home-object-button').count();
-      session.check(objectButtons === objects.length + 1, `expected ${objects.length + 1} working home buttons, found ${objectButtons}`);
+      session.check(objectButtons === objects.length + 2, `expected ${objects.length + 2} working home buttons (objects, Demo, Ask), found ${objectButtons}`);
       if (objectButtons) {
         await session.page.getByRole('button', {name: objects[0].label}).click();
         try {
@@ -824,10 +855,10 @@ async function main() {
       send(session, {type: 'show', reqId: 'replay-live-1', objectId: 'guitar', label: 'Guitar string'});
       await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
       await session.page.keyboard.press('Enter');
-      await session.expectText(/^Step 2\//);
+      await waitStep(session, 2);
       send(session, {type: 'show', reqId: 'replay-1', objectId: 'guitar', label: 'Guitar string', replay: true});
       await session.page.waitForTimeout(150);
-      await session.expectText(/^Step 2\//);
+      await waitStep(session, 2);
       await sleep(1000);
       const rendered = bridge.frames.slice(since).some(frame => frame.message.type === 'rendered' && frame.message.reqId === 'replay-1');
       session.check(!rendered, 'replay show sent a rendered acknowledgement');
@@ -918,13 +949,13 @@ async function main() {
       });
       await session.expectText(`Q: ${question}`, {exact: true});
       await session.expectText(answer, {exact: true});
-      await session.expectText(/^Step 2\//);
+      await waitStep(session, 2);
       const title = await session.page.locator('.ex-title').innerText();
       session.check(title.includes(lastLens.title), `expected title to name lens "${lastLens.title}", found "${title}"`);
       await captureScreenshot(session.page, path.join(SCREENSHOTS, session.result.screenshot.split('/').pop()));
       session.result.screenshotCaptured = true;
       await session.page.keyboard.press('Enter');
-      await session.expectText(/^Step 3\//);
+      await waitStep(session, 3);
       const followUpVisible = await session.page.locator('.ex-follow-up').isVisible().catch(() => false);
       session.check(!followUpVisible, 'follow-up block remained after moving to another step');
     });
@@ -943,24 +974,29 @@ async function main() {
         answer: 'This hint should be ignored.',
         lensHint: {id: 'kettle.not-a-lens', step: 99},
       });
-      await session.expectText(/^Step 1\//);
+      await waitStep(session, 1);
       const title = await session.page.locator('.ex-title').innerText();
       session.check(title.includes(firstLens.title), `expected first lens title "${firstLens.title}", found "${title}"`);
     });
 
     await simple('demo', {params: {demo: 2}}, async session => {
       const since = bridge.frames.length;
-      await session.page.locator('.ex-title').waitFor({state: 'visible', timeout: WAIT_MS});
-      const initialTitle = await session.page.locator('.ex-title').innerText();
+      await session.page.locator('.ex-title, .xp-name').first().waitFor({state: 'visible', timeout: WAIT_MS});
+      await session.page.waitForTimeout(300);
+      const initialTitle = await positionOf(session.page);
       await session.expectText('Demo', {exact: true});
       try {
         await session.page.waitForFunction(
-          previous => document.querySelector('.ex-title')?.textContent?.trim() !== previous,
+          previous => [
+            document.querySelector('.ex-title, .xp-name')?.textContent?.trim() ?? '',
+            document.querySelector('.xp-beats')?.getAttribute('aria-label') ?? '',
+            document.querySelector('.ex-caption')?.getAttribute('aria-label') ?? '',
+          ].join(' | ') !== previous,
           initialTitle,
           {timeout: 12000},
         );
       } catch {
-        session.check(false, `demo title did not change within 12 s from "${initialTitle}"`);
+        session.check(false, `demo did not move on within 12 s from "${initialTitle}"`);
       }
       try {
         await bridge.waitForMessage(message => message.type === 'state' && message.demo === true, {
@@ -986,21 +1022,24 @@ async function main() {
     await simple('demo-button', {}, async session => {
       await session.expectText('Demo', {exact: true});
       await session.page.waitForTimeout(100);
-      await session.page.keyboard.press('ArrowDown');
-      await session.page.keyboard.press('ArrowDown');
-      await session.page.keyboard.press('ArrowRight');
-      const focused = await session.page.evaluate(() => {
+      // Demo sits after the objects in the home grid: walk the D-pad to it.
+      const focusedLabel = () => session.page.evaluate(() => {
         const element = document.activeElement;
         return element?.getAttribute('aria-label') || element?.textContent || '';
       });
+      for (let index = 0; index < objects.length + 4 && !(await focusedLabel()).includes('Demo'); index++) {
+        await session.page.keyboard.press('ArrowRight');
+      }
+      const focused = await focusedLabel();
       session.check(focused.includes('Demo'), `expected D-pad focus on Demo, found ${JSON.stringify(focused)}`);
       await session.page.keyboard.press('Enter');
       // The demo's first object may open on its Explore lens, whose top line has the name instead of .ex-title.
       const title = session.page.locator('.ex-title, .xp-name').first();
       await title.waitFor({state: 'visible', timeout: WAIT_MS});
-      const initialTitle = await title.innerText();
+      await session.page.waitForTimeout(300);
+      const initialTitle = await positionOf(session.page);
       await session.page.waitForTimeout(1600);
-      const laterTitle = await title.innerText();
+      const laterTitle = await positionOf(session.page);
       session.check(laterTitle === initialTitle, `Demo advanced too quickly from "${initialTitle}" to "${laterTitle}"`);
     });
 
@@ -1466,20 +1505,26 @@ async function main() {
       await openExplore(session, 'explore-last-1');
       await nextBeat(session, 1);
       await nextBeat(session, 2);
+      // The film ends on its last beat: New photo, Watch again, Turn it, Home (New photo focused).
+      await session.page.waitForTimeout(300);
+      const end = await session.page.evaluate(() => ({
+        state: document.querySelector('.xp')?.getAttribute('data-state'),
+        buttons: Array.from(document.querySelectorAll('.xp-actions button')).map(button => button.textContent.trim()),
+        focused: document.activeElement?.textContent?.trim(),
+      }));
+      session.check(end.state === 'end' && end.buttons.join('|') === 'New photo|Watch again|Turn it|Home' && end.focused === 'New photo',
+        `end of film: ${JSON.stringify(end)}`);
+      await shoot(session);
       const since = bridge.frames.length;
       await session.page.keyboard.press('Enter');
       try {
-        const state = await bridge.waitForMessage(message => message.type === 'state' && message.objectId === FIXTURE_ID &&
-          message.lensIndex === 1, {since, description: 'next lens after the last beat'});
-        session.check(state.message.lens === 'flow' && state.message.step === 1,
-          `pinch on the last beat should open the flow lens at step 1: ${JSON.stringify(state.message)}`);
+        await bridge.waitForMessage(message => message.type === 'capture', {since, description: 'capture after New photo'});
       } catch (error) {
         session.check(false, errorMessage(error));
       }
-      await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
-      session.check(await session.page.locator('.xp').count() === 0, 'Explore view stayed after leaving the lens');
-      session.check(await session.page.locator('.ex-lens-dot--explore').count() === 1, 'lens bar has no Explore mark');
-      await session.page.waitForTimeout(300);
+      await session.expectText(/^Taking the photo/);
+      const lensFrames = bridge.frames.slice(since).filter(frame => frame.message.type === 'state' && frame.message.lensIndex !== 0);
+      session.check(lensFrames.length === 0 && await session.page.locator('.ex').count() === 0, 'a 2D lens opened after the last beat');
     });
 
     await exploreState('explore-fallback', async session => {
@@ -1488,12 +1533,13 @@ async function main() {
         const sent = Date.now();
         send(session, exploreShow('explore-fallback-1'));
         try {
-          await waitDebug(session.page, () => window.__exploreDebug?.mode === 'still', null, 3000);
+          await waitDebug(session.page, () => window.__exploreDebug?.mode === 'still', null, 6500);
         } catch {
           session.check(false, `still did not replace the stalled video: ${JSON.stringify(await debugOf(session.page))}`);
         }
         const elapsed = Date.now() - sent;
-        session.check(elapsed >= 1400 && elapsed <= 2100, `fallback took ${elapsed} ms (expected about 1.5 s)`);
+        // The player gives a stalled video 4.5 s (ExploreView FALLBACK_MS) before it shows the still.
+        session.check(elapsed >= 4300 && elapsed <= 5400, `fallback took ${elapsed} ms (expected about 4.5 s)`);
         const still = await debugOf(session.page);
         session.check(still?.stillSrc.endsWith('/c1.png'), `expected c1.png, found ${JSON.stringify(still?.stillSrc)}`);
         await waitDebug(session.page, () => window.__exploreDebug?.labels.length === 2 && window.__exploreDebug.labels.every(label => label.alpha >= 1));
@@ -1606,21 +1652,32 @@ async function main() {
       let session;
       try {
         session = await openPage();
-        const sceneFrameStart = bridge.frames.length;
+        let sceneFrameStart = bridge.frames.length;
         // The Explore lens is walked only when its rendered media is in bridge/media/<id>/ (served by
         // the scripted bridge); otherwise the app skips it, and so does the walk.
         const isExplore = chapter => chapter.lens === 'explore' || chapter.scene === 'model3d';
         const exploreMedia = browser.h264 && object.chapters.some(isExplore) ? await realExploreMedia(object.id) : null;
-        const walkChapters = exploreMedia
-          ? [...object.chapters.filter(isExplore).slice(0, 1), ...object.chapters.filter(chapter => !isExplore(chapter))]
-          : object.chapters.filter(chapter => !isExplore(chapter));
-        bridge.send(session.socket, {type: 'show', reqId: `scene-${object.id}`, objectId: object.id, label: object.label,
-          ...(exploreMedia ? {media: exploreMedia} : {})});
+        // An object with a film shows only the film (no 2D lens after it). Its 2D lenses are walked
+        // from a second show without media: how the object opens when there is no film.
+        const film = exploreMedia ? object.chapters.filter(isExplore).slice(0, 1) : [];
+        const twoD = object.chapters.filter(chapter => !isExplore(chapter) &&
+          (object.id !== 'phone' || chapter.lens === 'whatif' || chapter.lens === 'inside'));
+        const walkChapters = [...film, ...twoD];
+        const segmentStart = film.length;
         let knobChecked = false;
         let consoleCursor = 0;
 
-        for (let lensIndex = 0; lensIndex < walkChapters.length; lensIndex++) {
-          const chapter = walkChapters[lensIndex];
+        for (let walkIndex = 0; walkIndex < walkChapters.length; walkIndex++) {
+          const chapter = walkChapters[walkIndex];
+          const lensIndex = walkIndex < segmentStart ? walkIndex : walkIndex - segmentStart;
+          if (walkIndex === 0 || walkIndex === segmentStart) {
+            sceneFrameStart = bridge.frames.length;
+            const withFilm = walkIndex < segmentStart;
+            const openSocket = [...bridge.frames].reverse().find(frame => frame.message.type === 'hello' && frame.socket?.readyState === 1)?.socket;
+            if (openSocket) session.socket = openSocket;
+            bridge.send(session.socket, {type: 'show', reqId: `scene-${object.id}-${withFilm ? 'film' : '2d'}`, objectId: object.id,
+              label: object.label, ...(withFilm ? {media: exploreMedia} : {})});
+          }
           const lensKey = `${object.id}.${chapter.lens}`;
           const samples = [];
           const lensResults = [];
@@ -1815,9 +1872,10 @@ async function main() {
             }
           }
           for (const result of lensResults) recordResult(result);
-          if (lensIndex + 1 < walkChapters.length) {
+          if (walkIndex + 1 < walkChapters.length && walkIndex + 1 !== segmentStart) {
+            // 2D lenses: pinch on the last step opens the next lens (the step button holds the focus).
             const navSince = bridge.frames.length;
-            await session.page.keyboard.press('ArrowRight');
+            await session.page.keyboard.press('Enter');
             try {
               await bridge.waitForMessage(message => message.type === 'state' && message.objectId === object.id &&
                 message.lensIndex === lensIndex + 1 && message.step === 1, {
@@ -1905,7 +1963,7 @@ async function main() {
     '',
     `Date: ${markdownText(date)}`,
     '',
-    `Bundle: ${bundle.totalGzipBytes} bytes gzip (${bundle.jsGzipBytes} JS + ${bundle.cssGzipBytes} CSS); ${bundle.requests} first-paint requests.`,
+    `Bundle: ${bundle.totalGzipBytes} bytes gzip first load (${bundle.jsGzipBytes} JS + ${bundle.cssGzipBytes} CSS); ${bundle.requests} first-paint requests; lazy chunks (Turn it) ${bundle.lazyGzipBytes} bytes gzip.`,
     '',
     `Frame rates: ${markdownText(fpsSummary)}`,
     '',

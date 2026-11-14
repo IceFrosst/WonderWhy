@@ -1,10 +1,10 @@
 # Glasses state check
 
-Date: 2026-11-14T08:12:27.880Z
+Date: 2026-11-14T20:11:19.087Z
 
-Bundle: 224191 bytes gzip (205260 JS + 18931 CSS); 5 first-paint requests.
+Bundle: 245627 bytes gzip first load (226354 JS + 19273 CSS); 4 first-paint requests; lazy chunks (Turn it) 137029 bytes gzip.
 
-Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.91 fps min/median; guitar.flow: 29.81/30.01 fps min/median; guitar.number: 29.87/29.98 fps min/median; ball.motion: 29.87/29.94 fps min/median; ball.compare: 29.8/30.05 fps min/median; ball.whatif: 29.8/29.9 fps min/median; ball.flow: 29.79/29.94 fps min/median; ball.number: 29.86/29.95 fps min/median; bicycle.motion: 29.91/30 fps min/median; bicycle.whatif: 29.83/29.9 fps min/median; bicycle.flow: 29.84/29.94 fps min/median; bicycle.number: 29.88/29.96 fps min/median; kettle.motion: 29.93/29.94 fps min/median; kettle.cutaway: 29.8/29.99 fps min/median; kettle.whatif: 29.9/29.92 fps min/median; kettle.flow: 29.88/30.03 fps min/median; kettle.number: 29.87/29.96 fps min/median; pendulum.motion: 29.81/30.01 fps min/median; pendulum.whatif: 29.8/29.92 fps min/median; pendulum.flow: 29.89/29.93 fps min/median; pendulum.number: 29.87/29.96 fps min/median; phone.inside: 29.85/29.97 fps min/median; phone.whatif: 29.9/29.9 fps min/median; phone.flow: 29.96/29.97 fps min/median; phone.number: 29.86/29.95 fps min/median; spoon.zoom: 29.87/29.98 fps min/median; spoon.flow: 29.9/29.97 fps min/median; spoon.number: 29.9/29.96 fps min/median
+Frame rates: guitar.motion: 29.76/30 fps min/median; guitar.whatif: 29.72/29.86 fps min/median; guitar.flow: 29.69/30 fps min/median; guitar.number: 29.71/30 fps min/median; ball.motion: 29.67/30 fps min/median; ball.compare: 29.56/30 fps min/median; ball.whatif: 29.77/29.89 fps min/median; ball.flow: 29.68/30 fps min/median; ball.number: 29.67/30 fps min/median; bicycle.motion: 29.69/30 fps min/median; bicycle.whatif: 29.86/29.93 fps min/median; bicycle.flow: 29.72/30 fps min/median; bicycle.number: 29.74/30 fps min/median; kettle.motion: 29.64/30 fps min/median; kettle.cutaway: 29.7/30 fps min/median; kettle.whatif: 29.82/29.91 fps min/median; kettle.flow: 29.88/30 fps min/median; kettle.number: 29.57/30 fps min/median; pendulum.motion: 29.96/30 fps min/median; pendulum.whatif: 29.68/29.84 fps min/median; pendulum.flow: 29.91/30 fps min/median; pendulum.number: 29.67/30 fps min/median; phone.inside: 29.96/30 fps min/median; phone.whatif: 29.68/29.84 fps min/median; spoon.zoom: 29.88/30 fps min/median; spoon.flow: 29.69/30 fps min/median; spoon.number: 29.62/30 fps min/median; earbuds.motion: 29.56/30 fps min/median; earbuds.flow: 29.77/30 fps min/median; earbuds.number: 29.66/30 fps min/median
 
 | State | Result | Screenshot |
 |---|---|---|
@@ -55,6 +55,12 @@ Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.9
 | explore-finnish | OK | ![explore-finnish](states/45-explore-finnish.png) |
 | explore-sketch | OK | ![explore-sketch](states/46-explore-sketch.png) |
 | explore-home | OK | ![explore-home](states/47-explore-home.png) |
+| scene-guitar-explore-s1 | OK | ![scene-guitar-explore-s1](states/scene-guitar-explore-s1.png) |
+| scene-guitar-explore-s2 | OK | ![scene-guitar-explore-s2](states/scene-guitar-explore-s2.png) |
+| scene-guitar-explore-s3 | OK | ![scene-guitar-explore-s3](states/scene-guitar-explore-s3.png) |
+| scene-guitar-explore-s4 | OK | ![scene-guitar-explore-s4](states/scene-guitar-explore-s4.png) |
+| scene-guitar-explore-s5 | OK | ![scene-guitar-explore-s5](states/scene-guitar-explore-s5.png) |
+| scene-guitar-explore-s6 | OK | ![scene-guitar-explore-s6](states/scene-guitar-explore-s6.png) |
 | scene-guitar-motion-s1 | OK | ![scene-guitar-motion-s1](states/scene-guitar-motion-s1.png) |
 | scene-guitar-motion-s2 | OK | ![scene-guitar-motion-s2](states/scene-guitar-motion-s2.png) |
 | scene-guitar-motion-s3 | OK | ![scene-guitar-motion-s3](states/scene-guitar-motion-s3.png) |
@@ -67,6 +73,12 @@ Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.9
 | scene-guitar-number-s1 | OK | ![scene-guitar-number-s1](states/scene-guitar-number-s1.png) |
 | scene-guitar-number-s2 | OK | ![scene-guitar-number-s2](states/scene-guitar-number-s2.png) |
 | scene-guitar-number-s3 | OK | ![scene-guitar-number-s3](states/scene-guitar-number-s3.png) |
+| scene-ball-explore-s1 | OK | ![scene-ball-explore-s1](states/scene-ball-explore-s1.png) |
+| scene-ball-explore-s2 | OK | ![scene-ball-explore-s2](states/scene-ball-explore-s2.png) |
+| scene-ball-explore-s3 | OK | ![scene-ball-explore-s3](states/scene-ball-explore-s3.png) |
+| scene-ball-explore-s4 | OK | ![scene-ball-explore-s4](states/scene-ball-explore-s4.png) |
+| scene-ball-explore-s5 | OK | ![scene-ball-explore-s5](states/scene-ball-explore-s5.png) |
+| scene-ball-explore-s6 | OK | ![scene-ball-explore-s6](states/scene-ball-explore-s6.png) |
 | scene-ball-motion-s1 | OK | ![scene-ball-motion-s1](states/scene-ball-motion-s1.png) |
 | scene-ball-motion-s2 | OK | ![scene-ball-motion-s2](states/scene-ball-motion-s2.png) |
 | scene-ball-motion-s3 | OK | ![scene-ball-motion-s3](states/scene-ball-motion-s3.png) |
@@ -82,6 +94,12 @@ Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.9
 | scene-ball-number-s1 | OK | ![scene-ball-number-s1](states/scene-ball-number-s1.png) |
 | scene-ball-number-s2 | OK | ![scene-ball-number-s2](states/scene-ball-number-s2.png) |
 | scene-ball-number-s3 | OK | ![scene-ball-number-s3](states/scene-ball-number-s3.png) |
+| scene-bicycle-explore-s1 | OK | ![scene-bicycle-explore-s1](states/scene-bicycle-explore-s1.png) |
+| scene-bicycle-explore-s2 | OK | ![scene-bicycle-explore-s2](states/scene-bicycle-explore-s2.png) |
+| scene-bicycle-explore-s3 | OK | ![scene-bicycle-explore-s3](states/scene-bicycle-explore-s3.png) |
+| scene-bicycle-explore-s4 | OK | ![scene-bicycle-explore-s4](states/scene-bicycle-explore-s4.png) |
+| scene-bicycle-explore-s5 | OK | ![scene-bicycle-explore-s5](states/scene-bicycle-explore-s5.png) |
+| scene-bicycle-explore-s6 | OK | ![scene-bicycle-explore-s6](states/scene-bicycle-explore-s6.png) |
 | scene-bicycle-motion-s1 | OK | ![scene-bicycle-motion-s1](states/scene-bicycle-motion-s1.png) |
 | scene-bicycle-motion-s2 | OK | ![scene-bicycle-motion-s2](states/scene-bicycle-motion-s2.png) |
 | scene-bicycle-motion-s3 | OK | ![scene-bicycle-motion-s3](states/scene-bicycle-motion-s3.png) |
@@ -115,6 +133,12 @@ Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.9
 | scene-kettle-number-s1 | OK | ![scene-kettle-number-s1](states/scene-kettle-number-s1.png) |
 | scene-kettle-number-s2 | OK | ![scene-kettle-number-s2](states/scene-kettle-number-s2.png) |
 | scene-kettle-number-s3 | OK | ![scene-kettle-number-s3](states/scene-kettle-number-s3.png) |
+| scene-pendulum-explore-s1 | OK | ![scene-pendulum-explore-s1](states/scene-pendulum-explore-s1.png) |
+| scene-pendulum-explore-s2 | OK | ![scene-pendulum-explore-s2](states/scene-pendulum-explore-s2.png) |
+| scene-pendulum-explore-s3 | OK | ![scene-pendulum-explore-s3](states/scene-pendulum-explore-s3.png) |
+| scene-pendulum-explore-s4 | OK | ![scene-pendulum-explore-s4](states/scene-pendulum-explore-s4.png) |
+| scene-pendulum-explore-s5 | OK | ![scene-pendulum-explore-s5](states/scene-pendulum-explore-s5.png) |
+| scene-pendulum-explore-s6 | OK | ![scene-pendulum-explore-s6](states/scene-pendulum-explore-s6.png) |
 | scene-pendulum-motion-s1 | OK | ![scene-pendulum-motion-s1](states/scene-pendulum-motion-s1.png) |
 | scene-pendulum-motion-s2 | OK | ![scene-pendulum-motion-s2](states/scene-pendulum-motion-s2.png) |
 | scene-pendulum-motion-s3 | OK | ![scene-pendulum-motion-s3](states/scene-pendulum-motion-s3.png) |
@@ -127,6 +151,12 @@ Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.9
 | scene-pendulum-number-s1 | OK | ![scene-pendulum-number-s1](states/scene-pendulum-number-s1.png) |
 | scene-pendulum-number-s2 | OK | ![scene-pendulum-number-s2](states/scene-pendulum-number-s2.png) |
 | scene-pendulum-number-s3 | OK | ![scene-pendulum-number-s3](states/scene-pendulum-number-s3.png) |
+| scene-phone-explore-s1 | OK | ![scene-phone-explore-s1](states/scene-phone-explore-s1.png) |
+| scene-phone-explore-s2 | OK | ![scene-phone-explore-s2](states/scene-phone-explore-s2.png) |
+| scene-phone-explore-s3 | OK | ![scene-phone-explore-s3](states/scene-phone-explore-s3.png) |
+| scene-phone-explore-s4 | OK | ![scene-phone-explore-s4](states/scene-phone-explore-s4.png) |
+| scene-phone-explore-s5 | OK | ![scene-phone-explore-s5](states/scene-phone-explore-s5.png) |
+| scene-phone-explore-s6 | OK | ![scene-phone-explore-s6](states/scene-phone-explore-s6.png) |
 | scene-phone-inside-s1 | OK | ![scene-phone-inside-s1](states/scene-phone-inside-s1.png) |
 | scene-phone-inside-s2 | OK | ![scene-phone-inside-s2](states/scene-phone-inside-s2.png) |
 | scene-phone-inside-s3 | OK | ![scene-phone-inside-s3](states/scene-phone-inside-s3.png) |
@@ -135,13 +165,12 @@ Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.9
 | scene-phone-inside-s6 | OK | ![scene-phone-inside-s6](states/scene-phone-inside-s6.png) |
 | scene-phone-whatif-s1 | OK | ![scene-phone-whatif-s1](states/scene-phone-whatif-s1.png) |
 | scene-phone-whatif-s2 | OK | ![scene-phone-whatif-s2](states/scene-phone-whatif-s2.png) |
-| scene-phone-flow-s1 | OK | ![scene-phone-flow-s1](states/scene-phone-flow-s1.png) |
-| scene-phone-flow-s2 | OK | ![scene-phone-flow-s2](states/scene-phone-flow-s2.png) |
-| scene-phone-flow-s3 | OK | ![scene-phone-flow-s3](states/scene-phone-flow-s3.png) |
-| scene-phone-flow-s4 | OK | ![scene-phone-flow-s4](states/scene-phone-flow-s4.png) |
-| scene-phone-number-s1 | OK | ![scene-phone-number-s1](states/scene-phone-number-s1.png) |
-| scene-phone-number-s2 | OK | ![scene-phone-number-s2](states/scene-phone-number-s2.png) |
-| scene-phone-number-s3 | OK | ![scene-phone-number-s3](states/scene-phone-number-s3.png) |
+| scene-spoon-explore-s1 | OK | ![scene-spoon-explore-s1](states/scene-spoon-explore-s1.png) |
+| scene-spoon-explore-s2 | OK | ![scene-spoon-explore-s2](states/scene-spoon-explore-s2.png) |
+| scene-spoon-explore-s3 | OK | ![scene-spoon-explore-s3](states/scene-spoon-explore-s3.png) |
+| scene-spoon-explore-s4 | OK | ![scene-spoon-explore-s4](states/scene-spoon-explore-s4.png) |
+| scene-spoon-explore-s5 | OK | ![scene-spoon-explore-s5](states/scene-spoon-explore-s5.png) |
+| scene-spoon-explore-s6 | OK | ![scene-spoon-explore-s6](states/scene-spoon-explore-s6.png) |
 | scene-spoon-zoom-s1 | OK | ![scene-spoon-zoom-s1](states/scene-spoon-zoom-s1.png) |
 | scene-spoon-zoom-s2 | OK | ![scene-spoon-zoom-s2](states/scene-spoon-zoom-s2.png) |
 | scene-spoon-zoom-s3 | OK | ![scene-spoon-zoom-s3](states/scene-spoon-zoom-s3.png) |
@@ -151,3 +180,13 @@ Frame rates: guitar.motion: 29.91/29.97 fps min/median; guitar.whatif: 29.8/29.9
 | scene-spoon-number-s1 | OK | ![scene-spoon-number-s1](states/scene-spoon-number-s1.png) |
 | scene-spoon-number-s2 | OK | ![scene-spoon-number-s2](states/scene-spoon-number-s2.png) |
 | scene-spoon-number-s3 | OK | ![scene-spoon-number-s3](states/scene-spoon-number-s3.png) |
+| scene-earbuds-motion-s1 | OK | ![scene-earbuds-motion-s1](states/scene-earbuds-motion-s1.png) |
+| scene-earbuds-motion-s2 | OK | ![scene-earbuds-motion-s2](states/scene-earbuds-motion-s2.png) |
+| scene-earbuds-motion-s3 | OK | ![scene-earbuds-motion-s3](states/scene-earbuds-motion-s3.png) |
+| scene-earbuds-flow-s1 | OK | ![scene-earbuds-flow-s1](states/scene-earbuds-flow-s1.png) |
+| scene-earbuds-flow-s2 | OK | ![scene-earbuds-flow-s2](states/scene-earbuds-flow-s2.png) |
+| scene-earbuds-flow-s3 | OK | ![scene-earbuds-flow-s3](states/scene-earbuds-flow-s3.png) |
+| scene-earbuds-flow-s4 | OK | ![scene-earbuds-flow-s4](states/scene-earbuds-flow-s4.png) |
+| scene-earbuds-number-s1 | OK | ![scene-earbuds-number-s1](states/scene-earbuds-number-s1.png) |
+| scene-earbuds-number-s2 | OK | ![scene-earbuds-number-s2](states/scene-earbuds-number-s2.png) |
+| scene-earbuds-number-s3 | OK | ![scene-earbuds-number-s3](states/scene-earbuds-number-s3.png) |

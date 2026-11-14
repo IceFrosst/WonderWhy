@@ -1,6 +1,6 @@
 # render3d: the Explore lens renderer
 
-Renders every Explore chapter (`lens: "explore"`, `scene: "model3d"`, spec in [MODEL3D.md](../shared/MODEL3D.md)) with three.js in headless Chromium, frame by frame, and writes per-beat clips, stills and label tracks into `bridge/media/<id>/explore/`. Two looks: the glowing-line look (default) and the photo-real look (`spec.style: "real"`, MODEL3D.md v2).
+Renders every Explore chapter (`lens: "explore"`, `scene: "model3d"`, spec in [MODEL3D.md](../shared/MODEL3D.md)) with three.js in headless Chrome, frame by frame, and writes per-beat clips, stills and label tracks into `bridge/media/<id>/explore/`. Two looks: the glowing-line look (default) and the photo-real look (`spec.style: "real"`, MODEL3D.md v2).
 
 ## Run
 | Command | What |
@@ -19,6 +19,39 @@ Needs `ffmpeg` on PATH. The kettle (6 beats, 1224 frames) takes about **25 s** o
 
 Unknown `material`, `prim` and `fx` names print a `WARNING <id>:` line (the part falls back to its role's material; unknown prims and fx are skipped). Clips over the size cap or with a loop seam over 1 also warn.
 
+## Live lines and callouts
+
+`scene.js` exports `Explore`. Direct imports leave `window.R3D` and DOM ids untouched; the offline
+HTML entry still installs `window.R3D` for `render.mjs`. Automated rendering uses Google Chrome
+(`channel: 'chrome'`).
+
+```js
+import {Explore} from './page/scene.js';
+const model = new Explore(canvas, {live: true});
+model.load(chapter.spec);
+model.renderAt(0, 1); // zero-based beat, clip seconds including the move
+const labels = model.labelsAt(0, 1); // [{kind, text, side, x, y}], 600x600 anchor pixels
+model.setView({yaw: 35, pitch: 10, explode: 0.5});
+model.setView({yaw: 0, pitch: 0, explode: null}); // restore beat explode
+const {dur, loopFrom, frames} = model.plan(0);
+```
+
+Live mode uses pixel ratio 1 and draws directly to the canvas, without bloom, EffectComposer or
+an MSAA render target. Parts, fills, effects, transitions and camera moves use the offline code.
+Omit `style` for the original glowing lines. `labelsAt` returns current target anchors; the UI
+places text in the left/right margin columns, spreading rows at least 26 px apart.
+
+Beat `callouts: [{to: 'element', text: 'Resistance makes heat', side: 'r'}]` accepts a part id or
+model-space `[x,y,z]` target. `side` is optional. At most 3 callouts, 28 characters each, and at
+most 4 labels plus callouts per beat; invalid targets warn and are skipped. Explicit points bind
+to the nearest assembled part so explode and animation carry them along. Callouts use white
+text and a thin leader with a 6 px arrowhead, rendered in captioned stills too. Label tracks now
+include `kind` and `text`; callouts also include `to` (and `part` for part targets).
+
+`specs/live_common.py` provides `write_object(meta, chapter)` (the shared `.objects.lock` protocol;
+existing object metadata and other chapters are preserved) and `render_stills(obj_id, out_dir)`
+(`--stills-only --strip`). It re-exports `pt`, `r2` and the rotation/vector helpers from `common.py`.
+
 ## Output (`bridge/media/<id>/explore/`)
 | File | What |
 |---|---|
@@ -26,7 +59,7 @@ Unknown `material`, `prim` and `fx` names print a `WARNING <id>:` line (the part
 | `c<n>.png` | The frame at rest (t = `loopFrom`), text-free |
 | `k<n>.png` | Only with `--stills-only --strip`: the contact sheet |
 | `s<n>.png` | The same frame with top line (object, beat dots), labels with leaders, number and caption |
-| `tracks.json` | `{objectId, size, fps, beats: [{dur, loopFrom, labels: [{part, side, focus, anchor: [[t, x, y], ...]}], number, dims?}]}`. `dur` is the clip length in seconds (move + beat `dur`); anchors are sampled at 10 Hz over the whole clip, in 600x600 pixels |
+| `tracks.json` | `{objectId, size, fps, beats: [{dur, loopFrom, labels: [{kind, text, part?, to?, side, focus, anchor: [[t, x, y], ...]}], number, dims?}]}`. `kind` is `label` or `callout`; `to` is included for callouts. `dur` is the clip length in seconds (move + beat `dur`); anchors are sampled at 10 Hz over the whole clip, in 600x600 pixels |
 
 `manifest.json` gets a `"<id>.explore"` entry (kind, title, `beats` [{clip, still, clean}], `stills`, `clean`, `tracks`, captions, size 600, fps 30), merged first; other entries are kept. `glasses/scripts/export-media.mjs` skips `model3d` chapters and keeps `*.explore` entries when it rewrites a manifest.
 

@@ -105,7 +105,7 @@ export function drawCard(source, meta) {
       const width = ctx.measureText(item.text).width;
       const textX = side === 'l' ? MARGIN : SIZE - MARGIN;
       ctx.textAlign = side === 'l' ? 'left' : 'right';
-      ctx.fillStyle = item.focus ? WHITE : SOFT;
+      ctx.fillStyle = item.kind === 'callout' || item.focus ? WHITE : SOFT;
       ctx.fillText(item.text, textX, item.ty);
       const startX = side === 'l' ? MARGIN + width + 8 : SIZE - MARGIN - width - 8;
       ctx.strokeStyle = 'rgba(201, 212, 255, 0.75)';
@@ -114,6 +114,17 @@ export function drawCard(source, meta) {
       ctx.moveTo(startX, item.ty);
       ctx.lineTo(item.x, item.y);
       ctx.stroke();
+      if (item.kind === 'callout') {
+        // A 6 px open arrowhead, pointing along the leader into the target.
+        const angle = Math.atan2(item.y - item.ty, item.x - startX);
+        ctx.beginPath();
+        for (const turn of [-0.5, 0.5]) {
+          ctx.moveTo(item.x, item.y);
+          ctx.lineTo(item.x - 6 * Math.cos(angle + turn), item.y - 6 * Math.sin(angle + turn));
+        }
+        ctx.stroke();
+        continue;
+      }
       ctx.fillStyle = SOFT;
       ctx.beginPath();
       ctx.arc(item.x, item.y, 2.5, 0, Math.PI * 2);

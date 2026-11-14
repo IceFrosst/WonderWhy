@@ -61,15 +61,7 @@ function serve(root) {
 
 async function launch() {
   const args = ['--enable-webgl', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader'];
-  const errors = [];
-  for (const [name, extra] of [['bundled Chromium', {}], ['Google Chrome', {channel: 'chrome'}], ['Microsoft Edge', {channel: 'msedge'}]]) {
-    try {
-      return await chromium.launch({headless: true, args, ...extra});
-    } catch (error) {
-      errors.push(`${name}: ${String(error?.message ?? error).split('\n')[0]}`);
-    }
-  }
-  throw new Error(`Could not launch a browser:\n${errors.join('\n')}`);
+  return chromium.launch({headless: true, channel: 'chrome', args});
 }
 
 const fromDataUrl = url => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
@@ -161,7 +153,11 @@ async function renderChapter(page, job, options) {
     tracks.push({
       dur: plan.dur,
       loopFrom: plan.loopFrom,
-      labels: labelData.labels.map(label => ({part: label.part, side: label.side, focus: focus.has(label.part), anchor: label.anchor})),
+      labels: labelData.labels.map(label => ({
+        kind: label.kind, text: label.text ?? labelText[label.part], part: label.part,
+        ...(label.kind === 'callout' ? {to: label.to} : {}),
+        side: label.side, focus: label.kind === 'callout' || focus.has(label.part), anchor: label.anchor,
+      })),
       number,
       ...(dims.length ? {dims} : {}),
     });
@@ -171,7 +167,7 @@ async function renderChapter(page, job, options) {
     const started = Date.now();
     const restLabels = labelData.labels.map(label => {
       const at = label.anchor.find(p => Math.abs(p[0] - plan.loopFrom) < 1e-6) ?? label.anchor[0];
-      return {side: label.side, text: labelText[label.part], focus: focus.has(label.part), x: at[1], y: at[2]};
+      return {kind: label.kind, side: label.side, text: label.text ?? labelText[label.part], focus: focus.has(label.part), x: at[1], y: at[2]};
     });
     const card = await page.evaluate(
       ([i, meta]) => window.R3D.card(i, meta),

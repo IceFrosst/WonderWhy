@@ -213,3 +213,28 @@ Owner decision: the Explore film is **the** explanation. It is now a photo-real,
 | 3 to 6 The mechanism | One idea per beat, on the part that does the work: focus, ghost or cut, effects | 8 to 10 |
 | 7 The number | One number, green | 7 |
 | 8 So what | Back together (explode 0), the everyday consequence | 7 |
+
+## v3: live lines (14 Nov evening)
+
+The explanation runs live in three.js on the glasses. Leave `spec.style` absent for the original
+glowing-line look. Build 20 to 35 parts and 7 or 8 beats, each with `dur` 4 to 6 s and `move`
+about 1 s. Captions contain at most 8 words; the diagram carries the explanation.
+
+A beat may contain `"callouts": [{"to": "element", "text": "Resistance makes heat", "side": "r"}]`.
+`to` is a known part id or a model-space `[x,y,z]`; `side` is optional (`"l"` or `"r"`, otherwise
+chosen like labels). Text is at most 28 characters. At most 3 callouts and at most 4 labels plus
+callouts per beat. Unknown targets warn and are skipped. Callouts have white text in the margin
+columns, the same thin leader as labels, and a roughly 6 px arrowhead at the target. All text rows
+on either side stay at least 26 px apart. Part anchors follow the same vertex as labels; explicit
+points bind to the nearest assembled part and follow its explode/animation, projected each frame
+with the camera. `labelTracks()` and `tracks.json` include callouts with `kind` and `text`.
+
+Import `Explore` from `render3d/page/scene.js` and use `new Explore(canvas, {live: true})`, then
+`load(spec)` and `renderAt(beat, t)` (zero-based beat, clip time in seconds). Live mode renders
+straight to the canvas at pixel ratio 1, without a composer, bloom or an MSAA render target.
+Geometry, fills, physics effects and beat motion use the same renderer as offline exports.
+`labelsAt(beat, t)` returns `[{kind: 'label'|'callout', text, side, x, y}]`, with current **anchor**
+positions in 600x600 pixels; the overlay spreads text rows by 26 px and draws the leaders/arrows.
+`setView({yaw: 0, pitch: 0, explode: null})` applies yaw/pitch offsets in degrees and an optional
+0..1 explode override (`null` restores the beat's explode). `setView()` resets all overrides.
+`plan(beat)` returns clip `dur`, `loopFrom`, `frames`, `loopFrame` and `beatDur`.

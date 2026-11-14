@@ -1,19 +1,17 @@
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {Button, ButtonRail, TextColor, TextStyle, TextView} from '@wearables-ui-toolkit/mrbd';
-import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
+import {TextColor, TextStyle, TextView} from '@wearables-ui-toolkit/mrbd';
 import {emitNav, onNav} from './bus';
 import type {NavAction} from './bus';
 import type {Chapter, ObjectInfo} from './content';
 import ExploreView from './ExploreView';
-import InspectView from './InspectView';
-import {isExploreChapter, parseExploreSpec} from './explore';
+import {fallbackExploreMedia, isExploreChapter, parseExploreSpec} from './explore';
 import type {ExploreMedia} from './explore';
 import {createScene} from './scenes';
 import type {Readout, Scene} from './scenes';
 
 interface Props {
   info: ObjectInfo;
-  /** Streamed media for the Explore lens; the lens is only in `info.chapters` when this is set. */
+  /** Streamed media for the Explore lens; optional fallbacks for the live renderer. */
   explore?: ExploreMedia | null;
   label?: string;
   /** Unknown view only: a sketch is being drawn, or none came. */
@@ -28,13 +26,15 @@ interface Props {
   followUpStep?: number;
   demo?: boolean;
   paused?: boolean;
-  inspecting: boolean;
-  onInspect: () => void;
-  onExitInspect: () => void;
-  onNewCapture: () => void;
+  /** Turn it is open on the film (App owns it: Back closes it first). */
+  turning: boolean;
+  onTurn: () => void;
+  onExitTurn: () => void;
+  /** Take a new photo; undefined without a bridge. */
+  onNewPhoto?: () => void;
   onRendered: () => void;
   onMotion: () => void;
-  motionMs?: number;
+  filmMs?: number;
   onState: (
     step: number,
     param: number | undefined,
@@ -52,7 +52,6 @@ interface Position {
 
 const FRAME_GAP_MS = 1000 / 30;
 const FOCUS_DELAY_MS = 50;
-const MAX_LENS_MARKS = 5;
 
 const LENS_NAMES: Record<string, string> = {
   explore: 'Explore',
@@ -69,12 +68,6 @@ const LENS_NAMES: Record<string, string> = {
 function lensName(chapter: Chapter | undefined): string {
   if (!chapter) return '';
   return (chapter.lens && LENS_NAMES[chapter.lens]) || chapter.title;
-}
-
-function visibleLensIndices(current: number, total: number): number[] {
-  const count = Math.min(total, MAX_LENS_MARKS);
-  const start = total <= MAX_LENS_MARKS ? 0 : Math.min(Math.max(current - 2, 0), total - MAX_LENS_MARKS);
-  return Array.from({length: count}, (_, i) => start + i);
 }
 
 declare global {
@@ -98,13 +91,13 @@ export default function Explainer({
   followUpStep,
   demo = false,
   paused = false,
-  inspecting,
-  onInspect,
-  onExitInspect,
-  onNewCapture,
+  turning,
+  onTurn,
+  onExitTurn,
+  onNewPhoto,
   onRendered,
   onMotion,
-  motionMs,
+  filmMs,
   onState,
 }: Props) {
   const objectId = info.id;
@@ -118,14 +111,14 @@ export default function Explainer({
   const sceneId = chapter?.scene ?? '';
   const stepsInLens = Math.max(1, chapter?.captions.length ?? 0);
   const exploreSpec = useMemo(
-    () => (explore && isExploreChapter(chapter) ? parseExploreSpec(chapter?.spec, chapter?.captions.length ?? 0) : null),
-    [explore, chapter],
+    () => (isExploreChapter(chapter) ? parseExploreSpec(chapter?.spec, chapter?.captions.length ?? 0) : null),
+    [chapter],
   );
-  const isExplore = known && exploreSpec !== null && explore !== null;
+  const media = useMemo(() => explore ?? fallbackExploreMedia(objectId, stepsInLens), [explore, objectId, stepsInLens]);
+  const isExplore = known && exploreSpec !== null;
   const isExploreRef = useRef(isExplore);
   isExploreRef.current = isExplore;
   const [replay, setReplay] = useState(0);
-  const [filmPaused, setFilmPaused] = useState(false);
   const [sceneInstance, setSceneInstance] = useState<Scene | null | undefined>(undefined);
   const [readouts, setReadouts] = useState<Readout[]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -137,8 +130,8 @@ export default function Explainer({
   const forceReadoutsRef = useRef(false);
   const positionRef = useRef<Position>({info, lens: startingLens, step: startingStep});
   positionRef.current = {info, lens, step};
-  const btnRef = useRef<ButtonHandle>(null);
-  const homeRef = useRef<ButtonHandle>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const homeRef = useRef<HTMLButtonElement>(null);
   const cb = useRef({onRendered, onState});
   cb.current = {onRendered, onState};
 
@@ -315,9 +308,10 @@ export default function Explainer({
     else loopControlRef.current?.resume();
   }, [paused]);
 
-  // Arrow keys and bridge `nav` messages share one bus.
+  // 2D lenses: arrow keys and bridge `nav` messages share one bus. The 3D film has its own
+  // control map (ExploreView + stageControls.ts).
   useEffect(() => {
-    if (inspecting) return;
+    if (isExplore) return;
     const off = onNav((a: NavAction) => {
       const current = positionRef.current;
       const chapters = current.info.chapters;
@@ -329,10 +323,6 @@ export default function Explainer({
         if (chapters.length < 2) return;
         const delta = a === 'left' ? -1 : 1;
         goPosition((current.lens + delta + chapters.length) % chapters.length, 0);
-      } else if ((a === 'up' || a === 'down') && isExploreRef.current) {
-        // The video cannot turn: up replays the beat from its camera move, down goes back one beat.
-        if (a === 'up') setReplay(value => value + 1);
-        else if (current.step > 0) goPosition(current.lens, current.step - 1);
       } else if (a === 'up' || a === 'down') {
         const knob = currentChapter.knobs === undefined ? {axis: 'x' as const} : currentChapter.knobs[current.step];
         const scene = sceneRef.current;
@@ -340,8 +330,6 @@ export default function Explainer({
         scene.setParam(knob.axis, a === 'up' ? 1 : -1);
         forceReadoutsRef.current = true;
         reportState();
-      } else if (a === 'next' && isExploreRef.current && chapters.length === 1 && current.step >= lastStep) {
-        onNewCapture();
       } else if (a === 'next') {
         if (current.step < lastStep) goPosition(current.lens, current.step + 1);
         else goPosition((current.lens + 1) % chapters.length, 0);
@@ -355,79 +343,28 @@ export default function Explainer({
         }
       }
     });
-    const keys: Record<string, NavAction> = {
-      ArrowLeft: 'left',
-      ArrowRight: 'right',
-      ArrowUp: 'up',
-      ArrowDown: 'down',
-    };
+    // The pill row holds the focus (pinch presses the focused button). Left/Right move along the
+    // row (Right reaches Home, Left the step button), Up/Down change the scene's value.
     const onKey = (e: KeyboardEvent): void => {
-      const active = document.activeElement;
-      const inFilmControls = active?.closest('.xp-actions');
-      if (isExplore && !inFilmControls && !demo && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) {
-        // Right always means Home, on every film (kettle included). Inspect sits in the controls row: Down, then Right.
-        const control = document.querySelector<HTMLButtonElement>(
-          e.key === 'ArrowRight' ? '.xp-actions [data-film-home]' : '.xp-actions button',
-        );
-        if (control) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          control.focus();
-          return;
-        }
-      }
-      if (isExplore && inFilmControls) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          if (!e.repeat && document.activeElement instanceof HTMLButtonElement) document.activeElement.click();
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          document.querySelector<HTMLElement>('.xp-stage')?.focus();
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-          const controls = Array.from(document.querySelectorAll<HTMLButtonElement>('.xp-actions button'));
-          const index = controls.findIndex(button => button === document.activeElement);
-          const target = controls[index + (e.key === 'ArrowLeft' ? -1 : 1)];
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          target?.focus();
-        }
-        return;
-      }
-      if (!isExplore && e.key === 'ArrowRight') {
-        const home = homeRef.current?.getElement();
-        if (home) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          home.focus();
-          return;
-        }
-      }
-      if (!isExplore && e.key === 'ArrowLeft' && (
-        objectId === 'phone' || homeRef.current?.getElement()?.contains(active)
-      )) {
-        const stepButton = btnRef.current?.getElement();
-        if (stepButton) {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          stepButton.focus();
-          return;
-        }
-      }
-      const a = keys[e.key];
-      if (a) {
+      const row = Array.from(document.querySelectorAll<HTMLButtonElement>('.ex .xp-actions button'));
+      const index = row.findIndex(button => button === document.activeElement);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const target = index < 0
+          ? (e.key === 'ArrowRight' ? homeRef.current : btnRef.current)
+          : row[Math.min(row.length - 1, Math.max(0, index + (e.key === 'ArrowLeft' ? -1 : 1)))];
+        target?.focus();
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
         e.stopPropagation();
-        emitNav(a);
-      } else if (e.key === 'Enter') {
-        if (document.activeElement?.closest('.ex-dock [role="button"], .ex-dock button')) return;
-        // Pinch normally arrives as a click on the focused button; this covers lost focus.
-        const el = btnRef.current?.getElement();
-        if (!el || !el.contains(document.activeElement)) {
-          e.preventDefault();
-          emitNav('next');
-        }
+        emitNav(e.key === 'ArrowUp' ? 'up' : 'down');
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (e.repeat) return;
+        if (index >= 0) row[index].click();
+        else emitNav('next');
       }
     };
     window.addEventListener('keydown', onKey, true);
@@ -435,98 +372,99 @@ export default function Explainer({
       off();
       window.removeEventListener('keydown', onKey, true);
     };
-  }, [goPosition, reportState, inspecting, isExplore, onNewCapture, onInspect, objectId, demo]);
+  }, [goPosition, reportState, isExplore]);
 
   // Keep a focus target so pinch (Enter) always lands on the step button.
   useEffect(() => {
     const t = window.setTimeout(() => {
-      const el = btnRef.current?.getElement();
-      if (el && !document.activeElement?.closest('.ex-dock')) el.focus();
+      const el = btnRef.current ?? homeRef.current;
+      if (el && !document.activeElement?.closest('.ex .xp-actions')) el.focus();
     }, FOCUS_DELAY_MS);
     return () => window.clearTimeout(t);
   }, [lens, step, objectId]);
 
   const multi = info.chapters.length > 1;
-  const currentLensName = lensName(chapter);
   const isSketch = known && info.provenance === 'sketch';
-  const fullTitle = chapter ? `${info.label} \u00b7 ${chapter.title}` : info.label;
-  const compactTitle = chapter ? `${info.short ?? info.label} \u00b7 ${chapter.title}` : info.label;
-  const title = known
-    ? multi && chapter && !isSketch
-      ? fullTitle.trim().split(/\s+/).length <= 5
-        ? fullTitle
-        : compactTitle
-      : info.label
-    : 'Not in the library yet';
-  const oneLine = known ? (chapter?.lead ?? info.answer) : label ? `Looks like: ${label}` : '';
+  const name = lang && lang !== 'en' ? info.label : (info.short ?? info.label);
   const showFollowUp = Boolean(question && answer) && lens === followUpLens && step === followUpStep;
   const knob = chapter?.knobs?.[step];
   const hint = chapter?.knobs === undefined ? (chapter?.hint ?? '') : knob ? `Up/down: ${knob.label}.` : '';
-  const marks = visibleLensIndices(lens, info.chapters.length);
   const onLastStep = step >= stepsInLens - 1;
   const nextLensName = lensName(info.chapters[(lens + 1) % Math.max(1, info.chapters.length)]);
-  const buttonTitle = !known
-    ? 'Done'
-    : onLastStep
-      ? multi
-        ? `Next lens: ${nextLensName}`
-        : 'Back to step 1'
-      : `Next step (${step + 1}/${stepsInLens})`;
+  const buttonTitle = onLastStep
+    ? multi
+      ? `Next: ${nextLensName}`
+      : 'Back to step 1'
+    : `Next step (${step + 1}/${stepsInLens})`;
 
-  if (isExplore && chapter && exploreSpec && explore) {
+  if (isExplore && chapter && exploreSpec) {
     return (
-      <>
-        <ExploreView
-          key={`${objectId}.${lens}`}
-          name={lang && lang !== 'en' ? info.label : (info.short ?? info.label)}
-          captions={chapter.captions}
-          spec={exploreSpec}
-          media={explore}
-          step={step}
-          replay={replay}
-          isSketch={isSketch}
-          autoPlay={!demo}
-          paused={paused || inspecting || filmPaused}
-          inspecting={inspecting}
-          filmPaused={filmPaused}
-          onToggleFilm={() => setFilmPaused(value => !value)}
-          onHome={() => emitNav('done')}
-          onInspect={objectId === 'kettle' && !demo ? onInspect : undefined}
-          finalCapture={info.chapters.length === 1}
-          standIn={standIn}
-          demo={demo}
-          lang={lang}
-          onAuto={autoAdvance}
-          onRendered={exploreRendered}
-          onMotion={onMotion}
-          followUp={showFollowUp && question && answer ? {question, answer} : null}
-        />
-        {inspecting && <InspectView motionMs={motionMs} onBack={onExitInspect} />}
-      </>
+      <ExploreView
+        key={`${objectId}.${lens}`}
+        name={name}
+        captions={chapter.captions}
+        spec={exploreSpec}
+        modelSpec={chapter.spec}
+        media={media}
+        step={step}
+        replay={replay}
+        isSketch={isSketch}
+        autoPlay={!demo}
+        paused={paused}
+        turning={turning}
+        onBeat={next => goPosition(lens, next)}
+        onReplay={() => setReplay(value => value + 1)}
+        onWatchAgain={() => {
+          goPosition(lens, 0);
+          setReplay(value => value + 1);
+        }}
+        onTurn={onTurn}
+        onExitTurn={onExitTurn}
+        onHome={() => emitNav('done')}
+        onNewPhoto={onNewPhoto}
+        standIn={standIn}
+        demo={demo}
+        lang={lang}
+        onAuto={autoAdvance}
+        onRendered={exploreRendered}
+        onMotion={onMotion}
+        followUp={showFollowUp && question && answer ? {question, answer} : null}
+        filmMs={filmMs}
+      />
     );
   }
 
+  // 2D lenses (objects without an Explore film): the same top line and pill row as the 3D screen.
   return (
     <div className="ex" lang={lang}>
-      <div className="ex-head">
-        <div className="ex-title-row">
-          <TextView as="h1" textStyle={TextStyle.BODY2_EMPHASIZED} className="ex-title">
-            {title}
-          </TextView>
-          {isSketch ? (
-            <span
-              className="ex-tag ex-tag--hot"
-              title="Generated explanation, not checked"
-              aria-label="Generated explanation, not checked"
-            >
-              {'Sketch \u00b7 unverified'}
-            </span>
-          ) : null}
-        </div>
-        {oneLine ? (
-          <TextView as="p" textStyle={TextStyle.META1} textColor={TextColor.SECONDARY}>
-            {oneLine}
-          </TextView>
+      <div className="xp-top ex-top">
+        <h1 className="xp-name ex-title">
+          {known ? (
+            <>
+              {name}
+              {chapter && !isSketch ? <>{' · '}<span className="xp-mode">{chapter.title}</span></> : null}
+            </>
+          ) : 'Not in the library yet'}
+        </h1>
+        {isSketch ? (
+          <span
+            className="ex-tag ex-tag--hot xp-tag"
+            title="Generated explanation, not checked"
+            aria-label="Generated explanation, not checked"
+          >
+            {'Sketch · unverified'}
+          </span>
+        ) : null}
+        {standIn ? <span className="ex-tag ex-tag--soft xp-tag">Stand-in model</span> : null}
+        {demo ? <span className="ex-tag ex-tag--soft xp-tag">Demo</span> : null}
+        {known && stepsInLens > 1 ? (
+          <div className="xp-beats" aria-label={`Step ${step + 1} of ${stepsInLens}${multi ? `, lens ${lens + 1} of ${info.chapters.length}` : ''}`}>
+            <div className="xp-dots" aria-hidden="true">
+              {Array.from({length: stepsInLens}, (_, index) => (
+                <span key={index} className={`xp-dot${index === step ? ' xp-dot--current' : index < step ? ' xp-dot--past' : ''}`} />
+              ))}
+            </div>
+          </div>
         ) : null}
       </div>
 
@@ -536,20 +474,21 @@ export default function Explainer({
         </div>
       ) : (
         <div className="ex-unknown">
+          {label ? <p className="ex-lead">{`Looks like: ${label}`}</p> : null}
           <TextView as="p" textStyle={TextStyle.BODY2}>
             {answer || 'Try pointing at a ball, a guitar, a bike, a kettle or something that swings.'}
           </TextView>
           {sketchState ? (
             <div role="status" className="ex-sketch-line">
-              {sketchState === 'pending' ? 'Drawing a sketch\u2026' : 'No sketch for this one.'}
+              {sketchState === 'pending' ? 'Drawing a sketch…' : 'No sketch for this one.'}
             </div>
           ) : null}
-          {standIn ? <span className="ex-tag ex-tag--soft ex-unknown-tag">Stand-in model</span> : null}
         </div>
       )}
 
       {known ? (
-        <>
+        <div className="ex-bottom">
+          {/* Always present (aria-live off); hidden by CSS when a scene has no live values. */}
           <div className="ex-read" aria-live="off" aria-label="Live values">
             {readouts.map(r => (
               <span className="ex-chip" key={r.label}>
@@ -566,56 +505,18 @@ export default function Explainer({
               <span className="ex-follow-up-answer">{answer}</span>
             </div>
           ) : null}
-          <TextView
-            as="p"
-            textStyle={TextStyle.META1}
-            className="ex-caption"
-            aria-label={`Step ${step + 1}/${stepsInLens}. ${chapter?.captions[step] ?? ''}`}
-          >
-            {`Step ${step + 1}/${stepsInLens}. ${chapter?.captions[step] ?? ''}`}
-          </TextView>
-          <div className="ex-foot">
-            {multi ? (
-              <div
-                className="ex-lenses"
-                role="group"
-                aria-label={`Lens ${lens + 1} of ${info.chapters.length}: ${currentLensName}`}
-              >
-                {marks.map(i => {
-                  const current = i === lens;
-                  return (
-                    <span className="ex-lens-mark" aria-hidden="true" key={i}>
-                      <span
-                        className={`ex-lens-dot${current ? ' ex-lens-dot--current' : ''}${
-                          isExploreChapter(info.chapters[i]) ? ' ex-lens-dot--explore' : ''
-                        }`}
-                      />
-                      {current ? (
-                        <TextView as="span" textStyle={TextStyle.META1} className="ex-lens-name">
-                          {currentLensName}
-                        </TextView>
-                      ) : null}
-                    </span>
-                  );
-                })}
-              </div>
-            ) : null}
-            {hint ? (
-              <TextView as="p" textStyle={TextStyle.META2} textColor={TextColor.SECONDARY} className="ex-hint">
-                {hint}
-              </TextView>
-            ) : null}
-            {standIn ? <span className="ex-tag ex-tag--soft ex-foot-tag">Stand-in model</span> : null}
-            {demo ? <span className="ex-tag ex-tag--soft ex-foot-tag">Demo</span> : null}
-          </div>
-        </>
+          <p className="ex-caption" aria-label={`Step ${step + 1}/${stepsInLens}. ${chapter?.captions[step] ?? ''}`}>
+            {chapter?.captions[step] ?? ''}
+          </p>
+          {hint ? <p className="ex-hint">{hint}</p> : null}
+        </div>
       ) : null}
 
-      <div className="ex-dock">
-        <ButtonRail>
-          <Button ref={btnRef} title={buttonTitle} onClick={() => emitNav(known ? 'next' : 'done')} />
-          {known && <Button ref={homeRef} title="Home" onClick={() => emitNav('done')} />}
-        </ButtonRail>
+      <div className="xp-actions ex-actions" aria-label="Controls">
+        {known ? (
+          <button type="button" ref={btnRef} onClick={() => emitNav('next')}>{buttonTitle}</button>
+        ) : null}
+        <button type="button" ref={homeRef} className="xp-home" onClick={() => emitNav('done')}>Home</button>
       </div>
     </div>
   );
