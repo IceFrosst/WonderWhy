@@ -54,10 +54,31 @@ body {
   font-size: 16px;
 }
 
+.consent-screen {
+  display: grid;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--uit-spacing-large);
+}
+
+.consent-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uit-spacing-medium);
+  padding: var(--uit-spacing-large);
+}
+
+.consent-card > h1,
+.consent-card > p {
+  margin: 0;
+  font-size: 16px;
+}
+
 /* Explainer: title, canvas stage, readouts, caption, lens bar, step button. */
 .ex {
   display: grid;
-  grid-template-rows: auto minmax(280px, 1fr) auto auto auto auto auto;
+  grid-template-rows: auto minmax(270px, 1fr) auto auto auto auto auto;
   block-size: 100%;
   min-block-size: 0;
   min-inline-size: 0;
@@ -76,7 +97,7 @@ body {
 
 .ex-stage {
   position: relative;
-  min-block-size: 280px;
+  min-block-size: 270px;
   min-inline-size: 0;
   overflow: hidden;
 }
@@ -111,11 +132,33 @@ body {
   text-overflow: ellipsis;
 }
 
-.ex-answer,
+.ex-follow-up,
 .ex-caption,
 .ex-hint {
   margin: 0;
   min-inline-size: 0;
+}
+
+.ex-follow-up,
+.ex-caption {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.ex-follow-up {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.ex-follow-up-question {
+  color: var(--uit-color-text-secondary);
+}
+
+.ex-follow-up-answer {
+  color: var(--uit-color-text-primary);
+  font-weight: 600;
 }
 
 .ex-foot {

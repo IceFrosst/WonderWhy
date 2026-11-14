@@ -7,6 +7,7 @@ export interface ShowMsg {
   confidence?: number;
   question?: string;
   answer?: string;
+  lensHint?: {id: string; step: number};
   lowConfidence?: boolean;
   summary?: string;
   steps?: string[];
@@ -38,11 +39,19 @@ export type BridgeMsg =
   | ShowMsg
   | {type: 'sketch'; reqId: string; sketch?: unknown; error?: string}
   | {type: 'ping'; t_sent?: number}
-  | {type: 'nav'; action: 'next' | 'prev' | 'deeper' | 'done' | 'left' | 'right' | 'up' | 'down'}
+  | {type: 'nav'; action: 'next' | 'prev' | 'deeper' | 'done' | 'left' | 'right' | 'up' | 'down' | 'demo'}
   | {type: 'clear'}
   | {
       type: 'device';
-      state: 'donned' | 'doffed' | 'battery_low' | 'thermal_hot' | 'offline' | 'online' | 'camera_denied';
+      state:
+        | 'donned'
+        | 'doffed'
+        | 'battery_low'
+        | 'thermal_hot'
+        | 'offline'
+        | 'online'
+        | 'camera_denied'
+        | 'first_run';
     }
   | {type: 'error'; code: string; message: string; reqId?: string};
 
@@ -59,6 +68,14 @@ function readToken(): string | null {
   try {
     const url = new URL(window.location.href);
     queryToken = url.searchParams.get('k');
+    // Preferred form is the fragment (#k=...): it never reaches the server or its logs.
+    const fragment = new URLSearchParams(url.hash.replace(/^#/, ''));
+    const fragmentToken = fragment.get('k');
+    if (fragmentToken !== null) {
+      queryToken = fragmentToken;
+      fragment.delete('k');
+      url.hash = fragment.toString();
+    }
     if (queryToken !== null) {
       url.searchParams.delete('k');
       window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);

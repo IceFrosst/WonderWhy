@@ -16,6 +16,11 @@ interface Props {
   standIn?: boolean;
   answer?: string;
   question?: string;
+  initialLens?: number;
+  initialStep?: number;
+  followUpLens?: number;
+  followUpStep?: number;
+  demo?: boolean;
   onRendered: () => void;
   onState: (
     step: number,
@@ -72,13 +77,21 @@ export default function Explainer({
   standIn,
   answer,
   question,
+  initialLens = 0,
+  initialStep = 0,
+  followUpLens,
+  followUpStep,
+  demo = false,
   onRendered,
   onState,
 }: Props) {
   const objectId = info.id;
   const known = info.id !== 'unknown' && info.chapters.length > 0;
-  const [lens, setLens] = useState(0);
-  const [step, setStep] = useState(0);
+  const startingLens = Math.min(Math.max(initialLens, 0), Math.max(0, info.chapters.length - 1));
+  const startingChapter = info.chapters[startingLens];
+  const startingStep = Math.min(Math.max(initialStep, 0), Math.max(0, (startingChapter?.captions.length ?? 1) - 1));
+  const [lens, setLens] = useState(startingLens);
+  const [step, setStep] = useState(startingStep);
   const chapter = info.chapters[lens];
   const sceneId = chapter?.scene ?? '';
   const stepsInLens = Math.max(1, chapter?.captions.length ?? 0);
@@ -87,7 +100,7 @@ export default function Explainer({
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<Scene | null>(null);
-  const positionRef = useRef<Position>({info, lens: 0, step: 0});
+  const positionRef = useRef<Position>({info, lens: startingLens, step: startingStep});
   positionRef.current = {info, lens, step};
   const btnRef = useRef<ButtonHandle>(null);
   const cb = useRef({onRendered, onState});
@@ -122,13 +135,13 @@ export default function Explainer({
     [reportState],
   );
 
-  // New object: start at the first step of the first lens.
+  // New object: start at the requested answer position, or the first step of the first lens.
   useEffect(() => {
-    positionRef.current = {info, lens: 0, step: 0};
+    positionRef.current = {info, lens: startingLens, step: startingStep};
     sceneRef.current = null;
-    setLens(0);
-    setStep(0);
-  }, [info, objectId]);
+    setLens(startingLens);
+    setStep(startingStep);
+  }, [info, objectId, startingLens, startingStep]);
 
   // One scene instance belongs to one (object, lens). A layout effect prevents an old lens
   // from painting under the new title while React swaps the canvas lifecycle below.
@@ -308,7 +321,7 @@ export default function Explainer({
       : info.label
     : 'Not in the library yet';
   const oneLine = known ? (chapter?.lead ?? info.answer) : label ? `Looks like: ${label}` : '';
-  const hasBridgeAnswer = Boolean(answer);
+  const showFollowUp = Boolean(question && answer) && lens === followUpLens && step === followUpStep;
   const knob = chapter?.knobs?.[step];
   const hint = chapter?.knobs === undefined ? (chapter?.hint ?? '') : knob ? `Up/down: ${knob.label}.` : '';
   const marks = visibleLensIndices(lens, info.chapters.length);
@@ -376,11 +389,11 @@ export default function Explainer({
               </span>
             ))}
           </div>
-          {hasBridgeAnswer ? (
-            <TextView as="p" textStyle={TextStyle.META1_EMPHASIZED} className="ex-answer">
-              {question ? `Q: ${question} → ` : ''}
-              {answer}
-            </TextView>
+          {showFollowUp ? (
+            <div className="ex-follow-up" aria-label={`Q: ${question} ${answer}`}>
+              <span className="ex-follow-up-question">Q: {question}</span>{' '}
+              <span className="ex-follow-up-answer">{answer}</span>
+            </div>
           ) : null}
           <TextView as="p" textStyle={TextStyle.META1} className="ex-caption" aria-live="polite">
             {`Step ${step + 1}/${stepsInLens}. ${chapter?.captions[step] ?? ''}`}
@@ -409,6 +422,7 @@ export default function Explainer({
               </TextView>
             ) : null}
             {standIn ? <span className="ex-tag ex-tag--soft ex-foot-tag">Stand-in model</span> : null}
+            {demo ? <span className="ex-tag ex-tag--soft ex-foot-tag">Demo</span> : null}
           </div>
         </>
       ) : null}

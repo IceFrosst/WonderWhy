@@ -255,7 +255,8 @@ async function main() {
   const simpleNames = [
     'home-connected', 'home-offline', 'locked', 'looking', 'took-too-long', 'not-sure', 'unknown', 'error',
     'bridge-drop-while-looking', 'device-battery-low', 'device-thermal-hot', 'device-offline',
-    'device-camera-denied', 'device-doffed', 'device-donned', 'clear', 'replay', 'heartbeat', 'token',
+    'device-camera-denied', 'device-doffed', 'device-donned', 'clear', 'replay', 'heartbeat', 'token', 'token-fragment',
+    'consent', 'consent-device-frame', 'follow-up', 'follow-up-bad-hint', 'demo', 'demo-button',
   ];
   const isSceneName = value => /^scene-[^-]+-[^-]+-s\d+$/.test(value || '');
   if (options.only && !simpleNames.includes(options.only) && !objectIds.has(options.only) && !isSceneName(options.only)) {
@@ -277,7 +278,7 @@ async function main() {
     console.log(`${result.name}: ${detail}`);
   };
 
-  const openPage = async ({offline = false, token = null, closeOnHello = null} = {}) => {
+  const openPage = async ({offline = false, token = null, fragmentToken = null, closeOnHello = null, params = {}} = {}) => {
     if (closeOnHello !== null) bridge.closeNextHello = closeOnHello;
     const context = await browser.newContext({viewport: VIEWPORT, deviceScaleFactor: 1});
     const page = await context.newPage();
@@ -297,7 +298,9 @@ async function main() {
     const wsPort = offline ? 1 : bridge.port;
     const query = new URLSearchParams({bridge: `ws://localhost:${wsPort}/ws`});
     if (token !== null) query.set('k', token);
-    await page.goto(`http://localhost:${previewPort}/?${query}`, {waitUntil: 'networkidle'});
+    for (const [key, value] of Object.entries(params)) query.set(key, String(value));
+    const fragment = fragmentToken !== null ? `#k=${encodeURIComponent(fragmentToken)}` : '';
+    await page.goto(`http://localhost:${previewPort}/?${query}${fragment}`, {waitUntil: 'networkidle'});
     if (firstPaintRequests === null) firstPaintRequests = requests.size;
     if (!userAgent) userAgent = await page.evaluate(() => navigator.userAgent);
     let hello = null;
@@ -342,10 +345,12 @@ async function main() {
           addFailure(result, `text-size check failed: ${errorMessage(error)}`);
         }
         if (session.consoleErrors.length) addFailure(result, `console errors: ${session.consoleErrors.map(error => short(error, 160)).join(' | ')}`);
-        try {
-          await session.page.screenshot({path: path.join(SCREENSHOTS, filename)});
-        } catch (error) {
-          addFailure(result, `screenshot failed: ${errorMessage(error)}`);
+        if (!result.screenshotCaptured) {
+          try {
+            await session.page.screenshot({path: path.join(SCREENSHOTS, filename)});
+          } catch (error) {
+            addFailure(result, `screenshot failed: ${errorMessage(error)}`);
+          }
         }
         await session.context.close().catch(error => addFailure(result, `page close failed: ${errorMessage(error)}`));
       }
@@ -391,16 +396,19 @@ async function main() {
 
     await simple('home-connected', {}, async session => {
       await session.expectText('Bridge connected', {exact: true});
-      const buttons = await session.page.getByRole('button').count();
-      session.check(buttons === 6, `expected 6 object buttons, found ${buttons}; text "${await visibleText(session.page)}"`);
+      const objectButtons = await session.page.locator('.home-object-button').count();
+      session.check(
+        objectButtons === objects.length + 1,
+        `expected ${objects.length} object buttons and one Demo button, found ${objectButtons}; text "${await visibleText(session.page)}"`,
+      );
     });
 
     await simple('home-offline', {offline: true}, async session => {
       await session.expectText('Bridge offline (demo)', {exact: true});
-      const buttons = await session.page.getByRole('button').count();
-      session.check(buttons === 6, `expected 6 working object buttons, found ${buttons}`);
-      if (buttons) {
-        await session.page.getByRole('button').first().click();
+      const objectButtons = await session.page.locator('.home-object-button').count();
+      session.check(objectButtons === objects.length + 1, `expected ${objects.length + 1} working home buttons, found ${objectButtons}`);
+      if (objectButtons) {
+        await session.page.getByRole('button', {name: objects[0].label}).click();
         try {
           await session.page.locator('.ex-canvas').waitFor({state: 'visible', timeout: WAIT_MS});
         } catch {
@@ -526,6 +534,135 @@ async function main() {
       const hello = bridge.frames.slice(session.frameStart).find(frame => frame.message.type === 'hello')?.message;
       session.check(hello?.token === 'abc123', `expected hello token abc123, found ${JSON.stringify(hello?.token)}`);
       session.check(!new URL(session.page.url()).searchParams.has('k'), `page address still contains k=: ${session.page.url()}`);
+    });
+
+    await simple('token-fragment', {fragmentToken: 'frag456'}, async session => {
+      const hello = bridge.frames.slice(session.frameStart).find(frame => frame.message.type === 'hello')?.message;
+      session.check(hello?.token === 'frag456', `expected hello token frag456, found ${JSON.stringify(hello?.token)}`);
+      session.check(!session.page.url().includes('k='), `page address still contains k=: ${session.page.url()}`);
+    });
+
+    await simple('consent', {params: {consent: 1}}, async session => {
+      await session.expectText('Before you start', {exact: true});
+      await session.expectText('OK, start', {exact: true});
+      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      session.result.screenshotCaptured = true;
+      await session.page.keyboard.press('Enter');
+      await session.expectText('Physics Lens', {exact: true});
+      const stored = await session.page.evaluate(() => localStorage.getItem('lens.consent'));
+      session.check(stored !== null && !Number.isNaN(Date.parse(stored)), `expected an ISO consent date, found ${JSON.stringify(stored)}`);
+      await session.page.reload({waitUntil: 'networkidle'});
+      await session.expectText('Physics Lens', {exact: true});
+      const cardVisible = await session.page.getByText('Before you start', {exact: true}).isVisible().catch(() => false);
+      session.check(!cardVisible, 'consent card returned after reloading with stored consent');
+    });
+
+    await simple('consent-device-frame', {}, async session => {
+      send(session, {type: 'device', state: 'first_run'});
+      await session.expectText('Before you start', {exact: true});
+      await session.expectText('OK, start', {exact: true});
+      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      session.result.screenshotCaptured = true;
+      send(session, {type: 'detecting', reqId: 'consent-held-1', timeoutMs: 60000});
+      send(session, {type: 'show', reqId: 'consent-held-1', objectId: 'kettle', label: 'Boiling kettle'});
+      await session.page.waitForTimeout(100);
+      await session.expectText('Before you start', {exact: true});
+      await session.page.keyboard.press('Enter');
+      await session.expectText(/Boiling kettle/);
+    });
+
+    await simple('follow-up', {}, async session => {
+      const kettle = objects.find(object => object.id === 'kettle');
+      const lastLens = kettle?.chapters.at(-1);
+      if (!kettle || !lastLens) throw new Error('kettle fixture is missing its last lens');
+      const question = 'Why does it switch off?';
+      const answer = 'Steam bends a metal strip that cuts the power.';
+      send(session, {
+        type: 'show',
+        reqId: 'follow-up-1',
+        objectId: kettle.id,
+        label: kettle.label,
+        question,
+        answer,
+        lensHint: {id: `${kettle.id}.${lastLens.lens}`, step: 2},
+      });
+      await session.expectText(`Q: ${question}`, {exact: true});
+      await session.expectText(answer, {exact: true});
+      await session.expectText(/^Step 2\//);
+      const title = await session.page.locator('.ex-title').innerText();
+      session.check(title.includes(lastLens.title), `expected title to name lens "${lastLens.title}", found "${title}"`);
+      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      session.result.screenshotCaptured = true;
+      await session.page.keyboard.press('Enter');
+      await session.expectText(/^Step 3\//);
+      const followUpVisible = await session.page.locator('.ex-follow-up').isVisible().catch(() => false);
+      session.check(!followUpVisible, 'follow-up block remained after moving to another step');
+    });
+
+    await simple('follow-up-bad-hint', {}, async session => {
+      const kettle = objects.find(object => object.id === 'kettle');
+      const firstLens = kettle?.chapters[0];
+      if (!kettle || !firstLens) throw new Error('kettle fixture is missing its first lens');
+      send(session, {
+        type: 'show',
+        reqId: 'follow-up-bad-1',
+        objectId: kettle.id,
+        label: kettle.label,
+        question: 'Where does this go?',
+        answer: 'This hint should be ignored.',
+        lensHint: {id: 'kettle.not-a-lens', step: 99},
+      });
+      await session.expectText(/^Step 1\//);
+      const title = await session.page.locator('.ex-title').innerText();
+      session.check(title.includes(firstLens.title), `expected first lens title "${firstLens.title}", found "${title}"`);
+    });
+
+    await simple('demo', {params: {demo: 2}}, async session => {
+      const since = bridge.frames.length;
+      await session.page.locator('.ex-title').waitFor({state: 'visible', timeout: WAIT_MS});
+      const initialTitle = await session.page.locator('.ex-title').innerText();
+      await session.expectText('Demo', {exact: true});
+      try {
+        await session.page.waitForFunction(
+          previous => document.querySelector('.ex-title')?.textContent?.trim() !== previous,
+          initialTitle,
+          {timeout: 12000},
+        );
+      } catch {
+        session.check(false, `demo title did not change within 12 s from "${initialTitle}"`);
+      }
+      try {
+        await bridge.waitForMessage(message => message.type === 'state' && message.demo === true, {
+          since,
+          timeout: 5000,
+          description: 'demo state frame',
+        });
+      } catch (error) {
+        session.check(false, errorMessage(error));
+      }
+      await session.page.screenshot({path: path.join(SCREENSHOTS, session.result.screenshot.split('/').pop())});
+      session.result.screenshotCaptured = true;
+      await session.page.keyboard.press('ArrowDown');
+      try {
+        await session.page.getByText('Demo', {exact: true}).waitFor({state: 'hidden', timeout: WAIT_MS});
+      } catch {
+        session.check(false, 'Demo tag remained after a key press');
+      }
+      const rendered = bridge.frames.slice(since).some(frame => frame.message.type === 'rendered');
+      session.check(!rendered, 'demo sent a rendered acknowledgement');
+    });
+
+    await simple('demo-button', {}, async session => {
+      await session.expectText('Demo', {exact: true});
+      await session.page.waitForTimeout(100);
+      await session.page.keyboard.press('ArrowDown');
+      await session.page.keyboard.press('ArrowDown');
+      await session.page.keyboard.press('ArrowRight');
+      const focused = await session.page.evaluate(() => {
+        const element = document.activeElement;
+        return element?.getAttribute('aria-label') || element?.textContent || '';
+      });
+      session.check(focused.includes('Demo'), `expected D-pad focus on Demo, found ${JSON.stringify(focused)}`);
     });
 
     const selectedObjects = options.only && objectIds.has(options.only)
@@ -687,7 +824,9 @@ async function main() {
           if (lensIndex + 1 < object.chapters.length) await session.page.keyboard.press('ArrowRight');
         }
 
-        if (!knobChecked && (!options.only || objectIds.has(options.only))) {
+        // Only objects that have a knob on some step must show a changed param (the spoon has none).
+        const hasKnob = object.chapters.some(chapter => chapter.knobs === undefined || chapter.knobs.some(Boolean));
+        if (hasKnob && !knobChecked && (!options.only || objectIds.has(options.only))) {
           failures.push(`${object.id}: no knob step produced a changed param state frame`);
         }
       } catch (error) {
@@ -697,6 +836,10 @@ async function main() {
         if (session) {
           await session.context.close().catch(error => failures.push(`${object.id}: page close failed: ${errorMessage(error)}`));
         }
+      }
+      if (!options.only && object !== selectedObjects.at(-1)) {
+        await browser.close().catch(() => {});
+        browser = await launchBrowser(options.headed);
       }
     }
 

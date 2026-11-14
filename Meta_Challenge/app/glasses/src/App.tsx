@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   App as WearablesApp,
   Button,
@@ -39,7 +39,25 @@ type View =
       question?: string;
       lang?: string;
       standIn?: boolean;
+      initialLens?: number;
+      initialStep?: number;
+      followUpLens?: number;
+      followUpStep?: number;
     };
+
+type DeferredBridgeMsg = Extract<BridgeMsg, {type: 'show' | 'detecting'}>;
+
+interface DemoRun {
+  active: boolean;
+  stepMs: number;
+  objectIndex: number;
+  lensIndex: number;
+  stepIndex: number;
+  phase: 'step' | 'gap';
+  timer?: number;
+  due: number;
+  remaining: number;
+}
 
 const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/;
 
@@ -85,16 +103,24 @@ const DEVICE_CARDS: Record<string, Card> = {
 interface HomeScreenProps {
   connected: boolean;
   openObject: (objectId: string) => void;
+  startDemo: () => void;
 }
 
 function clampHomeIndex(index: number, count: number): number {
   return Math.max(0, Math.min(count - 1, index));
 }
 
-function HomeScreen({connected, openObject}: HomeScreenProps) {
+function HomeScreen({connected, openObject, startDemo}: HomeScreenProps) {
   const columns = OBJECTS.length > 6 ? 3 : 2;
-  const rows: ObjectInfo[][] = [];
-  for (let index = 0; index < OBJECTS.length; index += columns) rows.push(OBJECTS.slice(index, index + columns));
+  const choices = useMemo(
+    () => [
+      ...OBJECTS.map(object => ({id: object.id, label: object.label, short: object.short, onClick: () => openObject(object.id)})),
+      {id: 'demo', label: 'Demo', short: 'Demo', onClick: startDemo},
+    ],
+    [openObject, startDemo],
+  );
+  const rows: typeof choices[] = [];
+  for (let index = 0; index < choices.length; index += columns) rows.push(choices.slice(index, index + columns));
   const buttonRefs = useRef<Array<ButtonHandle | null>>([]);
   const [shortLabels, setShortLabels] = useState<Set<string>>(() => new Set());
 
@@ -106,10 +132,10 @@ function HomeScreen({connected, openObject}: HomeScreenProps) {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const shortened = new Set<string>();
-      OBJECTS.forEach((object, index) => {
+      choices.forEach((choice, index) => {
         const root = buttonRefs.current[index]?.getElement();
         const title = root?.querySelector<HTMLElement>('[class*="titleLabel"]');
-        if (title && title.scrollWidth > title.clientWidth + 1) shortened.add(object.id);
+        if (title && title.scrollWidth > title.clientWidth + 1) shortened.add(choice.id);
       });
       setShortLabels(previous => {
         if (previous.size === shortened.size && [...shortened].every(id => previous.has(id))) return previous;
@@ -117,7 +143,7 @@ function HomeScreen({connected, openObject}: HomeScreenProps) {
       });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [columns]);
+  }, [columns, choices]);
 
   useEffect(() => {
     const moveFocus = (action: 'left' | 'right' | 'up' | 'down'): void => {
@@ -127,7 +153,7 @@ function HomeScreen({connected, openObject}: HomeScreenProps) {
       });
       const start = current < 0 ? 0 : current;
       const delta = action === 'left' ? -1 : action === 'right' ? 1 : action === 'up' ? -columns : columns;
-      const next = clampHomeIndex(start + delta, OBJECTS.length);
+      const next = clampHomeIndex(start + delta, choices.length);
       buttonRefs.current[next]?.getElement()?.focus({preventScroll: true});
     };
     const off = onNav(action => {
@@ -151,7 +177,7 @@ function HomeScreen({connected, openObject}: HomeScreenProps) {
       off();
       window.removeEventListener('keydown', onKey, true);
     };
-  }, [columns]);
+  }, [choices.length, columns]);
 
   let flatIndex = 0;
   return (
@@ -173,19 +199,20 @@ function HomeScreen({connected, openObject}: HomeScreenProps) {
         <div className="action-dock home-dock">
           {rows.map((row, rowIndex) => (
             <ButtonRail className="home-rail" key={rowIndex} centerContentWhenSmallerThanWidth={false}>
-              {row.map(object => {
+              {row.map(choice => {
                 const index = flatIndex++;
-                const shorten = shortLabels.has(object.id) || (columns === 3 && object.label.length > 14);
-                const title = shorten ? object.label.trim().split(/\s+/)[0] : object.label;
+                const shorten = shortLabels.has(choice.id) || (columns === 3 && choice.label.length > 14);
+                // Three to a row: always the one-word name, so no label is cut and the row reads evenly.
+                const title = columns === 3 || shorten ? (choice.short ?? choice.label.trim().split(/\s+/)[0]) : choice.label;
                 return (
                   <Button
                     className="home-object-button"
                     enforceMaxWidth
-                    key={object.id}
+                    key={choice.id}
                     ref={handle => { buttonRefs.current[index] = handle; }}
                     title={title}
-                    aria-label={object.label}
-                    onClick={() => openObject(object.id)}
+                    aria-label={choice.label}
+                    onClick={choice.onClick}
                   />
                 );
               })}
@@ -197,18 +224,91 @@ function HomeScreen({connected, openObject}: HomeScreenProps) {
   );
 }
 
+interface ConsentScreenProps {
+  onAccept: () => void;
+}
+
+function ConsentScreen({onAccept}: ConsentScreenProps) {
+  const buttonRef = useRef<ButtonHandle>(null);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => buttonRef.current?.getElement()?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  return (
+    <div className="consent-screen" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+      <Panel width="100%">
+        <div className="consent-card">
+          <TextView as="h1" textStyle={TextStyle.BODY2_EMPHASIZED} id="consent-title">
+            Before you start
+          </TextView>
+          <TextView as="p" textStyle={TextStyle.META1}>
+            The camera is used only when you pinch. One photo goes to our server to name the object. It is not stored.
+          </TextView>
+          <ButtonRail>
+            <Button ref={buttonRef} title="OK, start" onClick={onAccept} />
+          </ButtonRail>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function consentNeeded(): boolean {
+  try {
+    const forceConsent = new URLSearchParams(window.location.search).get('consent') === '1';
+    if (navigator.webdriver && !forceConsent) return false;
+    return localStorage.getItem('lens.consent') === null;
+  } catch {
+    return true;
+  }
+}
+
+function urlDemoSeconds(): number | null {
+  try {
+    const value = new URLSearchParams(window.location.search).get('demo');
+    if (value === null) return null;
+    if (value === '1' || value === '') return 5;
+    const seconds = Number(value);
+    if (!Number.isFinite(seconds)) return 5;
+    return Math.min(20, Math.max(2, seconds));
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [view, setView] = useState<View>({k: 'home'});
   const [connected, setConnected] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [doffed, setDoffed] = useState(false);
+  const [consentRequired, setConsentRequired] = useState(consentNeeded);
+  const [demoActive, setDemoActive] = useState(false);
   const keyRef = useRef(0);
   const viewRef = useRef<View>(view);
   viewRef.current = view;
+  const consentRef = useRef(consentRequired);
+  consentRef.current = consentRequired;
   const bridgeRef = useRef<BridgeClient | null>(null);
   const cardTimer = useRef<number | undefined>(undefined);
   const detectTimer = useRef<number | undefined>(undefined);
   const paintFrame = useRef<number | undefined>(undefined);
+  const deferredBridge = useRef<DeferredBridgeMsg | null>(null);
+  const bridgeHandler = useRef<((message: BridgeMsg) => void) | null>(null);
+  const demoAdvance = useRef<(() => void) | null>(null);
+  const demoUrlSeconds = useRef(urlDemoSeconds());
+  const demoUrlStarted = useRef(false);
+  const demoRun = useRef<DemoRun>({
+    active: false,
+    stepMs: 5000,
+    objectIndex: 0,
+    lensIndex: 0,
+    stepIndex: 0,
+    phase: 'step',
+    due: 0,
+    remaining: 0,
+  });
 
   const flashCard = useCallback((c: Card | null, ms?: number) => {
     window.clearTimeout(cardTimer.current);
@@ -226,9 +326,112 @@ export default function App() {
     detectTimer.current = undefined;
   }, []);
 
+  const clearDemoTimer = useCallback(() => {
+    window.clearTimeout(demoRun.current.timer);
+    demoRun.current.timer = undefined;
+  }, []);
+
+  const scheduleDemo = useCallback((delay: number) => {
+    clearDemoTimer();
+    const run = demoRun.current;
+    run.remaining = delay;
+    run.due = performance.now() + delay;
+    if (document.hidden || !run.active) return;
+    run.timer = window.setTimeout(() => demoAdvance.current?.(), delay);
+  }, [clearDemoTimer]);
+
+  const stopDemo = useCallback(() => {
+    const run = demoRun.current;
+    if (!run.active) return;
+    run.active = false;
+    clearDemoTimer();
+    setDemoActive(false);
+  }, [clearDemoTimer]);
+
+  const startDemo = useCallback((seconds = 5) => {
+    clearDemoTimer();
+    const run = demoRun.current;
+    run.active = true;
+    run.stepMs = Math.min(20, Math.max(2, seconds)) * 1000;
+    run.objectIndex = 0;
+    run.lensIndex = 0;
+    run.stepIndex = 0;
+    run.phase = 'step';
+    setDemoActive(true);
+    openObject(OBJECTS[0].id, {initialLens: 0, initialStep: 0});
+    scheduleDemo(run.stepMs);
+  }, [clearDemoTimer, openObject, scheduleDemo]);
+
+  const advanceDemo = useCallback(() => {
+    const run = demoRun.current;
+    if (!run.active) return;
+    if (run.phase === 'gap') {
+      run.objectIndex = (run.objectIndex + 1) % OBJECTS.length;
+      run.lensIndex = 0;
+      run.stepIndex = 0;
+      run.phase = 'step';
+      openObject(OBJECTS[run.objectIndex].id, {initialLens: 0, initialStep: 0});
+      scheduleDemo(run.stepMs);
+      return;
+    }
+
+    const object = OBJECTS[run.objectIndex];
+    const chapter = object.chapters[run.lensIndex];
+    if (run.stepIndex + 1 < chapter.captions.length) {
+      run.stepIndex += 1;
+      emitNav('next');
+      scheduleDemo(run.stepMs);
+      return;
+    }
+    if (run.lensIndex + 1 < object.chapters.length) {
+      run.lensIndex += 1;
+      run.stepIndex = 0;
+      emitNav('next');
+      scheduleDemo(run.stepMs);
+      return;
+    }
+
+    run.phase = 'gap';
+    setView({k: 'home'});
+    scheduleDemo(1500);
+  }, [openObject, scheduleDemo]);
+  demoAdvance.current = advanceDemo;
+
+  useEffect(() => {
+    const onVisibility = (): void => {
+      const run = demoRun.current;
+      if (!run.active) return;
+      if (document.hidden) {
+        run.remaining = Math.max(0, run.due - performance.now());
+        clearDemoTimer();
+      } else {
+        scheduleDemo(run.remaining);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      demoRun.current.active = false;
+      clearDemoTimer();
+    };
+  }, [clearDemoTimer, scheduleDemo]);
+
+  useEffect(() => {
+    if (consentRequired || demoUrlStarted.current || demoUrlSeconds.current === null) return;
+    demoUrlStarted.current = true;
+    startDemo(demoUrlSeconds.current);
+  }, [consentRequired, startDemo]);
+
   // Bridge connection.
   useEffect(() => {
     const onMessage = (m: BridgeMsg): void => {
+      if (m.type === 'show' || m.type === 'detecting') {
+        stopDemo();
+        if (consentRef.current) {
+          deferredBridge.current = m;
+          return;
+        }
+      }
       switch (m.type) {
         case 'detecting':
           clearDetectTimer();
@@ -281,6 +484,17 @@ export default function App() {
             }
             const base = findObject(m.objectId);
             const translated = lang !== undefined && lang !== 'en' && Array.isArray(m.lenses);
+            const hintLens =
+              m.lensHint && typeof m.lensHint.id === 'string'
+                ? base.chapters.findIndex(chapter => `${base.id}.${chapter.lens ?? ''}` === m.lensHint?.id)
+                : -1;
+            const validHint = hintLens >= 0;
+            const hintStep = validHint
+              ? Math.min(
+                  Math.max(Number.isFinite(m.lensHint?.step) ? Math.trunc(m.lensHint?.step ?? 1) : 1, 1),
+                  base.chapters[hintLens].captions.length,
+                ) - 1
+              : 0;
             openObject(m.objectId, {
               ...common,
               info: translated ? localise(base, m) : base,
@@ -288,6 +502,10 @@ export default function App() {
               answer: m.answer,
               question: m.question,
               lang: translated ? lang : undefined,
+              initialLens: validHint ? hintLens : 0,
+              initialStep: hintStep,
+              followUpLens: validHint && m.question && m.answer ? hintLens : undefined,
+              followUpStep: validHint && m.question && m.answer ? hintStep : undefined,
             });
           }
           break;
@@ -306,14 +524,25 @@ export default function App() {
         case 'ping':
           break;
         case 'nav':
-          emitNav(m.action);
+          if (m.action === 'demo') {
+            if (demoRun.current.active) stopDemo();
+            else if (!consentRef.current) startDemo();
+          } else {
+            stopDemo();
+            emitNav(m.action);
+          }
           break;
         case 'clear':
           clearDetectTimer();
           setView({k: 'blank'});
           break;
         case 'device':
-          if (m.state === 'doffed') setDoffed(true);
+          if (m.state === 'first_run') {
+            stopDemo();
+            flashCard(null);
+            consentRef.current = true;
+            setConsentRequired(true);
+          } else if (m.state === 'doffed') setDoffed(true);
           else if (m.state === 'donned') {
             setDoffed(false);
             flashCard(null);
@@ -330,6 +559,7 @@ export default function App() {
           break;
       }
     };
+    bridgeHandler.current = onMessage;
     const url = bridgeUrl();
     if (!url) return;
     const onStatus = (isConnected: boolean, closeCode?: number): void => {
@@ -349,12 +579,30 @@ export default function App() {
     client.start();
     return () => {
       client.stop();
+      bridgeHandler.current = null;
       bridgeRef.current = null;
       window.clearTimeout(cardTimer.current);
       clearDetectTimer();
       window.cancelAnimationFrame(paintFrame.current ?? 0);
     };
-  }, [openObject, flashCard, clearDetectTimer]);
+  }, [openObject, flashCard, clearDetectTimer, startDemo, stopDemo]);
+
+  const acceptConsent = useCallback(() => {
+    try {
+      localStorage.setItem('lens.consent', new Date().toISOString());
+    } catch {
+      /* Continue for displays where storage is unavailable. */
+    }
+    consentRef.current = false;
+    setConsentRequired(false);
+  }, []);
+
+  useEffect(() => {
+    if (consentRequired || !deferredBridge.current) return;
+    const message = deferredBridge.current;
+    deferredBridge.current = null;
+    bridgeHandler.current?.(message);
+  }, [consentRequired]);
 
   // `done` from the bridge or Back on the glasses returns home; any key wakes a blank screen.
   useEffect(() => {
@@ -374,7 +622,20 @@ export default function App() {
     };
   }, []);
 
+  // A wearer key press stops hands-free playback without also moving the current step.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (!demoRun.current.active) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stopDemo();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [stopDemo]);
+
   useBackNavigation(() => {
+    if (consentRequired) return true;
     if (card) {
       flashCard(null);
       return true;
@@ -388,12 +649,25 @@ export default function App() {
 
   const reqId = view.k === 'explain' && !view.acked ? view.reqId : undefined;
   const onRendered = useCallback(() => {
-    if (reqId) bridgeRef.current?.send({type: 'rendered', reqId, t_rendered: Date.now()});
+    if (reqId && !demoRun.current.active) {
+      bridgeRef.current?.send({type: 'rendered', reqId, t_rendered: Date.now()});
+    }
   }, [reqId]);
   const objectId = view.k === 'explain' ? view.objectId : undefined;
   const onState = useCallback(
     (step: number, param: number | undefined, lens: string | undefined, lensIndex: number, steps: number) => {
-      if (objectId) bridgeRef.current?.send({type: 'state', objectId, step, param, lens, lensIndex, steps});
+      if (objectId) {
+        bridgeRef.current?.send({
+          type: 'state',
+          objectId,
+          step,
+          param,
+          lens,
+          lensIndex,
+          steps,
+          ...(demoRun.current.active ? {demo: true} : {}),
+        });
+      }
     },
     [objectId],
   );
@@ -421,14 +695,21 @@ export default function App() {
           sketchState={view.sketchState}
           lang={view.lang}
           standIn={view.standIn}
+          initialLens={view.initialLens}
+          initialStep={view.initialStep}
+          followUpLens={view.followUpLens}
+          followUpStep={view.followUpStep}
+          demo={demoActive}
           onRendered={onRendered}
           onState={onState}
         />
       </Page>
     );
   } else {
-    body = <HomeScreen connected={connected} openObject={openObject} />;
+    body = <HomeScreen connected={connected} openObject={openObject} startDemo={startDemo} />;
   }
+
+  if (consentRequired) body = <ConsentScreen onAccept={acceptConsent} />;
 
   return (
     <WearablesApp>

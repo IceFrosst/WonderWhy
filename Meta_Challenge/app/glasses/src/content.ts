@@ -27,6 +27,8 @@ export interface Knob {
 export interface ObjectInfo {
   id: string;
   label: string;
+  /** One-word name for small buttons (home screen). */
+  short?: string;
   concept: string;
   tagline: string;
   answer: string;
