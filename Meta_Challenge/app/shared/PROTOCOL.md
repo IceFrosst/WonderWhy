@@ -1,4 +1,4 @@
-# Bridge protocol (v0)
+# Bridge protocol (v1)
 
 Three parts run on the laptop for simulator testing:
 
@@ -39,6 +39,44 @@ Response: the same `show` message the glasses get (below), plus `timings`.
 
 ## Bridge → phone page (same `/ws`, after `hello` with `client: "phone"`)
 `latency` { `reqId`, `objectId`, `captureToReceivedMs`, `detectMs`, `detectedToRenderedMs`, `totalMs` } and the glasses' `state` messages.
+
+## v1 additions (14 Nov, overnight). Fields are only ever added, never renamed or removed.
+
+### Auth (`LENS_TOKEN`)
+| Item | Rule |
+|---|---|
+| Server setting | `LENS_TOKEN` in the bridge's `.env`. **Unset = no auth** (local dev, tests). `/health` reports `auth: true/false`, never the token |
+| Protected HTTP | `POST /detect`, `GET /last`, `GET /latency`: header `X-Lens-Token: <token>`. Wrong or missing gives `401 {"error":"unauthorized"}` |
+| Open HTTP | `GET /health`, `GET /objects`, `GET /phone` (the page only; its calls need the token), the static glasses app, `/media/*` |
+| WebSocket | `hello` carries `token`. Wrong or missing: the bridge sends `{type:"error",code:"unauthorized"}` and closes with code `4401`. A socket with no valid `hello` within 5 s is closed. Nothing is relayed before `hello` |
+| Glasses Web App and phone page | Read the token once from `?k=<token>`, keep it in `localStorage` (`lens.token`), strip `k` from the address bar. On `4401` they show "Bridge locked: open the link with the key" and stop reconnecting |
+| Android | "Bridge token" in settings, sent as the header |
+| CORS | No token set: `*` (dev). Token set: only the bridge's own origin plus the comma list in `LENS_ALLOWED_ORIGINS`. Allowed headers: `content-type, x-lens-token` |
+| Never | The token in git, in a QR image in git, in logs, or in a status file |
+
+### `show` (WebSocket and the `/detect` response): new optional fields
+| Field | Meaning |
+|---|---|
+| `lowConfidence` | `true` when the model's `confidence` is under `MIN_CONFIDENCE` (default 0.6) for a library object. Clients **must not** open the scene; they show a "Not sure" card with `label` as the guess. Never set for forced objects or `unknown` |
+| `summary` | The object's one-line answer (`answer` in `objects.json`) |
+| `steps` | `string[]`: the captions of the object's first lens, in order. Enough for a phone card with more than one line |
+| `lenses` | `[{ "id": "ball.motion", "kind": "motion", "title": "Projectile motion", "lead": "...", "steps": ["..."] }]`: every lens the object has, for lens buttons. `kind` is one of `motion, inside, cutaway, flow, zoom, whatif, compare, number` |
+| `media` | `{ "base": "/media/ball", "lenses": { "ball.motion": { "stills": ["s1.png", "s2.png"], "clip": "clip.mp4" } } }` when exported stills and clips exist for the object (served open under `/media/`). Absent when none exist |
+| `replay`, `ageMs` | Set on a `show` that is replayed from memory (see `/last`) |
+
+Source of truth for `summary`, `steps` and `lenses` is `shared/objects.json` (`tagline`, `answer`, `chapters[]` with `scene, lens, title, lead?, hint, captions[]`). The glasses app reads the same file.
+
+### `GET /last`
+`200 {"show": <the last show message> | null, "ageMs": number | null}`. The bridge remembers the last `show` for `LAST_TTL_MS` (default 120 000) or until a `clear`. When a glasses client says `hello` inside that window, the bridge sends it that `show` again with `replay: true` and `ageMs`. This is the handover route: the phone app detects, then the Web App opens late and still lands on the scene. Low-confidence and `unknown` shows are replayed too.
+
+### Heartbeat and timeouts
+| What | Rule |
+|---|---|
+| App-level beat | The bridge sends `{type:"ping", t_sent}` to every client every `HEARTBEAT_MS` (default 10 000). Clients may answer `{type:"pong"}`; the bridge ignores it |
+| Dead sockets | The bridge also sends WebSocket-level pings and terminates a socket that misses two beats |
+| Web App | No frame for 25 s means the link is dead: it reconnects |
+| `detecting` | Now carries `timeoutMs` (the bridge's detect timeout plus 2 000). The bridge always follows `detecting` with a `show` or an `error` for the same `reqId`. If neither arrives in `timeoutMs` (12 000 when absent), the Web App leaves "Looking…" by itself with a "Took too long" card |
+| `error` | Now carries `reqId` when it belongs to a detect request. Codes: `detect_timeout`, `detect_failed`, `bad_image`, `unauthorized` |
 
 ## Latency log
 The bridge appends every completed request as one JSON line to `bridge/latency.jsonl` (git-ignored) and serves a summary at `GET /latency` (count, p50, p90 per stage).
