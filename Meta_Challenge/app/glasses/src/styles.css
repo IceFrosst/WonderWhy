@@ -13,6 +13,8 @@ body,
 
 body {
   overflow: hidden;
+  /* Same stack as the toolkit's text. Canvas scenes read this for the labels they draw. */
+  font-family: 'Noto Sans Local', 'Noto Sans', system-ui, sans-serif;
 }
 
 * {
