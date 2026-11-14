@@ -7,8 +7,8 @@ import org.json.JSONObject
  * clock, so JVM tests check exactly what goes on the wire.
  */
 object BridgeRequests {
-    /** PROTOCOL `/ask`: "question: text, 200 chars at most". */
-    const val MAX_QUESTION_CHARS = 200
+    /** PROTOCOL `/ask`: the question is 300 characters at most. */
+    const val MAX_QUESTION_CHARS = 300
 
     /**
      * `POST /detect`. [lang] is sent only when it is one of [Lang.SUPPORTED] (anything else means English

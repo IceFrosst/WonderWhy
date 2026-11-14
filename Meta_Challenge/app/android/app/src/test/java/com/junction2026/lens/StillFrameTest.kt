@@ -69,15 +69,28 @@ class StillFrameTest {
         assertEquals(0 to 0, StillFrame.band(0, 0))
     }
 
-    /** Longer captions leave less room: the band gets wider (so it shows lower) and never under 96 px. */
-    @Test fun stillHeightFollowsTheCaption() {
-        assertEquals(1, StillFrame.captionLines(30))
-        assertEquals(2, StillFrame.captionLines(50))
-        assertEquals(4, StillFrame.captionLines(161)) // the Finnish bounce caption that overflowed at 2:1
-        assertEquals(144, StillFrame.stillHeight(161, 1))
-        assertEquals(228, StillFrame.stillHeight(20, 0))
-        assertEquals(96, StillFrame.stillHeight(400, 2))
-        assertTrue(StillFrame.aspectFor(161, 1) > StillFrame.aspectFor(87, 1))
+    /** More text leaves less room: the band shrinks with the card's text, between 160 and 300 px. */
+    @Test fun stillHeightFollowsTheText() {
+        assertEquals(StillFrame.MAX_H, StillFrame.heightFor(100))
+        assertEquals(600 - 300 - 12 - StillFrame.SLACK, StillFrame.heightFor(300))
+        assertEquals(StillFrame.MIN_H, StillFrame.heightFor(500))
+        assertTrue(StillFrame.aspectFor(160) > StillFrame.aspectFor(300))
+    }
+
+    /** Number lens on a card not in English: only the headline number and unit, not the English line under it. */
+    @Test fun numberHeadlineOnly() {
+        val root = appFile("bridge/media")
+        val files = root.walkTopDown().filter { it.path.contains("/number/") && it.name.matches(Regex("s\\d+\\.png")) }.toList()
+        assertTrue(files.size >= 7)
+        for (f in files) {
+            val (px, w, h) = pixels(f)
+            val full = StillFrame.crop(px, w, h)
+            val head = StillFrame.crop(px, w, h, headlineOnly = true)
+            assertTrue("${f.path} $head vs $full", head.top >= full.top && head.bottom < full.bottom && head.height in 25..140)
+        }
+        // ball step 1: the big "10.2 m" ends above the line "how far a 10 m/s throw..." (from y=285).
+        val (px, w, h) = pixels(appFile("bridge/media/ball/number/s1.png"))
+        assertTrue(StillFrame.crop(px, w, h, headlineOnly = true).bottom <= 285)
     }
 
     @Test fun syntheticFrameWithoutCaption() {

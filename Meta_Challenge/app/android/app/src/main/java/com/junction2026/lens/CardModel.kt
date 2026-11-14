@@ -23,6 +23,8 @@ class CardSpec(
     val items: List<CardItem>,
     val onPrimary: () -> Unit = {},
     val onSecondary: () -> Unit = {},
+    /** Centre the content (the "Looking…" card). */
+    val centered: Boolean = false,
 ) {
     val texts: List<String> get() = items.filterIsInstance<CardItem.Text>().map { it.text }
     val actions: CardItem.Actions? get() = items.filterIsInstance<CardItem.Actions>().firstOrNull()
@@ -46,12 +48,12 @@ class CardSpec(
         fun metaMuted(t: String) { items += CardItem.Text(t, TextRole.META_MUTED) }
         fun picture(b: Bitmap) { items += CardItem.Picture(b) }
         fun actions(primary: String, secondary: String? = null) { items += CardItem.Actions(primary, secondary) }
-        fun build(onPrimary: () -> Unit, onSecondary: () -> Unit) = CardSpec(items.toList(), onPrimary, onSecondary)
+        fun build(onPrimary: () -> Unit, onSecondary: () -> Unit, centered: Boolean) = CardSpec(items.toList(), onPrimary, onSecondary, centered)
     }
 
     companion object {
-        fun of(onPrimary: () -> Unit = {}, onSecondary: () -> Unit = {}, body: Builder.() -> Unit): CardSpec =
-            Builder().apply(body).build(onPrimary, onSecondary)
+        fun of(onPrimary: () -> Unit = {}, onSecondary: () -> Unit = {}, centered: Boolean = false, body: Builder.() -> Unit): CardSpec =
+            Builder().apply(body).build(onPrimary, onSecondary, centered)
     }
 }
 

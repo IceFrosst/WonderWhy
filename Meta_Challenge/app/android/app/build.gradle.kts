@@ -28,9 +28,14 @@ android {
     }
 }
 
-// Bundle the shared library JSON for offline cards; no duplicate copy lives in git.
-val copyLensAssets by tasks.registering(Copy::class) {
+// Bundle the shared library JSON and the bridge's exported stills (manifest + sN.png, no clips) for offline
+// cards; no duplicate copy lives in git. Sync, so a still removed from bridge/media leaves the APK too.
+val copyLensAssets by tasks.registering(Sync::class) {
     from(rootProject.layout.projectDirectory.file("../shared/objects.json"))
+    from(rootProject.layout.projectDirectory.dir("../bridge/media")) {
+        include("*/manifest.json", "*/*/s*.png")
+        into("media")
+    }
     into(layout.buildDirectory.dir("generated/lensAssets"))
 }
 tasks.named("preBuild") { dependsOn(copyLensAssets) }

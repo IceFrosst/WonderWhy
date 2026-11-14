@@ -74,4 +74,27 @@ class TriggerGateTest {
         assertNull(RenderedAck.body(null, 10))
         assertNull(RenderedAck.body("  ", 10))
     }
+
+    /** A pasted Web App link must not carry its key into requests, prefs or the log. */
+    @Test fun bridgeUrlLosesKeyQueryAndUserInfo() {
+        assertEquals("https://lens.example", BridgeConfig.from("https://lens.example/#k=secret", "").baseUrl)
+        assertEquals("https://lens.example", BridgeConfig.from("https://lens.example/?k=secret", "").baseUrl)
+        assertEquals("http://10.0.2.2:8787", BridgeConfig.from("http://user:pw@10.0.2.2:8787/?k=s#k=t", "").baseUrl)
+        assertEquals("https://h/lens", BridgeConfig.from("https://h/lens/?k=x", "").baseUrl)
+        val c = BridgeConfig.from("https://u:p@h.example:8443/sub/?k=secret#k=secret", "tok")
+        assertEquals("https://h.example:8443", c.origin)
+        assertFalse(c.origin.contains("secret") || c.baseUrl.contains("secret") || c.baseUrl.contains("u:p"))
+        assertEquals("", BridgeConfig.from("", "").origin)
+        assertEquals("http:", BridgeConfig.from("http://", "").baseUrl.trimEnd('/'))
+    }
+
+    /** A notice on top of the consent card takes the pinch / Back; consent is not recorded by it. */
+    @Test fun noticeWinsOverConsent() {
+        assertEquals(InputRoute.NOTICE, InputRouting.route(notice = true, consent = true, answer = false, picker = false, explainer = false))
+        assertEquals(InputRoute.CONSENT, InputRouting.route(notice = false, consent = true, answer = true, picker = true, explainer = true))
+        assertEquals(InputRoute.ANSWER, InputRouting.route(false, false, answer = true, picker = true, explainer = true))
+        assertEquals(InputRoute.PICKER, InputRouting.route(false, false, false, picker = true, explainer = true))
+        assertEquals(InputRoute.EXPLAINER, InputRouting.route(false, false, false, false, explainer = true))
+        assertEquals(InputRoute.NONE, InputRouting.route(false, false, false, false, false))
+    }
 }

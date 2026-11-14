@@ -45,6 +45,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -121,6 +122,10 @@ class GlassesController(
     @Volatile private var inputsActive = false
     private var captureJob: Job? = null
     private var reconnectJob: Job? = null
+    /** The Connect in progress, so Disconnect can stop it. */
+    private var connectJob: Job? = null
+    /** Microphone wanted (a result on screen); re-applied when speech settles (STOPPING ignores a start). */
+    private var wantListening = false
     /** Follows the glasses' state outside any session (a folded pair ends the session but keeps reporting). */
     private var deviceWatchJob: Job? = null
     /** The device watch saw the Bluetooth link go down and not come back yet. */
@@ -174,9 +179,20 @@ class GlassesController(
     private val watch = DeviceWatch()
     /** Last explainer action (pinch or card button), to swallow the twin of a pinch that also clicks a button. */
     private var lastNavAt = 0L
-    private val media = SceneMedia(scope) { path ->
-        if (useFixture) readAsset("fixture$path") else bridge.fetchBytes(path)
-    }
+    private val media = SceneMedia(
+        scope,
+        load = { path ->
+            when {
+                useFixture -> readAsset("fixture$path")
+                currentSaved -> readAsset(path.removePrefix("/")) // stills bundled in the APK
+                else -> bridge.fetchBytes(path)
+            }
+        },
+        // The number lens draws an English line under its number: other languages get the number only.
+        headlineOnly = { path -> !lang.startsWith("en") && "/number/" in path },
+    )
+    /** objectId -> tagline of the bundled English library, to tell an untranslated tagline. */
+    private var englishTaglines: Map<String, String> = emptyMap()
 
     // ---- connect / disconnect ----
 
@@ -197,6 +213,7 @@ class GlassesController(
         }
         if (connecting || session != null) { log("Already connected or connecting"); return }
         connecting = true
+        connectJob = currentCoroutineContext()[Job]
         try {
             if (!mock && !LensApp.wearablesReady) {
                 log("Wearables not initialised (${LensApp.initError ?: "restart the app after switching mock off"})")
@@ -216,10 +233,13 @@ class GlassesController(
                 if (ok == null) { log("Registration did not finish"); return }
             }
             watchDevice()
-            refreshLibrary()
-            if (!startSession(tries = 6)) _session.value = "no session"
+            val started = startSession(tries = 6)
+            // The library fetch (up to 8 s on a dead network) must not hold up the session.
+            scope.launch { refreshLibrary() }
+            if (!started) _session.value = "no session"
         } finally {
             connecting = false
+            connectJob = null
         }
     }
 
@@ -255,6 +275,9 @@ class GlassesController(
     }
 
     fun disconnect() {
+        connectJob?.let { log("Connect stopped"); it.cancel() }
+        connectJob = null
+        connecting = false
         reconnectJob?.cancel()
         waitJob?.cancel()
         deviceWatchJob?.cancel()
@@ -344,7 +367,7 @@ class GlassesController(
                 val wasAway = DeviceAlert.TAKEN_OVER in active || DeviceAlert.DISCONNECTED in active
                 lower(DeviceAlert.TAKEN_OVER)
                 lower(DeviceAlert.DISCONNECTED)
-                if (!attached) { attached = true; scope.launch { attachCapabilities(sess) } }
+                if (!attached) { attached = true; sessionJobs += scope.launch { attachCapabilities(sess) } }
                 else if (wasAway) restore()
             }
             // The SDK pauses a session when another experience takes the glasses over. Taking them off
@@ -396,8 +419,10 @@ class GlassesController(
         }
     }
 
+    /** Every step checks the session is still this one: a stale attach must not touch the next session. */
     private suspend fun attachCapabilities(sess: DeviceSession) {
         val addDisplayResult = sess.addDisplay()
+        if (session !== sess) return
         val d = addDisplayResult.getOrNull()
         if (d == null) {
             log("Display unavailable: ${addDisplayResult.errorOrNull()?.description}")
@@ -413,9 +438,11 @@ class GlassesController(
                 }
             }
             val ready = withTimeoutOrNull(10_000) { d.state.first { it == DisplayState.STARTED } }
+            if (session !== sess) return
             if (ready == null) log("Display did not start")
             else if (DeviceStates.suppressesDisplay(active)) clearDisplay()
             else if (lastContent != null) restore() else showIdle()
+            if (session !== sess) return
             firstDrawn = true
             displayReady.value = d.state.value == DisplayState.STARTED
         }
@@ -475,11 +502,17 @@ class GlassesController(
     private suspend fun attachSpeech(sess: DeviceSession) {
         var status = Wearables.checkPermissionStatus(Permission.MICROPHONE).getOrNull()
         if (status !is PermissionStatus.Granted) status = requestPermission(Permission.MICROPHONE).getOrNull()
+        if (session !== sess) return
         if (status !is PermissionStatus.Granted) { log("Microphone not allowed: spoken questions off"); return }
         sess.addSpeech(SpeechConfiguration()).fold(
             onSuccess = { sp ->
                 speech = sp
-                sessionJobs += scope.launch { sp.state.collect { _speech.value = it.name } }
+                sessionJobs += scope.launch {
+                    sp.state.collect {
+                        _speech.value = it.name
+                        if (it == SpeechState.STOPPED || it == SpeechState.STARTED) applyListening()
+                    }
+                }
                 sessionJobs += scope.launch { sp.transcriptions.collect { r -> if (r != null) onHeard(r) } }
                 sessionJobs += scope.launch {
                     sp.errors.collect { e -> if (e != null) log("Speech error: ${e.description} ${sp.errorDetails.value}") }
@@ -499,7 +532,14 @@ class GlassesController(
 
     /** Microphone on only while a question makes sense (a library result or an answer is on screen). */
     private fun setListening(want: Boolean) {
+        wantListening = want
+        applyListening()
+    }
+
+    /** Brings speech to [wantListening]; called again when speech reaches STOPPED or STARTED. */
+    private fun applyListening() {
         val sp = speech ?: return
+        val want = wantListening
         when (sp.state.value) {
             SpeechState.STOPPED -> if (want) sp.start().onFailure { e, _ -> log("Speech did not start: ${e.description}") }
             SpeechState.STARTED, SpeechState.STARTING -> if (!want) sp.stop()
@@ -569,11 +609,11 @@ class GlassesController(
     }
 
     private suspend fun applyGlasses(a: DeviceAlert) {
-        val t = DeviceStates.text(a, batteryLevel)
+        val t = DeviceStates.text(a, batteryLevel, lang)
         when (t.glasses) {
             GlassesShow.BLANK -> { noticeJob?.cancel(); notice = null; clearDisplay() }
             GlassesShow.NOTHING -> noticeJob?.cancel()
-            GlassesShow.CARD_DECIDE -> show(Cards.error(t.title, t.body, ::trigger, ::done))
+            GlassesShow.CARD_DECIDE -> show(Cards.decide(t.title, t.body, Cards.t(Lang.TRY_AGAIN), ::trigger, Cards.t(Lang.DONE), ::done))
             GlassesShow.CARD_AUTO -> {
                 noticeJob?.cancel()
                 notice = a
@@ -641,12 +681,17 @@ class GlassesController(
         var ok = false
         // One card at a time: two sends in the same moment make one of them fail.
         sendLock.withLock {
-            d.sendContent(Cards.render(card))
+            d.sendContent(Cards.render(onMain(card)))
                 .onSuccess { ok = true; _glasses.value = card.summary }
                 .onFailure { e, _ -> log("Display error: ${e.description}") }
         }
         return ok
     }
+
+    /** Card buttons are called on the SDK's thread; screen state is main-thread only, so hop over. */
+    private fun onMain(card: CardSpec) = CardSpec(
+        card.items, { scope.launch { card.onPrimary() } }, { scope.launch { card.onSecondary() } }, card.centered,
+    )
 
     private suspend fun restore(): Boolean = show(lastContent ?: Cards.idle(), record = false)
 
@@ -662,7 +707,10 @@ class GlassesController(
      * decides: refused with a log line (not connected, glasses off / folded / gone), wait for the display
      * (it has not reached STARTED yet), the first-run consent card, or run.
      */
-    fun trigger() {
+    fun trigger() { tryTrigger() }
+
+    /** True when the photo runs now or once the display is ready; false when refused (logged). */
+    private fun tryTrigger(): Boolean {
         val blocking = TriggerGate.blocking(active)
         val d = TriggerGate.decide(
             // While Connect is still creating the session, a trigger waits for the display like any other.
@@ -674,22 +722,48 @@ class GlassesController(
         )
         when (d) {
             TriggerDecision.RUN -> Unit
-            TriggerDecision.WAIT_DISPLAY -> { waitForDisplayThenTrigger(); return }
-            TriggerDecision.CONSENT -> { log(TriggerGate.refusal(d, blocking)); scope.launch { showConsent() }; return }
-            else -> { log(TriggerGate.refusal(d, blocking)); return }
+            TriggerDecision.WAIT_DISPLAY -> { waitForDisplayThenTrigger(); return true }
+            TriggerDecision.CONSENT -> { log(TriggerGate.refusal(d, blocking)); scope.launch { showConsent() }; return false }
+            else -> { log(TriggerGate.refusal(d, blocking)); return false }
         }
-        if (!busy.compareAndSet(false, true)) { log(TriggerGate.refusal(TriggerDecision.BUSY, null)); return }
-        captureJob = scope.launch {
-            try {
-                explainer = null
-                picker = null
-                answerDet = null
-                setListening(false)
-                lower(DeviceAlert.CAMERA_DENIED)
-                runCapture()
-            } finally {
-                busy.set(false)
-            }
+        if (!busy.compareAndSet(false, true)) { log(TriggerGate.refusal(TriggerDecision.BUSY, null)); return false }
+        // A capture replaces any consent card still up (demo data takes no photo, so it needs none).
+        consentShown = false
+        _consent.value = false
+        captureJob = launchExclusive {
+            explainer = null
+            picker = null
+            answerDet = null
+            setListening(false)
+            lower(DeviceAlert.CAMERA_DENIED)
+            runCapture()
+        }
+        return true
+    }
+
+    /**
+     * A capture or question. [busy] is released only by the job that is still the current one: a cancelled
+     * job that finishes late (after a teardown and a new capture) leaves the new one alone.
+     */
+    private fun launchExclusive(block: suspend () -> Unit): Job {
+        lateinit var job: Job
+        job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+            try { block() } finally { if (captureJob === job) busy.set(false) }
+        }
+        captureJob = job
+        job.start()
+        return job
+    }
+
+    /**
+     * After a cancelled capture or question: nothing when the session changed (it has its own cards);
+     * idle (kept for put-on) when the glasses were taken off or folded; else the "Cancelled" card.
+     */
+    private suspend fun afterCancel(startedIn: Int, retry: () -> Unit) {
+        when {
+            session == null || sessionNo != startedIn -> Unit
+            TriggerGate.blocking(active) != null -> { explainer = null; picker = null; answerDet = null; lastContent = Cards.idle() }
+            else -> show(Cards.error(Cards.t(Lang.CANCELLED), retry))
         }
     }
 
@@ -724,7 +798,8 @@ class GlassesController(
         Prefs.setConsent(ctx, true)
         log("Consent given: photos allowed")
         lastNavAt = SystemClock.uptimeMillis() // the pinch that agreed must not also act on the next card
-        trigger()
+        // Refused (glasses off, no session): the consent card must not stay as the card to restore.
+        if (!tryTrigger()) scope.launch { showIdle() }
     }
 
     /** Not now (the button or Back): idle card; the next trigger asks again. */
@@ -743,6 +818,7 @@ class GlassesController(
     }
 
     private suspend fun runCapture() {
+        val startedIn = sessionNo
         try {
             show(Cards.looking())
             var receivedAt = 0L
@@ -765,33 +841,35 @@ class GlassesController(
                 (det.sketchError?.let { " sketchError=$it" } ?: ""))
             if (present(det) && receivedAt > 0) ackRendered(det.reqId, receivedAt)
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            showError("Camera timed out", "The glasses did not deliver a photo")
+            log("Camera timed out: the glasses did not deliver a photo")
+            showError(Cards.t(Lang.TOOK_TOO_LONG))
         } catch (e: CancellationException) {
-            withContext(NonCancellable) {
-                show(Cards.error("Cancelled", "Capture stopped", ::trigger, ::done))
-            }
+            withContext(NonCancellable) { afterCancel(startedIn, ::trigger) }
             throw e
         } catch (e: CameraDenied) {
             log("Camera permission denied")
             raise(DeviceAlert.CAMERA_DENIED)
         } catch (e: CaptureFailure) {
             log("Capture failed: ${e.message}")
-            showError(e.title, e.detail)
+            showError(Cards.t(Lang.ERR_CAMERA))
         } catch (e: BridgeException) {
-            log("Bridge failed: ${e.message}")
+            log("Bridge failed: ${e.message} (HTTP ${e.status}${if (e.code.isNotEmpty()) ", ${e.code}" else ""})")
             when {
                 e.offline -> showOfflinePicker()
-                e.unauthorized -> showError("Bridge token", Cards.t(Lang.TOKEN))
-                else -> showError("Couldn't explain that", e.userMessage)
+                e.unauthorized -> showError(Cards.t(Lang.TOKEN_TITLE), Cards.t(Lang.TOKEN))
+                e.busy -> showError(Cards.t(Lang.BUSY))
+                e.code == "detect_timeout" -> showError(Cards.t(Lang.TOOK_TOO_LONG))
+                else -> showError(Cards.t(Lang.ERR_EXPLAIN))
             }
         } catch (e: Exception) {
             log("Unexpected: $e")
-            showError("Something went wrong", e.javaClass.simpleName)
+            showError(Cards.t(Lang.ERR_GENERIC))
         }
     }
 
-    private suspend fun showError(title: String, detail: String) =
-        show(Cards.error(title, detail, ::trigger, ::done))
+    /** Error card: the title and "Try again in a moment." unless [detail] says what to do. */
+    private suspend fun showError(title: String, detail: String = Cards.t(Lang.ERROR_BODY)) =
+        show(Cards.error(title, ::trigger, detail))
 
     private fun done() {
         scope.launch {
@@ -828,6 +906,8 @@ class GlassesController(
             val cached = file?.takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() }
             val bundled = runCatching { ctx.assets.open(OfflineCards.ASSET_NAME).use { it.readBytes().toString(Charsets.UTF_8) } }
                 .getOrDefault("{}")
+            if (englishTaglines.isEmpty()) englishTaglines = runCatching { OfflineCards.parse(bundled).mapValues { it.value.tagline } }
+                .getOrDefault(emptyMap())
             val pick = LibraryChoice.choose(want, fetched, cached, bundled)
             if (pick.save && file != null) runCatching {
                 file.parentFile?.mkdirs()
@@ -876,7 +956,7 @@ class GlassesController(
     /** Offline card: pick a saved library object with left/right, open with pinch. */
     private suspend fun showOfflinePicker() {
         val lib = library()
-        if (lib.isEmpty()) { showError("Offline", "Can't reach the bridge. Try again later."); return }
+        if (lib.isEmpty()) { showError(Cards.t(Lang.OFFLINE_TITLE), Cards.t(Lang.OFFLINE_EMPTY)); return }
         val p = OfflinePicker(lib.keys.toList(), pickerIndex.coerceIn(0, lib.size - 1))
         picker = p
         pickerIndex = p.index
@@ -885,7 +965,7 @@ class GlassesController(
         current = null
         val o = lib.getValue(p.current)
         show(Cards.offlinePicker(
-            p, o.label, o.tagline,
+            p, o.label, OfflineCards.taglineFor(lang, o.tagline, englishTaglines[o.id]),
             onOpen = { scope.launch { pickerOpen() } },
             onRetry = { if (navAllowed()) trigger() },
         ))
@@ -897,7 +977,8 @@ class GlassesController(
         val o = library()[p.current] ?: return
         picker = null
         log("Offline: opening saved card ${o.id}")
-        present(OfflineConvert.toDetection(OfflineCards.toDetect(o)), saved = true)
+        val manifest = readAsset("media/${o.id}/manifest.json")?.toString(Charsets.UTF_8)
+        present(OfflineConvert.toDetection(OfflineCards.toDetect(o), OfflineConvert.media(o.id, manifest)), saved = true)
     }
 
     // ---- result and explainer ----
@@ -913,9 +994,10 @@ class GlassesController(
         explainer = null
         answerDet = null
         return when (val v = DetectionParser.verdict(det)) {
-            is Verdict.NotSure -> { setListening(false); show(Cards.notSure(v.guess, ::trigger, ::done)) }
-            is Verdict.Unrecognised -> { setListening(false); show(Cards.result(Cards.t(Lang.NOT_SURE), null, v.answer, ::trigger, ::done)) }
-            is Verdict.Plain -> { setListening(true); show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, ::done)) }
+            // The bridge's own words for these go to the log only; the card says what to do.
+            is Verdict.NotSure -> { log("Not sure: maybe '${v.guess}'"); setListening(false); show(Cards.notSure(::trigger)) }
+            is Verdict.Unrecognised -> { log("Not sure: ${v.answer.orEmpty()}"); setListening(false); show(Cards.notSure(::trigger)) }
+            is Verdict.Plain -> { setListening(true); show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, det.standIn)) }
             is Verdict.Explainer -> showExplainer(ExplainerState(v.tracks))
             is Verdict.Sketched -> showExplainer(ExplainerState(v.tracks))
         }
@@ -952,26 +1034,24 @@ class GlassesController(
         setListening(AskFlow.target(det) is AskTarget.Object)
         val paths = stillPaths(det, s.track)
         media.prefetch(paths.filterNotNull())
-        val path = if (s.isOverview) null else paths.getOrNull(s.step)
-        val cached = path?.let { cardStill(it, s) }
+        // The overview shows the first step's still of its lens.
+        val path = paths.getOrNull(if (s.isOverview) 0 else s.step)
+        val cached = path?.let { cardStill(det, it, s) }
         val shown = show(explainerCard(det, s, cached))
         if (path != null && cached == null && !media.hasFailed(path)) {
             scope.launch {
                 val bmp = runCatching { media.get(path) }.getOrNull()
                 // Only if the wearer is still on this card; a failed still keeps the text card.
-                if (bmp != null && explainer === s && current === det) show(explainerCard(det, s, cardStill(path, s)))
+                if (bmp != null && explainer === s && current === det) show(explainerCard(det, s, cardStill(det, path, s)))
                 else if (bmp == null) log("Still unavailable: $path")
             }
         }
         return shown
     }
 
-    /** The still sized for this step card: the longer the caption, the lower the picture ([StillFrame]). */
-    private fun cardStill(path: String, s: ExplainerState): Bitmap? {
-        val caption = "${Cards.t(Lang.STEP)} ${s.counter}. ${s.track.steps[s.step]}"
-        val metaLines = (if (s.tracks.size > 1) 1 else 0) + (if (currentSaved) 1 else 0)
-        return media.forCard(path, caption.length, metaLines)
-    }
+    /** The still sized for this card: the more text, the lower the picture ([StillFrame.heightFor]). */
+    private fun cardStill(det: Detection, path: String, s: ExplainerState): Bitmap? =
+        media.forCard(path, StillFrame.heightFor(CardFit.height(explainerCard(det, s, null))))
 
     private fun explainerCard(det: Detection, s: ExplainerState, still: Bitmap?): CardSpec {
         val sk = det.sketch?.takeIf { det.objectId == "unknown" }
@@ -983,9 +1063,9 @@ class GlassesController(
             answer = if (sk != null) null else det.answer,
             still = still,
             onPrimary = { scope.launch { explainerPrimary() } },
-            onSecondary = { scope.launch { explainerSecondary() } },
             saved = currentSaved,
             sketch = sk != null,
+            standIn = det.standIn,
         )
     }
 
@@ -1006,24 +1086,25 @@ class GlassesController(
             else -> Unit
         }
         if (!busy.compareAndSet(false, true)) { log("Busy: ignoring question"); return }
-        captureJob = scope.launch {
-            try {
-                runAsk(q)
-            } finally {
-                busy.set(false)
-            }
-        }
+        launchExclusive { runAsk(q) }
     }
 
     private suspend fun runAsk(q: String) {
         val base = current
-        when (val target = AskFlow.target(base)) {
+        val target = AskFlow.target(base)
+        if (target !is AskTarget.Object) {
+            // These cards replace the screen: a pinch must not act on a hidden explainer, picker or answer.
+            explainer = null
+            picker = null
+            answerDet = null
+        }
+        when (target) {
             AskTarget.NoResult -> show(Cards.decide(
-                "No object yet", "Explain something first, then ask.",
+                Cards.t(Lang.NO_OBJECT), Cards.t(Lang.NO_OBJECT_BODY),
                 Cards.t(Lang.AGAIN), ::trigger, Cards.t(Lang.DONE), ::done,
             ))
             AskTarget.Unknown -> show(Cards.decide(
-                "Can't ask yet", "Questions work for library objects only.",
+                Cards.t(Lang.CANT_ASK_YET), Cards.t(Lang.CANT_ASK_YET_BODY),
                 Cards.t(Lang.AGAIN), ::trigger, Cards.t(Lang.DONE), ::done,
             ))
             is AskTarget.Object -> {
@@ -1033,6 +1114,7 @@ class GlassesController(
                 explainer = null
                 picker = null
                 answerDet = null
+                val startedIn = sessionNo
                 show(Cards.looking())
                 // Demo data and saved cards have no bridge behind them: the phone answers from the same text.
                 if (useFixture || currentSaved) { showAnswer(det, AskFlow.localAnswer(det, q), q, local = true); return }
@@ -1041,16 +1123,19 @@ class GlassesController(
                     val receivedAt = SystemClock.elapsedRealtime()
                     if (showAnswer(det, ans, q, local = false)) ackRendered(ans.reqId, receivedAt)
                 } catch (e: CancellationException) {
+                    // Not left on "Looking…" (put-on would restore it).
+                    withContext(NonCancellable) { afterCancel(startedIn) { if (navAllowed()) ask(q) } }
                     throw e
                 } catch (e: BridgeException) {
                     log("Ask failed: ${e.message} (HTTP ${e.status}${if (e.code.isNotEmpty()) ", ${e.code}" else ""})")
                     when {
                         // No /ask on this bridge (404), or no bridge: PROTOCOL's word-overlap rule on the phone.
                         AskFlow.answerOnPhone(e.status, e.code, e.offline) -> showAnswer(det, AskFlow.localAnswer(det, q), q, local = true)
-                        e.unauthorized -> askError(q, "Bridge token", Cards.t(Lang.TOKEN))
-                        e.code == "bad_request" -> askError(q, "Can't ask that", "Ask about the object on screen.")
-                        e.code == "detect_timeout" -> askError(q, "Took too long", "Ask again in a moment.")
-                        else -> askError(q, "Couldn't answer", e.userMessage)
+                        e.unauthorized -> askError(q, Cards.t(Lang.TOKEN_TITLE), Cards.t(Lang.TOKEN))
+                        e.busy -> askError(q, Cards.t(Lang.BUSY))
+                        e.code == "bad_request" -> askError(q, Cards.t(Lang.CANT_ASK_THAT), Cards.t(Lang.CANT_ASK_THAT_BODY))
+                        e.code == "detect_timeout" -> askError(q, Cards.t(Lang.TOOK_TOO_LONG))
+                        else -> askError(q, Cards.t(Lang.ERR_ANSWER))
                     }
                 }
             }
@@ -1058,10 +1143,8 @@ class GlassesController(
     }
 
     /** Error card for a question: Try again asks the same question again. */
-    private suspend fun askError(q: String, title: String, detail: String) = show(Cards.decide(
-        title, detail, Cards.t(Lang.TRY_AGAIN), { if (navAllowed()) ask(q) },
-        Cards.t(Lang.DONE), ::done,
-    ))
+    private suspend fun askError(q: String, title: String, detail: String = Cards.t(Lang.ERROR_BODY)) =
+        show(Cards.error(title, { if (navAllowed()) ask(q) }, detail))
 
     /** True when the answer card is on the display now. */
     private suspend fun showAnswer(base: Detection, ans: Detection, q: String, local: Boolean): Boolean {
@@ -1085,7 +1168,6 @@ class GlassesController(
             text,
             openLabel = pos?.let { (l, s) -> AskFlow.openLabel(tracks[l], s) },
             onPrimary = { scope.launch { answerPrimary() } },
-            onDone = { if (navAllowed()) done() },
             local = local,
         ))
         setListening(true)
@@ -1111,17 +1193,20 @@ class GlassesController(
         return true
     }
 
+    /** Which card takes a pinch or Back ([InputRouting]: a notice covers the consent card). */
+    private fun route() = InputRouting.route(notice != null, consentShown, answerDet != null, picker != null, explainer != null)
+
     /** Pinch (`InputEvent.Select`). Public so the phone's mock buttons can drive it too. */
     fun onSelect() {
         scope.launch {
-            when {
-                consentShown -> if (navAllowed()) agreeConsent()
-                notice != null -> if (navAllowed()) dismissNotice("pinch")
-                answerDet != null -> answerPrimary()
-                picker != null -> pickerOpen()
-                explainer != null -> explainerPrimary()
+            when (route()) {
+                InputRoute.NOTICE -> if (navAllowed()) dismissNotice("pinch")
+                InputRoute.CONSENT -> if (navAllowed()) agreeConsent()
+                InputRoute.ANSWER -> answerPrimary()
+                InputRoute.PICKER -> pickerOpen()
+                InputRoute.EXPLAINER -> explainerPrimary()
                 // Twin of a button click that just closed a card: ignore it.
-                SystemClock.uptimeMillis() - lastNavAt >= NAV_DEBOUNCE_MS -> trigger()
+                InputRoute.NONE -> if (SystemClock.uptimeMillis() - lastNavAt >= NAV_DEBOUNCE_MS) trigger()
             }
         }
     }
@@ -1134,14 +1219,6 @@ class GlassesController(
             is ExplainerState.Move.Show -> showExplainer(m.state)
             ExplainerState.Move.Again -> { explainer = null; trigger() }
         }
-    }
-
-    /** Overview: Again. Step cards: Done. */
-    private suspend fun explainerSecondary() {
-        val s = explainer ?: return
-        if (!navAllowed()) return
-        explainer = null
-        if (s.isOverview) trigger() else showIdle()
     }
 
     /**
@@ -1178,9 +1255,12 @@ class GlassesController(
      */
     fun onBack() {
         scope.launch {
-            if (consentShown) { consentNotNow(); return@launch }
-            if (notice != null) { dismissNotice("Back"); return@launch }
-            if (picker != null) { picker = null; showIdle(); return@launch }
+            when (route()) {
+                InputRoute.NOTICE -> { dismissNotice("Back"); return@launch }
+                InputRoute.CONSENT -> { consentNotNow(); return@launch }
+                InputRoute.PICKER -> { picker = null; showIdle(); return@launch }
+                else -> Unit
+            }
             answerDet?.let { a ->
                 // Back from an answer: the object's overview.
                 answerDet = null

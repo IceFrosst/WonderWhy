@@ -15,28 +15,24 @@ data class CropBox(val left: Int, val top: Int, val right: Int, val bottom: Int)
  * Pure (ARGB pixels in, rectangle out) so JVM tests run it on the real files.
  */
 object StillFrame {
-    /** Widest band shape for a still (552x228 on the card) when the caption is short. */
-    const val ASPECT = 552.0 / 228
+    /** Widest band shape for a still (552x300 on the card) when the text is short. */
+    const val ASPECT = 552.0 / 300
 
-    // Step card budget in display px, measured on the Mock Device Kit display (600x600): the card's fixed
-    // parts (padding, title, dock, gaps) leave about 326 px for the still, the caption and small lines.
     private const val CARD_W = 552.0
-    private const val BUDGET = 326
-    private const val BODY_LINE = 36 // one caption line (BODY)
-    private const val META_LINE = 38 // one small line (META) plus its gap
-    private const val CHARS_PER_LINE = 40.0
-    private const val MIN_H = 96
-    private const val MAX_H = 228
+    const val MIN_H = 160
+    const val MAX_H = 300
+    /**
+     * Margin kept free beyond the [CardFit] estimate. On the Mock Device Kit display (15 Nov, emulator) the
+     * estimate was within 5 px of the drawn card (502 estimated, 499 drawn); the real Display may differ.
+     */
+    const val SLACK = 24
+    private const val GAP = 12
 
-    /** Caption lines for [chars] characters (rounded up once a line is more than 15% used). */
-    fun captionLines(chars: Int): Int = maxOf(1, Math.ceil(chars / CHARS_PER_LINE - 0.15).toInt())
+    /** Band height in display px for a card whose other items take [cardPx] by the [CardFit] estimate. */
+    fun heightFor(cardPx: Int): Int = (CardFit.DISPLAY - cardPx - GAP - SLACK).coerceIn(MIN_H, MAX_H)
 
-    /** Height in display px the still may take next to that caption and [metaLines] small lines. */
-    fun stillHeight(captionChars: Int, metaLines: Int): Int =
-        (BUDGET - BODY_LINE * captionLines(captionChars) - META_LINE * metaLines).coerceIn(MIN_H, MAX_H)
-
-    /** Width / height of the band for that card: the display scales the band to the card's width. */
-    fun aspectFor(captionChars: Int, metaLines: Int): Double = CARD_W / stillHeight(captionChars, metaLines)
+    /** Width / height of a band [heightPx] high: the display scales the band to the card's width. */
+    fun aspectFor(heightPx: Int): Double = CARD_W / heightPx
 
     /** A pixel counts as drawn when its brightest channel is over this: dim guides (frets, ghosts) count too. */
     const val BRIGHT = 24
@@ -102,12 +98,17 @@ object StillFrame {
     }
 
     /**
-     * The part of the still to show. A frame: the stage, trimmed to its drawing plus a small margin. Anything
-     * else: the whole picture (unchanged behaviour for drawing-only stills).
+     * The part of the still to show. A frame: the stage, trimmed to its drawing plus a small margin. With
+     * [headlineOnly] (a number lens on a card that is not in English) only the first block of the stage: the
+     * big number and its unit, without the English line under it. Anything else: the whole picture.
      */
-    fun crop(px: IntArray, w: Int, h: Int): CropBox {
+    fun crop(px: IntArray, w: Int, h: Int, headlineOnly: Boolean = false): CropBox {
         if (!isFrame(w, h)) return CropBox(0, 0, w, h)
-        val stage = stageRows(rowsDrawn(px, w, h))
+        val rows = rowsDrawn(px, w, h)
+        var stage = stageRows(rows)
+        if (headlineOnly) blocks(rows, stage.first).firstOrNull { it.first <= stage.last }?.let { b ->
+            stage = b.first..minOf(b.last, stage.last)
+        }
         var minX = w; var maxX = -1; var minY = h; var maxY = -1
         for (y in stage) for (x in 0 until w) {
             if (drawn(px[y * w + x])) {

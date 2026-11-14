@@ -54,14 +54,77 @@ class CardsTest {
     @Test fun summaryMirrorsTheCard() {
         Cards.lang = "en"
         assertEquals("Physics Lens | Look at something and pinch", Cards.idle().summary)
-        assertEquals("T | d | [Try again / Done]", Cards.error("T", "d", {}, {}).summary)
+        assertEquals("T | d | [Try again]", Cards.error("T", {}, "d").summary)
+        assertEquals("T | Try again in a moment. | [Try again]", Cards.error("T", {}).summary)
+        Cards.lang = "fi"
+        assertEquals("T | Yritä hetken päästä uudelleen. | [Yritä uudelleen]", Cards.error("T", {}).summary)
+    }
+
+    /** Not sure: fixed words in the card's language, one button, never the bridge's answer. */
+    @Test fun notSureCard() {
+        Cards.lang = "en"
+        assertEquals("Not sure | Look again, a bit closer. | [Again]", Cards.notSure {}.summary)
+        Cards.lang = "fi"
+        assertEquals("En ole varma | Katso uudelleen, vähän lähempää. | [Uudelleen]", Cards.notSure {}.summary)
+    }
+
+    @Test fun lookingIsCentredWithARealEllipsis() {
+        Cards.lang = "en"
+        assertEquals("Looking…", Cards.looking().title)
+        assertTrue(Cards.looking().centered)
+        Cards.lang = "fi"
+        assertEquals("Katsotaan…", Cards.looking().title)
+    }
+
+    /** One button on explainer, result and answer cards (Back means Done); two on consent and decide cards. */
+    @Test fun buttonCounts() {
+        Cards.lang = "en"
+        val tracks = listOf(Track("o.a", "Lens A", "lead", listOf("one", "two")), Track("o.b", "Lens B", null, listOf("x")))
+        for (st in listOf(ExplainerState(tracks), ExplainerState(tracks, 0, 0), ExplainerState(tracks, 1, 0))) {
+            assertEquals(null, Cards.explainer(st, "Obj", "sum", null, null, {}).actions!!.secondary)
+        }
+        assertEquals(null, Cards.result("T", null, null, {}).actions!!.secondary)
+        assertEquals(null, Cards.answer(AnswerText("T", "q", "a"), null, {}).actions!!.secondary)
+        assertEquals("Not now", Cards.consent({}, {}).actions!!.secondary)
+        assertEquals("No", Cards.decide("T", "d", "Yes", {}, "No", {}).actions!!.secondary)
+    }
+
+    /** Step card: the object is the heading, no lead, "Step 1/3" is the only counter. */
+    @Test fun stepCardShape() {
+        Cards.lang = "en"
+        val tracks = listOf(Track("ball.motion", "Projectile motion", "The lead line.", listOf("Gravity pulls.", "Two.", "Three.")),
+            Track("ball.compare", "Bounce", null, listOf("b")))
+        val card = Cards.explainer(ExplainerState(tracks, 0, 0), "Thrown ball", "sum", null, null, {})
+        assertEquals("Thrown ball | Step 1/3. Gravity pulls. | ●○ Projectile motion | [Next]", card.summary)
+        assertTrue(card.texts.none { it.contains("lead line") })
+    }
+
+    /** PROTOCOL `standIn`: a small muted tag on the overview and the old result card, nowhere when unset. */
+    @Test fun standInTag() {
+        Cards.lang = "en"
+        val tracks = listOf(Track("o.a", "A", null, listOf("one")))
+        val ov = Cards.explainer(ExplainerState(tracks), "Obj", "sum", null, null, {}, standIn = true)
+        assertTrue(ov.items.contains(CardItem.Text("Stand-in model", TextRole.META_MUTED)))
+        assertTrue(Cards.result("T", null, "a", {}, standIn = true).texts.contains("Stand-in model"))
+        assertTrue(Cards.explainer(ExplainerState(tracks), "Obj", "sum", null, null, {}).texts.none { it == "Stand-in model" })
+    }
+
+    @Test fun offlinePickerShape() {
+        Cards.lang = "en"
+        val p = OfflinePicker(listOf("a", "b", "c"), 1)
+        assertEquals("Offline · pick a saved card | Kettle | Convection | 2/3 · Left/right: object. Pinch: open. | [Open / Try again]",
+            Cards.offlinePicker(p, "Kettle", "Convection", {}, {}).summary)
+        Cards.lang = "fi"
+        val fi = Cards.offlinePicker(p, "Vedenkeitin", null, {}, {})
+        assertEquals("Vedenkeitin", fi.title)
+        assertEquals(2, fi.items.count { it is CardItem.Text && it.role != TextRole.HEADING })
     }
 
     /** DESIGN.md: one dot per lens, the current one filled, never more than 5; the counter is text too. */
     @Test fun lensBarWithFiveLenses() {
         val tracks = (1..5).map { Track("o.l$it", "Lens number $it here", null, listOf("s")) }
         val s = ExplainerState(tracks, lens = 2, step = 0)
-        assertEquals("○○●○○ 3/5 Lens number 3…", Cards.lensBar(s))
+        assertEquals("○○●○○ Lens number 3…", Cards.lensBar(s))
         assertTrue(words(Cards.lensBar(s)) <= 8)
     }
 
@@ -94,12 +157,12 @@ class CardsTest {
                 val tracks = tracksOf(o)
                 assertTrue(tracks.size <= DetectionParser.MAX_LENSES)
                 val ov = ExplainerState(tracks)
-                val ovCard = Cards.explainer(ov, o.label, o.answer, null, null, {}, {}, saved = true)
+                val ovCard = Cards.explainer(ov, o.label, o.answer, null, null, {}, saved = true)
                 if (!CardFit.fits(ovCard)) over += "$tag ${o.id} overview ${CardFit.height(ovCard)}"
                 note("overview", CardFit.height(ovCard), "$tag ${o.id}")
                 tracks.forEachIndexed { l, t ->
                     t.steps.indices.forEach { st ->
-                        val card = Cards.explainer(ExplainerState(tracks, l, st), o.label, o.answer, null, null, {}, {}, saved = true)
+                        val card = Cards.explainer(ExplainerState(tracks, l, st), o.label, o.answer, null, null, {}, saved = true)
                         if (!CardFit.fits(card)) over += "$tag ${t.lensId} step ${st + 1}: ${CardFit.height(card)}"
                         note("text step", CardFit.height(card), "$tag ${t.lensId} step ${st + 1}")
                     }
@@ -110,30 +173,49 @@ class CardsTest {
         assertEquals(emptyList<String>(), over)
     }
 
-    /** Step cards with a still: the band height from [StillFrame] plus the text still fits. */
-    @Test fun stepCardsWithStillsFit() {
+    /**
+     * Cards with a still (every step, and the overview with its first step's still), online and offline: the
+     * band height [StillFrame.heightFor] gives plus the text fits 600x600. The band never goes under
+     * [StillFrame.MIN_H], so this is where a long caption would overflow.
+     */
+    @Test fun cardsWithStillsFit() {
         val over = ArrayList<String>()
+        var tallest = 0 to ""
         for (tag in listOf("en", "fi")) {
             Cards.lang = tag
             for (o in library(tag).values) {
                 val tracks = tracksOf(o)
-                tracks.forEachIndexed { l, t ->
-                    t.steps.indices.forEach { st ->
-                        val s = ExplainerState(tracks, l, st)
-                        val caption = "${Cards.t(Lang.STEP)} ${s.counter}. ${t.steps[st]}"
-                        val metaLines = if (tracks.size > 1) 1 else 0
-                        val stillPx = StillFrame.stillHeight(caption.length, metaLines)
-                        val text = Cards.explainer(s, o.label, o.answer, null, null, {}, {})
-                        // With a still the lead is not shown; the still's band takes its place (a Bitmap cannot be
-                        // made in a JVM test, so it is counted by height).
-                        val card = CardSpec(text.items.filterNot { it is CardItem.Text && it.text == t.lead })
-                        val h = CardFit.height(card) + 12 + stillPx
-                        if (h > CardFit.DISPLAY) over += "$tag ${t.lensId} step ${st + 1}: $h"
+                for (saved in listOf(false, true)) {
+                    val states = listOf(ExplainerState(tracks)) + tracks.indices.flatMap { l -> tracks[l].steps.indices.map { ExplainerState(tracks, l, it) } }
+                    for (s in states) {
+                        // A Bitmap cannot be made in a JVM test, so the still is counted by its band height.
+                        val text = Cards.explainer(s, o.label, o.answer, null, null, {}, saved = saved)
+                        val cardPx = CardFit.height(text)
+                        val h = cardPx + 12 + StillFrame.heightFor(cardPx)
+                        val which = "$tag ${s.track.lensId} ${if (s.isOverview) "overview" else "step ${s.step + 1}"}${if (saved) " saved" else ""}"
+                        if (h > tallest.first) tallest = h to which
+                        if (h > CardFit.DISPLAY) over += "$which: $h"
                     }
                 }
             }
         }
+        println("STILL CARD TALLEST: $tallest")
         assertEquals(emptyList<String>(), over)
+    }
+
+    /** Finnish cards carry no fixed English words (the idle title is the product name). */
+    @Test fun finnishCardsHaveNoEnglishFixedStrings() {
+        Cards.lang = "fi"
+        val en = Lang.KEYS.filter { Lang.ui("en", it) != Lang.ui("fi", it) }.map { Lang.ui("en", it) }.filter { it.length > 3 }
+        val lib = library("fi")
+        val o = lib.getValue("ball")
+        val tracks = tracksOf(o)
+        val cards = listOf(Cards.looking(), Cards.notSure {}, Cards.error(Cards.t(Lang.ERR_EXPLAIN), {}), Cards.consent({}, {}),
+            Cards.explainer(ExplainerState(tracks), o.label, o.answer, null, null, {}, saved = true),
+            Cards.explainer(ExplainerState(tracks, 1, 0), o.label, o.answer, null, null, {}),
+            Cards.offlinePicker(OfflinePicker(lib.keys.toList()), o.label, OfflineCards.taglineFor("fi", o.tagline, "Projectile motion"), {}, {}))
+        for (c in cards) for (e in en) assertTrue("${c.summary} has '$e'", !c.summary.contains(e))
+        for (c in cards) assertTrue(c.summary, !c.summary.contains("Projectile") && !c.summary.contains("Pinch") && !c.summary.contains("Step "))
     }
 
     @Test fun wrapEstimate() {

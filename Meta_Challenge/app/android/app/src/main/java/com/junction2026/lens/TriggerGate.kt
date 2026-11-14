@@ -65,9 +65,48 @@ object TriggerGate {
 
 /** Bridge address and token as typed on the phone, cleaned. Read fresh for every request. */
 data class BridgeConfig(val baseUrl: String, val token: String) {
+    /** scheme://host:port only, for the log (never a path, query or key). */
+    val origin: String get() = originOf(baseUrl)
+
     companion object {
         fun from(url: String?, token: String?): BridgeConfig =
-            BridgeConfig(url.orEmpty().trim().trimEnd('/'), token.orEmpty().trim())
+            BridgeConfig(stripSecrets(url.orEmpty().trim()).trimEnd('/'), token.orEmpty().trim())
+
+        /**
+         * The address without query, fragment and user info: a pasted Web App link (`#k=<token>` or `?k=<token>`)
+         * must not put the key in requests, prefs or the log.
+         */
+        fun stripSecrets(url: String): String {
+            val u = url.substringBefore('#').substringBefore('?')
+            val at = u.indexOf("://")
+            if (at < 0) return u
+            val rest = u.substring(at + 3)
+            val slash = rest.indexOf('/')
+            val authority = if (slash < 0) rest else rest.substring(0, slash)
+            val path = if (slash < 0) "" else rest.substring(slash)
+            return u.substring(0, at + 3) + authority.substringAfterLast('@') + path
+        }
+
+        fun originOf(url: String): String {
+            val u = stripSecrets(url)
+            val at = u.indexOf("://")
+            if (at < 0) return u.substringBefore('/')
+            return u.substring(0, at + 3) + u.substring(at + 3).substringBefore('/')
+        }
+    }
+}
+
+/** Who gets a pinch or a Back: the card on top. A notice covers whatever is under it, consent included. */
+enum class InputRoute { NOTICE, CONSENT, ANSWER, PICKER, EXPLAINER, NONE }
+
+object InputRouting {
+    fun route(notice: Boolean, consent: Boolean, answer: Boolean, picker: Boolean, explainer: Boolean): InputRoute = when {
+        notice -> InputRoute.NOTICE
+        consent -> InputRoute.CONSENT
+        answer -> InputRoute.ANSWER
+        picker -> InputRoute.PICKER
+        explainer -> InputRoute.EXPLAINER
+        else -> InputRoute.NONE
     }
 }
 

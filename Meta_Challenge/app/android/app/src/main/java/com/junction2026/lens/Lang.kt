@@ -58,11 +58,30 @@ object Lang {
     const val OFFLINE_BODY = "offline_body"
     const val OFFLINE_HINT = "offline_hint"
     const val OPEN = "open"
+    const val NOT_SURE_BODY = "not_sure_body"
+    const val ERROR_BODY = "error_body"
+    const val ERR_EXPLAIN = "err_explain"
+    const val ERR_CAMERA = "err_camera"
+    const val ERR_GENERIC = "err_generic"
+    const val ERR_ANSWER = "err_answer"
+    const val TOOK_TOO_LONG = "took_too_long"
+    const val CANCELLED = "cancelled"
+    const val BUSY = "busy"
+    const val TOKEN_TITLE = "token_title"
+    const val CANT_ASK_THAT = "cant_ask_that"
+    const val CANT_ASK_THAT_BODY = "cant_ask_that_body"
+    const val NO_OBJECT = "no_object"
+    const val NO_OBJECT_BODY = "no_object_body"
+    const val CANT_ASK_YET = "cant_ask_yet"
+    const val CANT_ASK_YET_BODY = "cant_ask_yet_body"
+    const val OFFLINE_EMPTY = "offline_empty"
+    const val QUESTION_PREFIX = "q_prefix"
+    const val STAND_IN = "stand_in"
 
     private val EN = mapOf(
         IDLE to "Look at something and pinch",
-        LOOKING to "Looking...",
-        NOT_SURE to "Not sure what this is",
+        LOOKING to "Looking…",
+        NOT_SURE to "Not sure",
         TRY_AGAIN to "Try again",
         AGAIN to "Again",
         DONE to "Done",
@@ -79,15 +98,34 @@ object Lang {
         AGREE to "Agree",
         NOT_NOW to "Not now",
         OFFLINE_TITLE to "Offline",
-        OFFLINE_BODY to "Can't reach the bridge. Pick a saved card.",
+        OFFLINE_BODY to "Offline · pick a saved card",
         OFFLINE_HINT to "Left/right: object. Pinch: open.",
         OPEN to "Open",
+        NOT_SURE_BODY to "Look again, a bit closer.",
+        ERROR_BODY to "Try again in a moment.",
+        ERR_EXPLAIN to "Couldn't explain that",
+        ERR_CAMERA to "Camera problem",
+        ERR_GENERIC to "Something went wrong",
+        ERR_ANSWER to "Couldn't answer",
+        TOOK_TOO_LONG to "Took too long",
+        CANCELLED to "Cancelled",
+        BUSY to "Busy",
+        TOKEN_TITLE to "Bridge token",
+        CANT_ASK_THAT to "Can't ask that",
+        CANT_ASK_THAT_BODY to "Ask about the object on screen.",
+        NO_OBJECT to "No object yet",
+        NO_OBJECT_BODY to "Explain something first, then ask.",
+        CANT_ASK_YET to "Can't ask yet",
+        CANT_ASK_YET_BODY to "Questions work for library objects only.",
+        OFFLINE_EMPTY to "Can't reach the bridge. Try again later.",
+        QUESTION_PREFIX to "Q:",
+        STAND_IN to "Stand-in model",
     )
 
     private val FI = mapOf(
         IDLE to "Katso jotain ja nipistä",
-        LOOKING to "Katsotaan...",
-        NOT_SURE to "En tunnista tätä",
+        LOOKING to "Katsotaan…",
+        NOT_SURE to "En ole varma",
         TRY_AGAIN to "Yritä uudelleen",
         AGAIN to "Uudelleen",
         DONE to "Valmis",
@@ -104,9 +142,28 @@ object Lang {
         AGREE to "Hyväksyn",
         NOT_NOW to "Ei nyt",
         OFFLINE_TITLE to "Ei yhteyttä",
-        OFFLINE_BODY to "Siltaan ei saada yhteyttä. Valitse tallennettu kortti.",
+        OFFLINE_BODY to "Ei yhteyttä · valitse tallennettu kortti",
         OFFLINE_HINT to "Vasen/oikea: kohde. Nipistys: avaa.",
         OPEN to "Avaa",
+        NOT_SURE_BODY to "Katso uudelleen, vähän lähempää.",
+        ERROR_BODY to "Yritä hetken päästä uudelleen.",
+        ERR_EXPLAIN to "En osannut selittää",
+        ERR_CAMERA to "Kameraongelma",
+        ERR_GENERIC to "Jokin meni pieleen",
+        ERR_ANSWER to "En osannut vastata",
+        TOOK_TOO_LONG to "Kesti liian kauan",
+        CANCELLED to "Peruttu",
+        BUSY to "Varattu",
+        TOKEN_TITLE to "Sillan avain",
+        CANT_ASK_THAT to "Tätä ei voi kysyä",
+        CANT_ASK_THAT_BODY to "Kysy näytöllä olevasta kohteesta.",
+        NO_OBJECT to "Ei kohdetta vielä",
+        NO_OBJECT_BODY to "Selitä ensin jotain, kysy sitten.",
+        CANT_ASK_YET to "Ei voi vielä kysyä",
+        CANT_ASK_YET_BODY to "Kysymykset toimivat vain kirjaston kohteille.",
+        OFFLINE_EMPTY to "Siltaan ei saada yhteyttä. Yritä myöhemmin.",
+        QUESTION_PREFIX to "K:",
+        STAND_IN to "Varamalli",
     )
 
     private val TABLES = mapOf("en" to EN, "fi" to FI)

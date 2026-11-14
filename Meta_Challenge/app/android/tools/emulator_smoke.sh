@@ -2,9 +2,10 @@
 # Smoke test of the Physics Lens phone app on a running emulator (or USB phone), no instrumentation:
 # build, install, grant permissions, launch, then walk the core demo path by finding controls by their text
 # in `uiautomator dump` (never by coordinates):
-#   consent card (first photo) -> Not now -> demo data on -> Connect (mock glasses) -> Pinch (overview)
-#   -> Pinch (step 1) -> Right (next lens) -> Back (overview) -> Back (idle) -> Disconnect.
-# What the glasses show is read from the app's "Glasses show: ..." line (a text mirror of the glasses card).
+#   open Developer -> Connect glasses (mock) -> consent card (first photo) -> Not now -> demo data on
+#   -> Pinch (overview) -> Pinch (step 1) -> Right (next lens) -> Back (overview) -> Back (idle) -> Disconnect.
+# What the glasses show is read from the glasses mirror's content description "Glasses show: ..." (a text
+# mirror of the glasses card).
 # Exits non-zero with a clear message when an expected text does not appear, or the app crashes (FATAL).
 #
 # Usage: tools/emulator_smoke.sh            (SKIP_BUILD=1 to reuse the last APK, ANDROID_SERIAL to pick a device)
@@ -133,7 +134,7 @@ wait_glasses() {
         line=$(python3 - "$XML" <<'PY'
 import sys, xml.etree.ElementTree as E
 for n in E.parse(sys.argv[1]).getroot().iter('node'):
-    t = n.get('text') or ''
+    t = n.get('content-desc') or n.get('text') or ''
     if t.startswith('Glasses show:'):
         print(t); break
 PY
@@ -179,15 +180,18 @@ step "launch"
 adb shell am start -W -n "$PKG/.MainActivity" >/dev/null || fail "am start failed"
 sleep 2
 check_alive
-wait_text "Connect"
+wait_text "Connect glasses"
 
+step "open the Developer section (switches)"
+tap_text "Developer  ▸" # collapsed after pm clear (the default bridge URL is set)
+wait_text "Mock glasses (no hardware)"
 dump
 [ "$(checked_of 'Mock glasses (no hardware)')" = "true" ] || tap_text "Mock glasses (no hardware)"
 dump
 [ "$(checked_of 'Mock glasses (no hardware)')" = "true" ] || fail "Mock glasses switch is not on"
 
 step "connect (mock glasses)"
-tap_text "Connect"
+tap_text "Connect glasses"
 wait_glasses "Physics Lens" "Look at something and pinch"
 
 step "first photo asks for consent"
@@ -206,19 +210,19 @@ dump
 
 step "pinch: ball overview"
 tap_text "Pinch"
-wait_glasses "Thrown ball" "[Show steps / Again]"
+wait_glasses "Thrown ball" "[Show steps]"
 
 step "pinch: step 1"
 tap_text "Pinch"
-wait_glasses "Projectile motion" "Step 1/3." "1/2"
+wait_glasses "Thrown ball" "Step 1/3." "●○ Projectile motion" "[Next]"
 
 step "right: next lens"
 tap_text "Right"
-wait_glasses "Bounce" "Step 1/3." "2/2"
+wait_glasses "Step 1/3." "○● Bounce"
 
 step "back: overview"
 tap_text "Back"
-wait_glasses "Thrown ball" "[Show steps / Again]"
+wait_glasses "Thrown ball" "[Show steps]"
 
 step "back: idle"
 tap_text "Back"

@@ -52,10 +52,11 @@ class BridgeRequestsTest {
         assertNull(BridgeRequests.askBody("q2", "   ", "ball", "en"))
     }
 
-    @Test fun questionIsCutTo200Chars() {
-        val long = "a".repeat(150) + " " + "b".repeat(100)
+    @Test fun questionIsCutTo300Chars() {
+        val long = "a".repeat(250) + " " + "b".repeat(100)
         val q = BridgeRequests.cleanQuestion(long)!!
-        assertEquals(200, q.length)
+        assertEquals(300, q.length) // PROTOCOL: 300 characters
+        assertEquals(252, BridgeRequests.cleanQuestion("a".repeat(250) + " b")!!.length) // under 300: kept whole
         assertNull(BridgeRequests.cleanQuestion(null))
     }
 

@@ -52,19 +52,25 @@ object DeviceStates {
     val THERMAL_ORDER = listOf("UNKNOWN", "NONE", "LIGHT", "MODERATE", "SEVERE", "CRITICAL", "EMERGENCY", "SHUTDOWN")
     fun isHot(level: String): Boolean = THERMAL_ORDER.indexOf(level) >= THERMAL_ORDER.indexOf("SEVERE")
 
-    fun text(a: DeviceAlert, battery: Int? = null): StateText = when (a) {
-        DeviceAlert.OFF -> StateText("Glasses are off", "Put them on to continue.", GlassesShow.BLANK, null)
-        DeviceAlert.FOLDED -> StateText("Glasses folded", "Unfold them to continue.", GlassesShow.BLANK, null)
-        DeviceAlert.BATTERY_LOW -> StateText(
-            "Battery low",
-            (if (battery != null && battery in 0..100) "$battery% left. " else "") + "Charge the glasses soon.",
-            GlassesShow.CARD_AUTO, null,
-        )
-        DeviceAlert.HOT -> StateText("Glasses are hot", "Let them cool for a few minutes.", GlassesShow.CARD_AUTO, null)
-        DeviceAlert.TAKEN_OVER -> StateText("Glasses busy", "Another app took over. Tap Connect.", GlassesShow.NOTHING, PhoneAction.CONNECT)
-        DeviceAlert.DISCONNECTED -> StateText("Glasses disconnected", "Reconnecting. Keep Bluetooth on.", GlassesShow.NOTHING, PhoneAction.CONNECT)
-        DeviceAlert.CAMERA_DENIED -> StateText("Camera not allowed", "Allow camera in Meta AI, then try again.", GlassesShow.CARD_DECIDE, PhoneAction.TRY_AGAIN)
+    /** Card words for [a] in [lang] (English and Finnish; other languages fall back to English). */
+    fun text(a: DeviceAlert, battery: Int? = null, lang: String = "en"): StateText {
+        val fi = lang.lowercase().startsWith("fi")
+        fun w(en: String, fiText: String) = if (fi) fiText else en
+        val left = if (battery != null && battery in 0..100) w("$battery% left. ", "$battery% jäljellä. ") else ""
+        return when (a) {
+            DeviceAlert.OFF -> StateText(w("Glasses are off", "Lasit pois päästä"), w("Put them on to continue.", "Laita ne päähän jatkaaksesi."), GlassesShow.BLANK, null)
+            DeviceAlert.FOLDED -> StateText(w("Glasses folded", "Lasit taitettu"), w("Unfold them to continue.", "Avaa ne jatkaaksesi."), GlassesShow.BLANK, null)
+            DeviceAlert.BATTERY_LOW -> StateText(w("Battery low", "Akku vähissä"), left + w("Charge the glasses soon.", "Lataa lasit pian."), GlassesShow.CARD_AUTO, null)
+            DeviceAlert.HOT -> StateText(w("Glasses are hot", "Lasit ovat kuumat"), w("Let them cool for a few minutes.", "Anna niiden jäähtyä muutama minuutti."), GlassesShow.CARD_AUTO, null)
+            DeviceAlert.TAKEN_OVER -> StateText(w("Glasses busy", "Lasit varattu"), w("Another app took over. Tap Connect.", "Toinen sovellus otti ne. Napauta Yhdistä."), GlassesShow.NOTHING, PhoneAction.CONNECT)
+            DeviceAlert.DISCONNECTED -> StateText(w("Glasses disconnected", "Yhteys katkesi"), w("Bluetooth dropped. Tap Connect.", "Bluetooth katkesi. Napauta Yhdistä."), GlassesShow.NOTHING, PhoneAction.CONNECT)
+            DeviceAlert.CAMERA_DENIED -> StateText(w("Camera not allowed", "Kamera ei sallittu"), w("Allow camera in Meta AI, then try again.", "Salli kamera Meta AI:ssa ja yritä uudelleen."), GlassesShow.CARD_DECIDE, PhoneAction.TRY_AGAIN)
+        }
     }
+
+    /** Something went wrong (hot title on the phone card); off, folded and taken over are plain states. */
+    fun isError(a: DeviceAlert): Boolean =
+        a == DeviceAlert.DISCONNECTED || a == DeviceAlert.CAMERA_DENIED || a == DeviceAlert.HOT || a == DeviceAlert.BATTERY_LOW
 
     /** The alert the phone card shows: highest priority of [active]. */
     fun top(active: Set<DeviceAlert>): DeviceAlert? = DeviceAlert.entries.firstOrNull { it in active }

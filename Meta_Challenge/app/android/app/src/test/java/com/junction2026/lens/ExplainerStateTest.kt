@@ -94,8 +94,8 @@ class ExplainerStateTest {
     }
 
     @Test fun lensBarIsTextNotColour() {
-        assertEquals("○● 2/2 Bounce", Cards.lensBar(two.switchLens(+1)))
-        assertEquals("●○ 1/2 Projectile motion", Cards.lensBar(two.next()))
+        assertEquals("○● Bounce", Cards.lensBar(two.switchLens(+1)))
+        assertEquals("●○ Projectile motion", Cards.lensBar(two.next()))
     }
 
     @Test(expected = IllegalArgumentException::class) fun emptyTracksRejected() {

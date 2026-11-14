@@ -18,6 +18,8 @@ import kotlinx.coroutines.withContext
 class SceneMedia(
     private val scope: CoroutineScope,
     private val load: suspend (path: String) -> ByteArray?,
+    /** True for a path whose frame keeps only its headline number ([StillFrame.crop] `headlineOnly`). */
+    private val headlineOnly: (path: String) -> Boolean = { false },
 ) {
     private val cache = HashMap<String, Bitmap>()
     /** Paths whose cached piece was cut from a whole exported frame ([StillFrame]). */
@@ -39,7 +41,7 @@ class SceneMedia(
                     withContext(Dispatchers.IO) {
                         load(path)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.let { src ->
                             frame = StillFrame.isFrame(src.width, src.height)
-                            if (frame) stage(src) else src
+                            if (frame) stage(src, headlineOnly(path)) else src
                         }
                     }
                 } catch (e: CancellationException) {
@@ -60,27 +62,28 @@ class SceneMedia(
     }
 
     /** A real exported frame (600x600 with its own title and English caption) cut to its drawing. */
-    private fun stage(src: Bitmap): Bitmap {
+    private fun stage(src: Bitmap, headline: Boolean): Bitmap {
         val px = IntArray(src.width * src.height)
         src.getPixels(px, 0, src.width, 0, 0, src.width, src.height)
-        val c = StillFrame.crop(px, src.width, src.height)
+        val c = StillFrame.crop(px, src.width, src.height, headline)
         return Bitmap.createBitmap(src, c.left, c.top, c.width, c.height)
     }
 
     /**
-     * The still of [path] ready for a step card whose caption is [captionChars] long with [metaLines] small
-     * lines. The display scales an image to the card's width, so the picture is put in a black band (black is
-     * see-through) wide enough that title, picture, caption and two buttons fit the 600x600 screen
-     * ([StillFrame.aspectFor]). Drawing-only stills (demo fixtures) never get less than the old 3:1 band.
+     * The still of [path] in a black band [heightPx] high (black is see-through). The display scales an image
+     * to the card's width, so the band's shape sets its height on the card ([StillFrame.heightFor]).
+     * Drawing-only stills (demo fixtures) never get less than the old 3:1 band.
      */
-    fun forCard(path: String, captionChars: Int, metaLines: Int): Bitmap? {
+    fun forCard(path: String, heightPx: Int): Bitmap? {
         val piece = cache[path] ?: return null
-        val aspect = StillFrame.aspectFor(captionChars, metaLines).let { if (path in frames) it else maxOf(it, StillBand.ASPECT) }
+        val aspect = StillFrame.aspectFor(heightPx).let { if (path in frames) it else maxOf(it, StillBand.ASPECT) }
         return pad(piece, aspect)
     }
 
     private fun pad(piece: Bitmap, aspect: Double): Bitmap {
-        val (w, h) = StillFrame.bandFor(piece.width, piece.height, aspect)
+        val (bw, bh) = StillFrame.bandFor(piece.width, piece.height, aspect)
+        // Never narrower than the card: a small piece (a number lens headline) is not blown up to fill it.
+        val (w, h) = if (bw >= CARD_PX) bw to bh else CARD_PX to Math.ceil(bh * CARD_PX.toDouble() / bw).toInt()
         if (w == piece.width && h == piece.height) return piece
         val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         android.graphics.Canvas(out).apply {
@@ -89,6 +92,8 @@ class SceneMedia(
         }
         return out
     }
+
+    private companion object { const val CARD_PX = 552 }
 
     /** Drop everything (new detection, disconnect). */
     fun clear() {
