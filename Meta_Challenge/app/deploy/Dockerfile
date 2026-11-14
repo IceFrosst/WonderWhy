@@ -6,7 +6,7 @@ COPY shared ./shared
 COPY glasses/dist ./glasses/dist
 COPY bridge/package.json bridge/package-lock.json ./bridge/
 RUN cd bridge && npm ci --omit=dev
-COPY bridge/server.js bridge/detect.js bridge/sketch.js bridge/bench.js ./bridge/
+COPY bridge/server.js bridge/detect.js bridge/sketch.js bridge/ask.js bridge/bench.js ./bridge/
 COPY bridge/fixtures ./bridge/fixtures
 COPY bridge/public ./bridge/public
 # Exported stills and clips (glasses: npm run export:media). The folder always exists (.gitkeep).

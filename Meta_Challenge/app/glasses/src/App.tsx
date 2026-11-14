@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   App as WearablesApp,
   Button,
@@ -10,10 +10,11 @@ import {
   TextView,
   useBackNavigation,
 } from '@wearables-ui-toolkit/mrbd';
+import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
 import {BridgeClient, bridgeUrl} from './bridge';
 import type {BridgeMsg, ShowMsg} from './bridge';
 import {emitNav, onNav} from './bus';
-import {OBJECTS, findObject, sketchToObject} from './content';
+import {OBJECTS, findObject, mergeSpecText, sketchToObject} from './content';
 import type {ObjectInfo} from './content';
 import Explainer from './Explainer';
 
@@ -33,16 +34,42 @@ type View =
       acked?: boolean;
       /** Request that a later `sketch` frame is matched against (unknown view only). */
       sketchReq?: string;
+      /** Original request id, retained so replayed sketches can be deduplicated. */
+      sourceReq?: string;
       sketchState?: 'pending' | 'failed';
       answer?: string;
       question?: string;
       lang?: string;
       standIn?: boolean;
+      initialLens?: number;
+      initialStep?: number;
+      followUpLens?: number;
+      followUpStep?: number;
     };
 
-const HOME_ROWS = [OBJECTS.slice(0, 2), OBJECTS.slice(2, 4), OBJECTS.slice(4)];
+type DeferredBridgeMsg = Extract<BridgeMsg, {type: 'show' | 'detecting'}>;
+
+interface DemoRun {
+  active: boolean;
+  stepMs: number;
+  objectIndex: number;
+  lensIndex: number;
+  stepIndex: number;
+  phase: 'step' | 'gap';
+  timer?: number;
+  due: number;
+  remaining: number;
+}
 
 const LANG_RE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*$/;
+
+declare global {
+  interface Window {
+    __lensDebug?: {mergeSpecText: typeof mergeSpecText};
+  }
+}
+
+if (navigator.webdriver) window.__lensDebug = {mergeSpecText};
 
 /** Translated copy of a library object from a `show` (never mutates the library). */
 function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
@@ -55,6 +82,12 @@ function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
     chapters: base.chapters.map(c => {
       const t = c.lens ? lenses.find(l => l && l.id === `${base.id}.${c.lens}`) : undefined;
       if (!t) return c;
+      const translatedKnobs = Array.isArray(c.knobs) && Array.isArray(t.knobLabels) && t.knobLabels.length === c.knobs.length
+        ? c.knobs.map((knob, index) => {
+            const label = t.knobLabels?.[index];
+            return knob && typeof label === 'string' ? {...knob, label} : knob;
+          })
+        : c.knobs;
       return {
         ...c,
         title: typeof t.title === 'string' && t.title ? t.title : c.title,
@@ -63,6 +96,8 @@ function localise(base: ObjectInfo, m: ShowMsg): ObjectInfo {
           Array.isArray(t.steps) && t.steps.length === c.captions.length && t.steps.every(x => typeof x === 'string' && x)
             ? t.steps
             : c.captions,
+        knobs: translatedKnobs,
+        spec: Object.hasOwn(t, 'specText') ? mergeSpecText(c.spec, t.specText) : c.spec,
       };
     }),
   };
@@ -83,18 +118,227 @@ const DEVICE_CARDS: Record<string, Card> = {
   camera_denied: {title: 'Camera blocked', body: 'Allow camera access on the phone.'},
 };
 
+interface HomeScreenProps {
+  connected: boolean;
+  openObject: (objectId: string) => void;
+  startDemo: () => void;
+}
+
+function clampHomeIndex(index: number, count: number): number {
+  return Math.max(0, Math.min(count - 1, index));
+}
+
+function HomeScreen({connected, openObject, startDemo}: HomeScreenProps) {
+  const columns = OBJECTS.length > 6 ? 3 : 2;
+  const choices = useMemo(
+    () => [
+      ...OBJECTS.map(object => ({id: object.id, label: object.label, short: object.short, onClick: () => openObject(object.id)})),
+      {id: 'demo', label: 'Demo', short: 'Demo', onClick: () => startDemo()},
+    ],
+    [openObject, startDemo],
+  );
+  const rows: typeof choices[] = [];
+  for (let index = 0; index < choices.length; index += columns) rows.push(choices.slice(index, index + columns));
+  const buttonRefs = useRef<Array<ButtonHandle | null>>([]);
+  const [shortLabels, setShortLabels] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => buttonRefs.current[0]?.getElement()?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const shortened = new Set<string>();
+      choices.forEach((choice, index) => {
+        const root = buttonRefs.current[index]?.getElement();
+        const title = root?.querySelector<HTMLElement>('[class*="titleLabel"]');
+        if (title && title.scrollWidth > title.clientWidth + 1) shortened.add(choice.id);
+      });
+      setShortLabels(previous => {
+        if (previous.size === shortened.size && [...shortened].every(id => previous.has(id))) return previous;
+        return shortened;
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [columns, choices]);
+
+  useEffect(() => {
+    const moveFocus = (action: 'left' | 'right' | 'up' | 'down'): void => {
+      const current = buttonRefs.current.findIndex(handle => {
+        const element = handle?.getElement();
+        return Boolean(element && element.contains(document.activeElement));
+      });
+      const start = current < 0 ? 0 : current;
+      const delta = action === 'left' ? -1 : action === 'right' ? 1 : action === 'up' ? -columns : columns;
+      const next = clampHomeIndex(start + delta, choices.length);
+      buttonRefs.current[next]?.getElement()?.focus({preventScroll: true});
+    };
+    const off = onNav(action => {
+      if (action === 'left' || action === 'right' || action === 'up' || action === 'down') moveFocus(action);
+    });
+    const onKey = (event: KeyboardEvent): void => {
+      const actions: Record<string, 'left' | 'right' | 'up' | 'down'> = {
+        ArrowLeft: 'left',
+        ArrowRight: 'right',
+        ArrowUp: 'up',
+        ArrowDown: 'down',
+      };
+      const action = actions[event.key];
+      if (!action) return;
+      event.preventDefault();
+      event.stopPropagation();
+      moveFocus(action);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      off();
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [choices.length, columns]);
+
+  let flatIndex = 0;
+  return (
+    <Page
+      headerText="Physics Lens"
+      headerMetadata={connected ? 'Bridge connected' : 'Bridge offline (demo)'}
+      enableSystemBarInset={false}
+    >
+      <div className={`action-page-shell home-page home-page--${columns === 3 ? 'three' : 'two'}`}>
+        <ScrollView insetForHeader ariaLabel="Physics Lens">
+          <Panel width="100%">
+            <div className="content-inset home-intro">
+              <TextView as="p" textStyle={TextStyle.BODY2}>
+                Look at something, or pick one.
+              </TextView>
+            </div>
+          </Panel>
+        </ScrollView>
+        <div className="action-dock home-dock">
+          {rows.map((row, rowIndex) => (
+            <ButtonRail className="home-rail" key={rowIndex} centerContentWhenSmallerThanWidth={false}>
+              {row.map(choice => {
+                const index = flatIndex++;
+                const shorten = shortLabels.has(choice.id) || (columns === 3 && choice.label.length > 14);
+                // Three to a row: always the one-word name, so no label is cut and the row reads evenly.
+                const title = columns === 3 || shorten ? (choice.short ?? choice.label.trim().split(/\s+/)[0]) : choice.label;
+                return (
+                  <Button
+                    className="home-object-button"
+                    enforceMaxWidth
+                    key={choice.id}
+                    ref={handle => { buttonRefs.current[index] = handle; }}
+                    title={title}
+                    aria-label={choice.label}
+                    onClick={choice.onClick}
+                  />
+                );
+              })}
+            </ButtonRail>
+          ))}
+        </div>
+      </div>
+    </Page>
+  );
+}
+
+interface ConsentScreenProps {
+  onAccept: () => void;
+}
+
+function ConsentScreen({onAccept}: ConsentScreenProps) {
+  const buttonRef = useRef<ButtonHandle>(null);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => buttonRef.current?.getElement()?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== 'Enter') return;
+      const element = buttonRef.current?.getElement();
+      if (element?.contains(document.activeElement)) return;
+      event.preventDefault();
+      onAccept();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onAccept]);
+
+  return (
+    <div className="consent-screen" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+      <Panel width="100%">
+        <div className="consent-card">
+          <TextView as="h1" textStyle={TextStyle.BODY2_EMPHASIZED} id="consent-title">
+            Before you start
+          </TextView>
+          <TextView as="p" textStyle={TextStyle.META1}>
+            The camera is used only when you pinch. One photo goes to our server to name the object. It is not stored.
+          </TextView>
+          <ButtonRail>
+            <Button ref={buttonRef} title="OK, start" onClick={onAccept} />
+          </ButtonRail>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function consentNeeded(): boolean {
+  try {
+    const forceConsent = new URLSearchParams(window.location.search).get('consent') === '1';
+    if (navigator.webdriver && !forceConsent) return false;
+    return localStorage.getItem('lens.consent') === null;
+  } catch {
+    return true;
+  }
+}
+
+function urlDemoSeconds(): number | null {
+  try {
+    const value = new URLSearchParams(window.location.search).get('demo');
+    if (value === null) return null;
+    if (value === '1' || value === '') return 5;
+    const seconds = Number(value);
+    if (!Number.isFinite(seconds)) return 5;
+    return Math.min(20, Math.max(2, seconds));
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [view, setView] = useState<View>({k: 'home'});
   const [connected, setConnected] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [doffed, setDoffed] = useState(false);
+  const [consentRequired, setConsentRequired] = useState(consentNeeded);
+  const [demoActive, setDemoActive] = useState(false);
   const keyRef = useRef(0);
   const viewRef = useRef<View>(view);
-  viewRef.current = view;
+  const consentRef = useRef(consentRequired);
+  consentRef.current = consentRequired;
   const bridgeRef = useRef<BridgeClient | null>(null);
   const cardTimer = useRef<number | undefined>(undefined);
   const detectTimer = useRef<number | undefined>(undefined);
   const paintFrame = useRef<number | undefined>(undefined);
+  const sketchTimer = useRef<number | undefined>(undefined);
+  const earlySketch = useRef<{message: Extract<BridgeMsg, {type: 'sketch'}>; received: number} | null>(null);
+  const deferredBridge = useRef<DeferredBridgeMsg | null>(null);
+  const bridgeHandler = useRef<((message: BridgeMsg) => void) | null>(null);
+  const demoAdvance = useRef<(() => void) | null>(null);
+  const demoUrlSeconds = useRef(urlDemoSeconds());
+  const demoRun = useRef<DemoRun>({
+    active: false,
+    stepMs: 5000,
+    objectIndex: 0,
+    lensIndex: 0,
+    stepIndex: 0,
+    phase: 'step',
+    due: 0,
+    remaining: 0,
+  });
 
   const flashCard = useCallback((c: Card | null, ms?: number) => {
     window.clearTimeout(cardTimer.current);
@@ -102,35 +346,196 @@ export default function App() {
     if (c && ms) cardTimer.current = window.setTimeout(() => setCard(null), ms);
   }, []);
 
+  const setViewNow = useCallback((next: View | ((current: View) => View)) => {
+    const resolved = typeof next === 'function' ? next(viewRef.current) : next;
+    viewRef.current = resolved;
+    setView(resolved);
+  }, []);
+
   const openObject = useCallback((objectId: string, extra?: Partial<View & {k: 'explain'}>) => {
     keyRef.current += 1;
-    setView({k: 'explain', key: keyRef.current, objectId, info: findObject(objectId), ...extra} as View);
-  }, []);
+    setViewNow({k: 'explain', key: keyRef.current, objectId, info: findObject(objectId), ...extra} as View);
+  }, [setViewNow]);
 
   const clearDetectTimer = useCallback(() => {
     window.clearTimeout(detectTimer.current);
     detectTimer.current = undefined;
   }, []);
 
+  const clearSketchTimer = useCallback(() => {
+    window.clearTimeout(sketchTimer.current);
+    sketchTimer.current = undefined;
+  }, []);
+
+  const armSketchTimer = useCallback((reqId: string) => {
+    clearSketchTimer();
+    sketchTimer.current = window.setTimeout(() => {
+      const current = viewRef.current;
+      if (current.k === 'explain' && current.info.id === 'unknown' && current.sketchReq === reqId && current.sketchState === 'pending') {
+        setViewNow({...current, sketchState: 'failed'});
+      }
+      sketchTimer.current = undefined;
+    }, 25000);
+  }, [clearSketchTimer, setViewNow]);
+
+  const clearDemoTimer = useCallback(() => {
+    window.clearTimeout(demoRun.current.timer);
+    demoRun.current.timer = undefined;
+  }, []);
+
+  const scheduleDemo = useCallback((delay: number) => {
+    clearDemoTimer();
+    const run = demoRun.current;
+    run.remaining = delay;
+    run.due = performance.now() + delay;
+    if (document.hidden || !run.active) return;
+    run.timer = window.setTimeout(() => demoAdvance.current?.(), delay);
+  }, [clearDemoTimer]);
+
+  const stopDemo = useCallback(() => {
+    const run = demoRun.current;
+    if (!run.active) return;
+    run.active = false;
+    clearDemoTimer();
+    setDemoActive(false);
+  }, [clearDemoTimer]);
+
+  const startDemo = useCallback((seconds = 5) => {
+    clearDemoTimer();
+    const run = demoRun.current;
+    run.active = true;
+    const safeSeconds = Number.isFinite(seconds) ? seconds : 5;
+    run.stepMs = Math.min(20, Math.max(2, safeSeconds)) * 1000;
+    run.objectIndex = 0;
+    run.lensIndex = 0;
+    run.stepIndex = 0;
+    run.phase = 'step';
+    setDemoActive(true);
+    openObject(OBJECTS[0].id, {initialLens: 0, initialStep: 0});
+    scheduleDemo(run.stepMs);
+  }, [clearDemoTimer, openObject, scheduleDemo]);
+
+  const advanceDemo = useCallback(() => {
+    const run = demoRun.current;
+    if (!run.active) return;
+    if (run.phase === 'gap') {
+      run.objectIndex = (run.objectIndex + 1) % OBJECTS.length;
+      run.lensIndex = 0;
+      run.stepIndex = 0;
+      run.phase = 'step';
+      openObject(OBJECTS[run.objectIndex].id, {initialLens: 0, initialStep: 0});
+      scheduleDemo(run.stepMs);
+      return;
+    }
+
+    const object = OBJECTS[run.objectIndex];
+    const chapter = object.chapters[run.lensIndex];
+    if (run.stepIndex + 1 < chapter.captions.length) {
+      run.stepIndex += 1;
+      emitNav('next');
+      scheduleDemo(run.stepMs);
+      return;
+    }
+    if (run.lensIndex + 1 < object.chapters.length) {
+      run.lensIndex += 1;
+      run.stepIndex = 0;
+      emitNav('next');
+      scheduleDemo(run.stepMs);
+      return;
+    }
+
+    run.phase = 'gap';
+    setViewNow({k: 'home'});
+    scheduleDemo(1500);
+  }, [openObject, scheduleDemo, setViewNow]);
+  demoAdvance.current = advanceDemo;
+
+  useEffect(() => {
+    const onVisibility = (): void => {
+      const run = demoRun.current;
+      if (!run.active) return;
+      if (document.hidden) {
+        run.remaining = Math.max(0, run.due - performance.now());
+        clearDemoTimer();
+      } else {
+        scheduleDemo(run.remaining);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      demoRun.current.active = false;
+      clearDemoTimer();
+    };
+  }, [clearDemoTimer, scheduleDemo]);
+
+  useEffect(() => {
+    if (consentRequired || demoUrlSeconds.current === null || demoRun.current.active) return;
+    const timer = window.setTimeout(() => {
+      if (!demoRun.current.active && demoUrlSeconds.current !== null) startDemo(demoUrlSeconds.current);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [consentRequired, startDemo]);
+
   // Bridge connection.
   useEffect(() => {
+    const applySketch = (m: Extract<BridgeMsg, {type: 'sketch'}>, v: View): boolean => {
+      if (v.k !== 'explain' || v.info.id !== 'unknown' || v.sketchReq === undefined || v.sketchReq !== m.reqId) return false;
+      clearSketchTimer();
+      const sk = m.error === undefined && m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
+      if (sk) {
+        openObject('sketch', {
+          info: sk,
+          label: sk.label,
+          reqId: v.reqId,
+          acked: v.acked,
+          sourceReq: m.reqId,
+          lang: v.lang,
+          standIn: v.standIn,
+        });
+      } else {
+        setViewNow({...v, sketchState: 'failed'});
+      }
+      return true;
+    };
+
     const onMessage = (m: BridgeMsg): void => {
+      const current = viewRef.current;
+      if (m.type === 'show' && !m.replay && current.k === 'detecting' && current.reqId !== m.reqId) return;
+      if (m.type === 'error' && current.k === 'detecting' && m.reqId !== undefined && current.reqId !== m.reqId) return;
+      if (m.type === 'show' && m.replay && current.k === 'explain') {
+        if (m.objectId !== 'unknown' && current.objectId === m.objectId) return;
+        if (m.objectId === 'unknown' && current.info.id === 'unknown') return;
+        if (m.objectId === 'unknown' && current.info.provenance === 'sketch' && current.sourceReq === m.reqId) return;
+      }
+      if (m.type === 'show' || m.type === 'detecting') {
+        stopDemo();
+        if (consentRef.current) {
+          deferredBridge.current = m;
+          return;
+        }
+      }
       switch (m.type) {
         case 'detecting':
           clearDetectTimer();
-          setView({k: 'detecting', reqId: m.reqId});
+          clearSketchTimer();
+          setViewNow({k: 'detecting', reqId: m.reqId});
+          {
+            const timeoutMs = m.timeoutMs === undefined ? 12000 : Math.min(120000, Math.max(2000, m.timeoutMs));
           detectTimer.current = window.setTimeout(() => {
             if (viewRef.current.k === 'detecting' && viewRef.current.reqId === m.reqId) {
-              setView({k: 'home'});
+              setViewNow({k: 'home'});
               flashCard({title: 'Took too long', body: 'Try again.'}, ERROR_MS);
             }
             detectTimer.current = undefined;
-          }, m.timeoutMs ?? 12000);
+          }, timeoutMs);
+          }
           break;
         case 'show':
           clearDetectTimer();
+          clearSketchTimer();
           if (m.lowConfidence) {
-            setView({k: 'home'});
+            setViewNow({k: 'home'});
             flashCard(
               {title: 'Not sure', body: `Maybe: ${m.label ?? 'that object'}. Look again, a bit closer.`},
               CARD_MS,
@@ -147,26 +552,50 @@ export default function App() {
           }
           {
             const lang = typeof m.lang === 'string' && LANG_RE.test(m.lang) ? m.lang : undefined;
-            const common = {reqId: m.replay ? undefined : m.reqId, standIn: m.standIn === true};
+            const common = {reqId: m.replay ? undefined : m.reqId, sourceReq: m.reqId, standIn: m.standIn === true};
             if (m.objectId === 'unknown') {
-              const sk = m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
+              const queued = earlySketch.current;
+              const early = queued?.message.reqId === m.reqId && Date.now() - queued.received <= 2000 ? queued.message : null;
+              if (early) earlySketch.current = null;
+              const sketchValue = m.sketch !== undefined && m.sketch !== null ? m.sketch : early?.sketch;
+              const sketchFailed = m.sketch === undefined && early?.error !== undefined;
+              const sk = sketchValue !== undefined && sketchValue !== null && !sketchFailed
+                ? sketchToObject(sketchValue)
+                : null;
               if (sk) {
                 openObject('sketch', {...common, info: sk, label: sk.label, lang});
               } else {
+                const sketchState = early
+                  ? 'failed'
+                  : m.sketchPending === true
+                    ? 'pending'
+                    : undefined;
                 openObject('unknown', {
                   ...common,
                   label: m.label,
                   answer: m.answer,
                   question: m.question,
                   sketchReq: m.reqId,
-                  sketchState: m.sketchPending === true ? 'pending' : undefined,
+                  sketchState,
                   lang,
                 });
+                if (sketchState === 'pending') armSketchTimer(m.reqId);
               }
               break;
             }
             const base = findObject(m.objectId);
             const translated = lang !== undefined && lang !== 'en' && Array.isArray(m.lenses);
+            const hintLens =
+              m.lensHint && typeof m.lensHint.id === 'string'
+                ? base.chapters.findIndex(chapter => `${base.id}.${chapter.lens ?? ''}` === m.lensHint?.id)
+                : -1;
+            const validHint = hintLens >= 0;
+            const hintStep = validHint
+              ? Math.min(
+                  Math.max(Number.isFinite(m.lensHint?.step) ? Math.trunc(m.lensHint?.step ?? 1) : 1, 1),
+                  base.chapters[hintLens].captions.length,
+                ) - 1
+              : 0;
             openObject(m.objectId, {
               ...common,
               info: translated ? localise(base, m) : base,
@@ -174,56 +603,75 @@ export default function App() {
               answer: m.answer,
               question: m.question,
               lang: translated ? lang : undefined,
+              initialLens: validHint ? hintLens : 0,
+              initialStep: hintStep,
+              followUpLens: validHint && m.question && m.answer ? hintLens : undefined,
+              followUpStep: validHint && m.question && m.answer ? hintStep : undefined,
             });
           }
           break;
         case 'sketch': {
           const v = viewRef.current;
-          if (v.k !== 'explain' || v.info.id !== 'unknown' || v.sketchReq === undefined || v.sketchReq !== m.reqId) break;
-          const sk =
-            m.error === undefined && m.sketch !== undefined && m.sketch !== null ? sketchToObject(m.sketch) : null;
-          if (sk) {
-            openObject('sketch', {info: sk, label: sk.label, reqId: v.reqId, acked: true, lang: v.lang, standIn: v.standIn});
-          } else {
-            setView({...v, sketchState: 'failed'});
-          }
+          if (!applySketch(m, v)) earlySketch.current = {message: m, received: Date.now()};
           break;
         }
         case 'ping':
           break;
         case 'nav':
-          emitNav(m.action);
+          setDoffed(false);
+          if (m.action === 'demo') {
+            if (demoRun.current.active) stopDemo();
+            else if (!consentRef.current) startDemo();
+          } else {
+            stopDemo();
+            emitNav(m.action);
+          }
           break;
         case 'clear':
+          stopDemo();
           clearDetectTimer();
-          setView({k: 'blank'});
+          clearSketchTimer();
+          setViewNow({k: 'blank'});
           break;
         case 'device':
-          if (m.state === 'doffed') setDoffed(true);
+          if (m.state === 'first_run') {
+            stopDemo();
+            flashCard(null);
+            consentRef.current = true;
+            setConsentRequired(true);
+          } else if (m.state === 'doffed') {
+            stopDemo();
+            setDoffed(true);
+          }
           else if (m.state === 'donned') {
             setDoffed(false);
             flashCard(null);
           } else if (m.state === 'online') flashCard(null);
           else {
-            const c = DEVICE_CARDS[m.state];
-            if (c) flashCard(c, m.state === 'offline' ? undefined : CARD_MS);
+            const c = Object.hasOwn(DEVICE_CARDS, m.state) ? DEVICE_CARDS[m.state] : undefined;
+            if (c) flashCard(c, m.state === 'offline' ? 60000 : CARD_MS);
           }
           break;
         case 'error':
           clearDetectTimer();
-          if (viewRef.current.k === 'detecting') setView({k: 'home'});
-          flashCard({title: 'Something went wrong', body: m.message || m.code}, ERROR_MS);
+          if (viewRef.current.k === 'detecting') setViewNow({k: 'home'});
+          flashCard({title: 'Something went wrong', body: m.message || m.code || 'Try again.'}, ERROR_MS);
           break;
       }
     };
+    bridgeHandler.current = onMessage;
     const url = bridgeUrl();
     if (!url) return;
     const onStatus = (isConnected: boolean, closeCode?: number): void => {
       setConnected(isConnected);
-      if (isConnected) return;
+      if (isConnected) {
+        setDoffed(false);
+        flashCard(null);
+        return;
+      }
       if (viewRef.current.k === 'detecting') {
         clearDetectTimer();
-        setView({k: 'home'});
+        setViewNow({k: 'home'});
         flashCard({title: 'Bridge offline', body: 'Built-in demos still work.'}, ERROR_MS);
       }
       if (closeCode === 4401) {
@@ -235,22 +683,43 @@ export default function App() {
     client.start();
     return () => {
       client.stop();
+      bridgeHandler.current = null;
       bridgeRef.current = null;
       window.clearTimeout(cardTimer.current);
       clearDetectTimer();
+      clearSketchTimer();
       window.cancelAnimationFrame(paintFrame.current ?? 0);
     };
-  }, [openObject, flashCard, clearDetectTimer]);
+  }, [openObject, flashCard, clearDetectTimer, clearSketchTimer, armSketchTimer, setViewNow, startDemo, stopDemo]);
+
+  const acceptConsent = useCallback(() => {
+    try {
+      localStorage.setItem('lens.consent', new Date().toISOString());
+    } catch {
+      /* Continue for displays where storage is unavailable. */
+    }
+    consentRef.current = false;
+    setConsentRequired(false);
+  }, []);
+
+  useEffect(() => {
+    if (consentRequired || !deferredBridge.current) return;
+    const message = deferredBridge.current;
+    deferredBridge.current = null;
+    bridgeHandler.current?.(message);
+  }, [consentRequired]);
 
   // `done` from the bridge or Back on the glasses returns home; any key wakes a blank screen.
   useEffect(() => {
     const off = onNav(a => {
-      if (a === 'done' && viewRef.current.k !== 'home') setView({k: 'home'});
+      setDoffed(false);
+      if (a === 'done' && viewRef.current.k !== 'home') setViewNow({k: 'home'});
     });
     const wake = (e: KeyboardEvent): void => {
+      setDoffed(false);
       if (viewRef.current.k === 'blank' && (e.key === 'Enter' || e.key.startsWith('Arrow'))) {
         e.preventDefault();
-        setView({k: 'home'});
+        setViewNow({k: 'home'});
       }
     };
     window.addEventListener('keydown', wake, true);
@@ -258,15 +727,28 @@ export default function App() {
       off();
       window.removeEventListener('keydown', wake, true);
     };
-  }, []);
+  }, [setViewNow]);
+
+  // A wearer key press stops hands-free playback without also moving the current step.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (!demoRun.current.active) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stopDemo();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [stopDemo]);
 
   useBackNavigation(() => {
+    if (consentRequired) return true;
     if (card) {
       flashCard(null);
       return true;
     }
     if (viewRef.current.k !== 'home') {
-      setView({k: 'home'});
+      setViewNow({k: 'home'});
       return true;
     }
     return false;
@@ -274,12 +756,27 @@ export default function App() {
 
   const reqId = view.k === 'explain' && !view.acked ? view.reqId : undefined;
   const onRendered = useCallback(() => {
-    if (reqId) bridgeRef.current?.send({type: 'rendered', reqId, t_rendered: Date.now()});
-  }, [reqId]);
+    if (reqId && !demoRun.current.active) {
+      bridgeRef.current?.send({type: 'rendered', reqId, t_rendered: Date.now()});
+      const current = viewRef.current;
+      if (current.k === 'explain' && current.reqId === reqId && !current.acked) setViewNow({...current, acked: true});
+    }
+  }, [reqId, setViewNow]);
   const objectId = view.k === 'explain' ? view.objectId : undefined;
   const onState = useCallback(
     (step: number, param: number | undefined, lens: string | undefined, lensIndex: number, steps: number) => {
-      if (objectId) bridgeRef.current?.send({type: 'state', objectId, step, param, lens, lensIndex, steps});
+      if (objectId) {
+        bridgeRef.current?.send({
+          type: 'state',
+          objectId,
+          step,
+          param,
+          lens,
+          lensIndex,
+          steps,
+          ...(demoRun.current.active ? {demo: true} : {}),
+        });
+      }
     },
     [objectId],
   );
@@ -291,7 +788,7 @@ export default function App() {
     body = (
       <div className="center" role="status" aria-live="polite">
         <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED}>
-          Looking…
+          {'Looking\u2026'}
         </TextView>
       </div>
     );
@@ -307,41 +804,22 @@ export default function App() {
           sketchState={view.sketchState}
           lang={view.lang}
           standIn={view.standIn}
+          initialLens={view.initialLens}
+          initialStep={view.initialStep}
+          followUpLens={view.followUpLens}
+          followUpStep={view.followUpStep}
+          demo={demoActive}
+          paused={doffed}
           onRendered={onRendered}
           onState={onState}
         />
       </Page>
     );
   } else {
-    body = (
-      <Page
-        headerText="Physics Lens"
-        headerMetadata={connected ? 'Bridge connected' : 'Bridge offline (demo)'}
-        enableSystemBarInset={false}
-      >
-        <div className="action-page-shell">
-          <ScrollView insetForHeader ariaLabel="Physics Lens" tabIndex={0}>
-            <Panel width="100%">
-              <div className="content-inset">
-                <TextView as="p" textStyle={TextStyle.BODY2}>
-                  Choose an object to see the physics inside it. Or look at one with the phone app.
-                </TextView>
-              </div>
-            </Panel>
-          </ScrollView>
-          <div className="action-dock">
-            {HOME_ROWS.map((row, i) => (
-              <ButtonRail key={i}>
-                {row.map(o => (
-                  <Button key={o.id} title={o.label} onClick={() => openObject(o.id)} />
-                ))}
-              </ButtonRail>
-            ))}
-          </div>
-        </div>
-      </Page>
-    );
+    body = <HomeScreen connected={connected} openObject={openObject} startDemo={startDemo} />;
   }
+
+  if (consentRequired) body = <ConsentScreen onAccept={acceptConsent} />;
 
   return (
     <WearablesApp>

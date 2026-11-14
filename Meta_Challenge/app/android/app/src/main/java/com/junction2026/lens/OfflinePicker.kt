@@ -19,8 +19,8 @@ data class OfflinePicker(val ids: List<String>, val index: Int = 0) {
 }
 
 object OfflineConvert {
-    /** The offline data as the [Detection] the explainer uses. Library data, so full confidence and no media. */
-    fun toDetection(d: OfflineDetect): Detection = Detection(
+    /** The offline data as the [Detection] the explainer uses. Library data, so full confidence. */
+    fun toDetection(d: OfflineDetect, media: Media? = null): Detection = Detection(
         objectId = d.id,
         label = d.label,
         confidence = 1.0,
@@ -30,6 +30,22 @@ object OfflineConvert {
         lenses = d.lenses.map {
             Lens(id = it.id, kind = it.kind, title = it.title.ifBlank { DetectionParser.kindName(it.kind) }, lead = it.lead, steps = it.steps)
         },
-        media = null,
+        media = media,
     )
+
+    /**
+     * Stills bundled in the APK (`assets/media/<id>/`, copied from `bridge/media/` at build time): the
+     * object's `manifest.json` as a `media` block with base `/media/<id>`. Null when it has no stills.
+     */
+    fun media(objectId: String, manifestText: String?): Media? {
+        if (manifestText.isNullOrBlank()) return null
+        val lenses = runCatching { org.json.JSONObject(manifestText).optJSONObject("lenses") }.getOrNull() ?: return null
+        val out = LinkedHashMap<String, LensMedia>()
+        for (key in lenses.keys()) {
+            val arr = lenses.optJSONObject(key)?.optJSONArray("stills") ?: continue
+            val stills = (0 until arr.length()).mapNotNull { arr.optString(it).trim().ifEmpty { null } }
+            if (stills.isNotEmpty()) out[key] = LensMedia(stills, null)
+        }
+        return if (out.isEmpty()) null else Media("/media/$objectId", out)
+    }
 }

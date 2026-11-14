@@ -1,0 +1,756 @@
+{
+  "date": "2026-11-14T06:43:30.237Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "bundle": {
+    "jsGzipBytes": 196082,
+    "cssGzipBytes": 18495,
+    "totalGzipBytes": 214577,
+    "requests": 5
+  },
+  "fps": {
+    "guitar.motion": {
+      "min": 29.87,
+      "median": 29.92
+    },
+    "guitar.whatif": {
+      "min": 29.83,
+      "median": 29.96
+    },
+    "guitar.flow": {
+      "min": 29.81,
+      "median": 29.96
+    },
+    "guitar.number": {
+      "min": 29.9,
+      "median": 29.9
+    },
+    "ball.motion": {
+      "min": 29.89,
+      "median": 29.92
+    },
+    "ball.compare": {
+      "min": 29.84,
+      "median": 29.89
+    },
+    "ball.whatif": {
+      "min": 29.87,
+      "median": 29.9
+    },
+    "ball.flow": {
+      "min": 29.81,
+      "median": 30.06
+    },
+    "ball.number": {
+      "min": 29.9,
+      "median": 29.91
+    },
+    "bicycle.motion": {
+      "min": 29.91,
+      "median": 29.95
+    },
+    "bicycle.whatif": {
+      "min": 29.9,
+      "median": 29.92
+    },
+    "bicycle.flow": {
+      "min": 29.89,
+      "median": 29.98
+    },
+    "bicycle.number": {
+      "min": 29.93,
+      "median": 29.97
+    },
+    "kettle.motion": {
+      "min": 29.84,
+      "median": 30
+    },
+    "kettle.cutaway": {
+      "min": 29.91,
+      "median": 29.93
+    },
+    "kettle.whatif": {
+      "min": 29.87,
+      "median": 29.91
+    },
+    "kettle.flow": {
+      "min": 29.91,
+      "median": 30
+    },
+    "kettle.number": {
+      "min": 29.78,
+      "median": 29.99
+    },
+    "pendulum.motion": {
+      "min": 29.78,
+      "median": 29.97
+    },
+    "pendulum.whatif": {
+      "min": 29.84,
+      "median": 29.91
+    },
+    "pendulum.flow": {
+      "min": 29.84,
+      "median": 29.93
+    },
+    "pendulum.number": {
+      "min": 29.86,
+      "median": 29.98
+    },
+    "phone.inside": {
+      "min": 29.82,
+      "median": 30.06
+    },
+    "phone.whatif": {
+      "min": 29.88,
+      "median": 29.9
+    },
+    "phone.flow": {
+      "min": 29.87,
+      "median": 29.88
+    },
+    "phone.number": {
+      "min": 29.81,
+      "median": 29.97
+    },
+    "spoon.zoom": {
+      "min": 29.91,
+      "median": 29.94
+    },
+    "spoon.flow": {
+      "min": 29.85,
+      "median": 29.95
+    },
+    "spoon.number": {
+      "min": 29.85,
+      "median": 29.95
+    }
+  },
+  "states": [
+    {
+      "name": "home-connected",
+      "ok": true,
+      "screenshot": "states/01-home-connected.png"
+    },
+    {
+      "name": "home-offline",
+      "ok": true,
+      "screenshot": "states/02-home-offline.png"
+    },
+    {
+      "name": "locked",
+      "ok": true,
+      "screenshot": "states/03-locked.png"
+    },
+    {
+      "name": "looking",
+      "ok": true,
+      "screenshot": "states/04-looking.png"
+    },
+    {
+      "name": "took-too-long",
+      "ok": true,
+      "screenshot": "states/05-took-too-long.png"
+    },
+    {
+      "name": "not-sure",
+      "ok": true,
+      "screenshot": "states/06-not-sure.png"
+    },
+    {
+      "name": "unknown",
+      "ok": true,
+      "screenshot": "states/07-unknown.png"
+    },
+    {
+      "name": "error",
+      "ok": true,
+      "screenshot": "states/08-error.png"
+    },
+    {
+      "name": "bridge-drop-while-looking",
+      "ok": true,
+      "screenshot": "states/09-bridge-drop-while-looking.png"
+    },
+    {
+      "name": "device-battery-low",
+      "ok": true,
+      "screenshot": "states/10-device-battery-low.png"
+    },
+    {
+      "name": "device-thermal-hot",
+      "ok": true,
+      "screenshot": "states/11-device-thermal-hot.png"
+    },
+    {
+      "name": "device-offline",
+      "ok": true,
+      "screenshot": "states/12-device-offline.png"
+    },
+    {
+      "name": "device-camera-denied",
+      "ok": true,
+      "screenshot": "states/13-device-camera-denied.png"
+    },
+    {
+      "name": "device-doffed",
+      "ok": true,
+      "screenshot": "states/14-device-doffed.png"
+    },
+    {
+      "name": "device-donned",
+      "ok": true,
+      "screenshot": "states/15-device-donned.png"
+    },
+    {
+      "name": "clear",
+      "ok": true,
+      "screenshot": "states/16-clear.png"
+    },
+    {
+      "name": "replay",
+      "ok": true,
+      "screenshot": "states/17-replay.png"
+    },
+    {
+      "name": "heartbeat",
+      "ok": true,
+      "screenshot": "states/18-heartbeat.png"
+    },
+    {
+      "name": "token",
+      "ok": true,
+      "screenshot": "states/19-token.png"
+    },
+    {
+      "name": "token-fragment",
+      "ok": true,
+      "screenshot": "states/20-token-fragment.png"
+    },
+    {
+      "name": "token-foreign",
+      "ok": true,
+      "screenshot": "states/21-token-foreign.png"
+    },
+    {
+      "name": "reconnect-backoff",
+      "ok": true,
+      "screenshot": "states/22-reconnect-backoff.png"
+    },
+    {
+      "name": "consent",
+      "ok": true,
+      "screenshot": "states/23-consent.png"
+    },
+    {
+      "name": "consent-device-frame",
+      "ok": true,
+      "screenshot": "states/24-consent-device-frame.png"
+    },
+    {
+      "name": "follow-up",
+      "ok": true,
+      "screenshot": "states/25-follow-up.png"
+    },
+    {
+      "name": "follow-up-bad-hint",
+      "ok": true,
+      "screenshot": "states/26-follow-up-bad-hint.png"
+    },
+    {
+      "name": "demo",
+      "ok": true,
+      "screenshot": "states/27-demo.png"
+    },
+    {
+      "name": "demo-button",
+      "ok": true,
+      "screenshot": "states/28-demo-button.png"
+    },
+    {
+      "name": "stale-request",
+      "ok": true,
+      "screenshot": "states/29-stale-request.png"
+    },
+    {
+      "name": "sketch-immediate",
+      "ok": true,
+      "screenshot": "states/30-sketch-immediate.png"
+    },
+    {
+      "name": "malformed-frame",
+      "ok": true,
+      "screenshot": "states/31-malformed-frame.png"
+    },
+    {
+      "name": "doffed-wake",
+      "ok": true,
+      "screenshot": "states/32-doffed-wake.png"
+    },
+    {
+      "name": "demo-stops",
+      "ok": true,
+      "screenshot": "states/33-demo-stops.png"
+    },
+    {
+      "name": "flow-loss-clamp",
+      "ok": true,
+      "screenshot": "states/34-flow-loss-clamp.png"
+    },
+    {
+      "name": "curve-bounds",
+      "ok": true,
+      "screenshot": "states/35-curve-bounds.png"
+    },
+    {
+      "name": "scene-guitar-motion-s1",
+      "ok": true,
+      "screenshot": "states/scene-guitar-motion-s1.png"
+    },
+    {
+      "name": "scene-guitar-motion-s2",
+      "ok": true,
+      "screenshot": "states/scene-guitar-motion-s2.png"
+    },
+    {
+      "name": "scene-guitar-motion-s3",
+      "ok": true,
+      "screenshot": "states/scene-guitar-motion-s3.png"
+    },
+    {
+      "name": "scene-guitar-whatif-s1",
+      "ok": true,
+      "screenshot": "states/scene-guitar-whatif-s1.png"
+    },
+    {
+      "name": "scene-guitar-whatif-s2",
+      "ok": true,
+      "screenshot": "states/scene-guitar-whatif-s2.png"
+    },
+    {
+      "name": "scene-guitar-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-guitar-flow-s1.png"
+    },
+    {
+      "name": "scene-guitar-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-guitar-flow-s2.png"
+    },
+    {
+      "name": "scene-guitar-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-guitar-flow-s3.png"
+    },
+    {
+      "name": "scene-guitar-flow-s4",
+      "ok": true,
+      "screenshot": "states/scene-guitar-flow-s4.png"
+    },
+    {
+      "name": "scene-guitar-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-guitar-number-s1.png"
+    },
+    {
+      "name": "scene-guitar-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-guitar-number-s2.png"
+    },
+    {
+      "name": "scene-guitar-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-guitar-number-s3.png"
+    },
+    {
+      "name": "scene-ball-motion-s1",
+      "ok": true,
+      "screenshot": "states/scene-ball-motion-s1.png"
+    },
+    {
+      "name": "scene-ball-motion-s2",
+      "ok": true,
+      "screenshot": "states/scene-ball-motion-s2.png"
+    },
+    {
+      "name": "scene-ball-motion-s3",
+      "ok": true,
+      "screenshot": "states/scene-ball-motion-s3.png"
+    },
+    {
+      "name": "scene-ball-compare-s1",
+      "ok": true,
+      "screenshot": "states/scene-ball-compare-s1.png"
+    },
+    {
+      "name": "scene-ball-compare-s2",
+      "ok": true,
+      "screenshot": "states/scene-ball-compare-s2.png"
+    },
+    {
+      "name": "scene-ball-compare-s3",
+      "ok": true,
+      "screenshot": "states/scene-ball-compare-s3.png"
+    },
+    {
+      "name": "scene-ball-whatif-s1",
+      "ok": true,
+      "screenshot": "states/scene-ball-whatif-s1.png"
+    },
+    {
+      "name": "scene-ball-whatif-s2",
+      "ok": true,
+      "screenshot": "states/scene-ball-whatif-s2.png"
+    },
+    {
+      "name": "scene-ball-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-ball-flow-s1.png"
+    },
+    {
+      "name": "scene-ball-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-ball-flow-s2.png"
+    },
+    {
+      "name": "scene-ball-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-ball-flow-s3.png"
+    },
+    {
+      "name": "scene-ball-flow-s4",
+      "ok": true,
+      "screenshot": "states/scene-ball-flow-s4.png"
+    },
+    {
+      "name": "scene-ball-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-ball-number-s1.png"
+    },
+    {
+      "name": "scene-ball-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-ball-number-s2.png"
+    },
+    {
+      "name": "scene-ball-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-ball-number-s3.png"
+    },
+    {
+      "name": "scene-bicycle-motion-s1",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-motion-s1.png"
+    },
+    {
+      "name": "scene-bicycle-motion-s2",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-motion-s2.png"
+    },
+    {
+      "name": "scene-bicycle-motion-s3",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-motion-s3.png"
+    },
+    {
+      "name": "scene-bicycle-whatif-s1",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-whatif-s1.png"
+    },
+    {
+      "name": "scene-bicycle-whatif-s2",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-whatif-s2.png"
+    },
+    {
+      "name": "scene-bicycle-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-flow-s1.png"
+    },
+    {
+      "name": "scene-bicycle-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-flow-s2.png"
+    },
+    {
+      "name": "scene-bicycle-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-flow-s3.png"
+    },
+    {
+      "name": "scene-bicycle-flow-s4",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-flow-s4.png"
+    },
+    {
+      "name": "scene-bicycle-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-number-s1.png"
+    },
+    {
+      "name": "scene-bicycle-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-number-s2.png"
+    },
+    {
+      "name": "scene-bicycle-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-bicycle-number-s3.png"
+    },
+    {
+      "name": "scene-kettle-motion-s1",
+      "ok": true,
+      "screenshot": "states/scene-kettle-motion-s1.png"
+    },
+    {
+      "name": "scene-kettle-motion-s2",
+      "ok": true,
+      "screenshot": "states/scene-kettle-motion-s2.png"
+    },
+    {
+      "name": "scene-kettle-motion-s3",
+      "ok": true,
+      "screenshot": "states/scene-kettle-motion-s3.png"
+    },
+    {
+      "name": "scene-kettle-cutaway-s1",
+      "ok": true,
+      "screenshot": "states/scene-kettle-cutaway-s1.png"
+    },
+    {
+      "name": "scene-kettle-cutaway-s2",
+      "ok": true,
+      "screenshot": "states/scene-kettle-cutaway-s2.png"
+    },
+    {
+      "name": "scene-kettle-cutaway-s3",
+      "ok": true,
+      "screenshot": "states/scene-kettle-cutaway-s3.png"
+    },
+    {
+      "name": "scene-kettle-whatif-s1",
+      "ok": true,
+      "screenshot": "states/scene-kettle-whatif-s1.png"
+    },
+    {
+      "name": "scene-kettle-whatif-s2",
+      "ok": true,
+      "screenshot": "states/scene-kettle-whatif-s2.png"
+    },
+    {
+      "name": "scene-kettle-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-kettle-flow-s1.png"
+    },
+    {
+      "name": "scene-kettle-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-kettle-flow-s2.png"
+    },
+    {
+      "name": "scene-kettle-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-kettle-flow-s3.png"
+    },
+    {
+      "name": "scene-kettle-flow-s4",
+      "ok": true,
+      "screenshot": "states/scene-kettle-flow-s4.png"
+    },
+    {
+      "name": "scene-kettle-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-kettle-number-s1.png"
+    },
+    {
+      "name": "scene-kettle-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-kettle-number-s2.png"
+    },
+    {
+      "name": "scene-kettle-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-kettle-number-s3.png"
+    },
+    {
+      "name": "scene-pendulum-motion-s1",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-motion-s1.png"
+    },
+    {
+      "name": "scene-pendulum-motion-s2",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-motion-s2.png"
+    },
+    {
+      "name": "scene-pendulum-motion-s3",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-motion-s3.png"
+    },
+    {
+      "name": "scene-pendulum-whatif-s1",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-whatif-s1.png"
+    },
+    {
+      "name": "scene-pendulum-whatif-s2",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-whatif-s2.png"
+    },
+    {
+      "name": "scene-pendulum-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-flow-s1.png"
+    },
+    {
+      "name": "scene-pendulum-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-flow-s2.png"
+    },
+    {
+      "name": "scene-pendulum-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-flow-s3.png"
+    },
+    {
+      "name": "scene-pendulum-flow-s4",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-flow-s4.png"
+    },
+    {
+      "name": "scene-pendulum-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-number-s1.png"
+    },
+    {
+      "name": "scene-pendulum-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-number-s2.png"
+    },
+    {
+      "name": "scene-pendulum-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-pendulum-number-s3.png"
+    },
+    {
+      "name": "scene-phone-inside-s1",
+      "ok": true,
+      "screenshot": "states/scene-phone-inside-s1.png"
+    },
+    {
+      "name": "scene-phone-inside-s2",
+      "ok": true,
+      "screenshot": "states/scene-phone-inside-s2.png"
+    },
+    {
+      "name": "scene-phone-inside-s3",
+      "ok": true,
+      "screenshot": "states/scene-phone-inside-s3.png"
+    },
+    {
+      "name": "scene-phone-inside-s4",
+      "ok": true,
+      "screenshot": "states/scene-phone-inside-s4.png"
+    },
+    {
+      "name": "scene-phone-inside-s5",
+      "ok": true,
+      "screenshot": "states/scene-phone-inside-s5.png"
+    },
+    {
+      "name": "scene-phone-inside-s6",
+      "ok": true,
+      "screenshot": "states/scene-phone-inside-s6.png"
+    },
+    {
+      "name": "scene-phone-whatif-s1",
+      "ok": true,
+      "screenshot": "states/scene-phone-whatif-s1.png"
+    },
+    {
+      "name": "scene-phone-whatif-s2",
+      "ok": true,
+      "screenshot": "states/scene-phone-whatif-s2.png"
+    },
+    {
+      "name": "scene-phone-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-phone-flow-s1.png"
+    },
+    {
+      "name": "scene-phone-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-phone-flow-s2.png"
+    },
+    {
+      "name": "scene-phone-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-phone-flow-s3.png"
+    },
+    {
+      "name": "scene-phone-flow-s4",
+      "ok": true,
+      "screenshot": "states/scene-phone-flow-s4.png"
+    },
+    {
+      "name": "scene-phone-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-phone-number-s1.png"
+    },
+    {
+      "name": "scene-phone-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-phone-number-s2.png"
+    },
+    {
+      "name": "scene-phone-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-phone-number-s3.png"
+    },
+    {
+      "name": "scene-spoon-zoom-s1",
+      "ok": true,
+      "screenshot": "states/scene-spoon-zoom-s1.png"
+    },
+    {
+      "name": "scene-spoon-zoom-s2",
+      "ok": true,
+      "screenshot": "states/scene-spoon-zoom-s2.png"
+    },
+    {
+      "name": "scene-spoon-zoom-s3",
+      "ok": true,
+      "screenshot": "states/scene-spoon-zoom-s3.png"
+    },
+    {
+      "name": "scene-spoon-flow-s1",
+      "ok": true,
+      "screenshot": "states/scene-spoon-flow-s1.png"
+    },
+    {
+      "name": "scene-spoon-flow-s2",
+      "ok": true,
+      "screenshot": "states/scene-spoon-flow-s2.png"
+    },
+    {
+      "name": "scene-spoon-flow-s3",
+      "ok": true,
+      "screenshot": "states/scene-spoon-flow-s3.png"
+    },
+    {
+      "name": "scene-spoon-number-s1",
+      "ok": true,
+      "screenshot": "states/scene-spoon-number-s1.png"
+    },
+    {
+      "name": "scene-spoon-number-s2",
+      "ok": true,
+      "screenshot": "states/scene-spoon-number-s2.png"
+    },
+    {
+      "name": "scene-spoon-number-s3",
+      "ok": true,
+      "screenshot": "states/scene-spoon-number-s3.png"
+    }
+  ],
+  "failures": []
+}

@@ -42,9 +42,12 @@ data class ExplainerState(
     /** Previous step, but never leaves the explainer (D-pad up). */
     fun prev(): ExplainerState = back() ?: this
 
-    /** Switch lens by [delta] (clamped, no wrap). A new lens always starts at its step 1. */
+    /**
+     * Switch lens by [delta], wrapping (PROTOCOL nav `left`/`right`: "previous / next, wrapping", as the
+     * glasses Web App does). A new lens always starts at its step 1. One lens: nothing changes.
+     */
     fun switchLens(delta: Int): ExplainerState {
-        val target = (lens + delta).coerceIn(0, tracks.lastIndex)
+        val target = Math.floorMod(lens + delta, tracks.size)
         return if (target == lens) this else copy(lens = target, step = 0)
     }
 

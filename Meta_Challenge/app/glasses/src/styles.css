@@ -54,10 +54,32 @@ body {
   font-size: 16px;
 }
 
+.consent-screen {
+  display: grid;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--uit-spacing-large);
+}
+
+.consent-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uit-spacing-medium);
+  padding: var(--uit-spacing-large);
+}
+
+.consent-card > h1,
+.consent-card > p {
+  margin: 0;
+  font-size: 16px;
+}
+
 /* Explainer: title, canvas stage, readouts, caption, lens bar, step button. */
 .ex {
   display: grid;
-  grid-template-rows: auto minmax(280px, 1fr) auto auto auto auto auto;
+  grid-template-rows: auto minmax(230px, 1fr) auto;
+  grid-auto-rows: auto;
   block-size: 100%;
   min-block-size: 0;
   min-inline-size: 0;
@@ -76,7 +98,7 @@ body {
 
 .ex-stage {
   position: relative;
-  min-block-size: 280px;
+  min-block-size: 230px;
   min-inline-size: 0;
   overflow: hidden;
 }
@@ -98,24 +120,62 @@ body {
 
 .ex-read {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0 var(--uit-spacing-medium);
   min-block-size: var(--uit-spacing-xlarge);
+  min-inline-size: 0;
+  overflow: hidden;
   padding-block: var(--uit-spacing-2xs);
 }
 
 .ex-chip {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 6px;
+  min-block-size: 24px;
   white-space: nowrap;
   max-inline-size: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.ex-answer,
+.ex-follow-up,
 .ex-caption,
 .ex-hint {
   margin: 0;
   min-inline-size: 0;
+}
+
+.ex-follow-up,
+.ex-caption {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+.ex-follow-up {
+  -webkit-line-clamp: 3;
+}
+
+.ex-caption {
+  max-block-size: 80px;
+  font-size: 16px;
+  line-height: 20px;
+  -webkit-line-clamp: 4;
+}
+
+.ex-follow-up {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.ex-follow-up-question {
+  color: var(--uit-color-text-secondary);
+}
+
+.ex-follow-up-answer {
+  color: var(--uit-color-text-primary);
+  font-weight: 600;
 }
 
 .ex-foot {
@@ -143,11 +203,11 @@ body {
 }
 
 .ex-lens-dot {
-  inline-size: 10px;
-  block-size: 10px;
+  inline-size: 12px;
+  block-size: 12px;
   border: 2px solid var(--uit-color-text-secondary);
   border-radius: var(--uit-corner-radius-full);
-  flex: 0 0 10px;
+  flex: 0 0 12px;
 }
 
 .ex-lens-dot--current {
@@ -156,8 +216,9 @@ body {
 }
 
 .ex-lens-name {
-  color: var(--uit-color-text-secondary);
+  color: var(--uit-color-text-primary);
   font-size: 16px;
+  font-weight: 600;
   line-height: 20px;
   white-space: nowrap;
 }
@@ -197,6 +258,45 @@ body {
   gap: calc(var(--uit-spacing-large) + var(--uit-spacing-xsmall));
   min-inline-size: 0;
   padding: var(--uit-spacing-large);
+}
+
+.home-page {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.home-intro {
+  gap: 0;
+  padding-block: var(--uit-spacing-medium);
+}
+
+.home-intro > p {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.home-dock {
+  gap: var(--uit-spacing-2xs);
+  padding-block-end: var(--uit-spacing-small);
+}
+
+.home-rail > :nth-child(2) {
+  inline-size: 100%;
+  gap: var(--uit-spacing-xsmall);
+}
+
+.home-object-button {
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+
+.home-page--two .home-object-button {
+  flex: 0 1 calc((100% - var(--uit-spacing-xsmall)) / 2);
+  inline-size: calc((100% - var(--uit-spacing-xsmall)) / 2);
+}
+
+.home-page--three .home-object-button {
+  flex: 0 1 calc((100% - 2 * var(--uit-spacing-xsmall)) / 3);
+  inline-size: calc((100% - 2 * var(--uit-spacing-xsmall)) / 3);
 }
 
 .fill {

@@ -138,6 +138,18 @@ object OfflineCards {
         return null
     }
 
+    /**
+     * The tagline to show on a card in [lang], or null. Translations do not carry taglines yet, so a library in
+     * another language still has the English one: show it only in English or when it differs from
+     * [englishTagline] (the bundled English library's).
+     */
+    fun taglineFor(lang: String, tagline: String, englishTagline: String?): String? = when {
+        tagline.isBlank() -> null
+        lang.lowercase(Locale.ROOT).startsWith("en") -> tagline
+        englishTagline != null && tagline != englishTagline -> tagline
+        else -> null
+    }
+
     /** The data a v1 `/detect` response would carry for this object. */
     fun toDetect(obj: OfflineObject): OfflineDetect = OfflineDetect(
         id = obj.id,

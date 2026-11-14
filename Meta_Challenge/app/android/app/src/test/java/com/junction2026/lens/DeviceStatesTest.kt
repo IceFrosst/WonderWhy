@@ -31,6 +31,26 @@ class DeviceStatesTest {
         assertEquals("Charge the glasses soon.", DeviceStates.text(DeviceAlert.BATTERY_LOW, null).body)
     }
 
+    @Test fun finnishStateWordsAndDisconnect() {
+        for (a in DeviceAlert.entries) {
+            val t = DeviceStates.text(a, battery = 10, lang = "fi")
+            assertTrue("$a title: ${t.title}", words(t.title) <= 3)
+            assertTrue("$a body: ${t.body}", words(t.body) <= 8)
+            assertTrue(t.title != DeviceStates.text(a).title)
+        }
+        assertEquals("Bluetooth dropped. Tap Connect.", DeviceStates.text(DeviceAlert.DISCONNECTED).body)
+        assertEquals("10% jäljellä. Lataa lasit pian.", DeviceStates.text(DeviceAlert.BATTERY_LOW, 10, "fi").body)
+    }
+
+    /** Hot title on the phone only for errors. */
+    @Test fun errorsVersusStates() {
+        assertTrue(DeviceStates.isError(DeviceAlert.DISCONNECTED))
+        assertTrue(DeviceStates.isError(DeviceAlert.CAMERA_DENIED))
+        assertFalse(DeviceStates.isError(DeviceAlert.OFF))
+        assertFalse(DeviceStates.isError(DeviceAlert.FOLDED))
+        assertFalse(DeviceStates.isError(DeviceAlert.TAKEN_OVER))
+    }
+
     /** DESIGN.md states table: off = blank, battery/hot = card that leaves, camera = decision card. */
     @Test fun glassesBehaviourPerState() {
         assertEquals(GlassesShow.BLANK, DeviceStates.text(DeviceAlert.OFF).glasses)

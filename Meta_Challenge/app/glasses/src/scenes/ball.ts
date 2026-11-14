@@ -188,6 +188,20 @@ export class BallScene implements Scene {
     // landing marker + apex marker
     dot(ctx, px(main.range), groundY, 4, C.cyan);
 
+    if (drag) {
+      ctx.font = '600 16px system-ui';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = C.soft;
+      ctx.fillText('no air', px(this.ideal.range) - 4, groundY - 28);
+      // Right of the landing dot: the main path comes down from the upper left, so text left of it would sit on the curve.
+      ctx.fillStyle = C.cyan;
+      ctx.textAlign = 'left';
+      const withAir = 'with air';
+      const withAirX = Math.min(px(this.real.range) + 10, w - ctx.measureText(withAir).width - 4);
+      ctx.fillText(withAir, withAirX, groundY - 6);
+    }
+
     // animate ball
     this.clock += dt * 0.9;
     const hold = 0.7;
@@ -223,19 +237,24 @@ export class BallScene implements Scene {
 
     dot(ctx, bx, by, 7, C.white);
 
-    const out: Readout[] = [
-      {label: 'Angle', value: `${this.angle}°`},
-      {label: 'Speed', value: `${this.speed} m/s`},
+    if (this.step === 2) {
+      return [
+        {label: 'Speed', value: `${this.speed} m/s`},
+        {label: 'Vx (constant)', value: `${fmt(s.vx)} m/s`},
+        {label: 'Vy', value: `${s.vy >= 0 ? '+' : ''}${fmt(s.vy)} m/s`},
+      ];
+    }
+    if (drag) {
+      return [
+        {label: 'Angle', value: `${this.angle}\u00b0`},
+        {label: 'Range', value: `${fmt(main.range)} m`},
+        {label: 'Best angle', value: `${this.bestAngle}\u00b0`},
+      ];
+    }
+    return [
+      {label: 'Angle', value: `${this.angle}\u00b0`},
       {label: 'Range', value: `${fmt(main.range)} m`},
       {label: 'Max height', value: `${fmt(main.maxH)} m`},
     ];
-    if (this.step === 2) {
-      out.push({label: 'Vx (constant)', value: `${fmt(s.vx)} m/s`});
-      out.push({label: 'Vy', value: `${s.vy >= 0 ? '+' : ''}${fmt(s.vy)} m/s`});
-    } else if (drag) {
-      out.push({label: 'No-air range', value: `${fmt(this.ideal.range)} m`});
-      out.push({label: 'Best angle', value: `${this.bestAngle}°`});
-    }
-    return out;
   }
 }

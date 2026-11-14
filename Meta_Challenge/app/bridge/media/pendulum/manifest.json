@@ -9,10 +9,15 @@
         "motion/s2.png",
         "motion/s3.png"
       ],
+      "clean": [
+        "motion/c1.png",
+        "motion/c2.png",
+        "motion/c3.png"
+      ],
       "clip": "motion/clip.mp4",
       "captions": [
-        "One swing takes T = 2 pi sqrt(L/g). A longer string swings more slowly.",
-        "The angle follows a smooth sine wave. Four times the length gives double the period.",
+        "For small swings, the time of one swing depends only on the length. A longer string swings more slowly.",
+        "The angle follows a smooth sine wave with T = 2 pi sqrt(L/g). Four times the length gives double the period.",
         "Mass cancels out: two bobs of different mass on equal strings swing together."
       ],
       "size": 600,
@@ -26,6 +31,10 @@
       "stills": [
         "whatif/s1.png",
         "whatif/s2.png"
+      ],
+      "clean": [
+        "whatif/c1.png",
+        "whatif/c2.png"
       ],
       "clip": "whatif/clip.mp4",
       "captions": [
@@ -46,10 +55,16 @@
         "flow/s3.png",
         "flow/s4.png"
       ],
+      "clean": [
+        "flow/c1.png",
+        "flow/c2.png",
+        "flow/c3.png",
+        "flow/c4.png"
+      ],
       "clip": "flow/clip.mp4",
       "captions": [
         "Lifting the keys to one side stores height energy. Nothing moves yet.",
-        "Let go: height energy turns into motion. At the bottom it is all motion, about half a metre per second.",
+        "Let go: height energy turns into motion. At the bottom it is all motion: half a metre per second for a 20 degree swing.",
         "On the far side the keys climb again and motion turns back into height. Then it all runs in reverse.",
         "Each swing the air takes a little energy away as heat, so the swings shrink. The swing time stays the same."
       ],
@@ -66,10 +81,15 @@
         "number/s2.png",
         "number/s3.png"
       ],
+      "clean": [
+        "number/c1.png",
+        "number/c2.png",
+        "number/c3.png"
+      ],
       "clip": "number/clip.mp4",
       "captions": [
-        "Swing time is 2 pi times the square root of length over g. For 25 centimetres that is one second.",
-        "Four times the length doubles the time: two seconds for one metre. The weight of the keys changes nothing.",
+        "Keys on a 25 centimetre lanyard swing there and back in about one second.",
+        "Swing time is 2 pi times the square root of length over g. Four times the length doubles it. Weight changes nothing.",
         "Weaker gravity pulls back more gently. On the Moon the same lanyard needs two and a half seconds."
       ],
       "size": 600,

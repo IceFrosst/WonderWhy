@@ -124,18 +124,23 @@ export class BicycleScene implements Scene {
       bar(h - 18, rel * (NF / 34), C.amber);
     }
 
-    const out: Readout[] = [
+    if (this.step === 2) {
+      return [
+        {label: 'Gears', value: `${NF}:${this.nr}`},
+        {label: 'Pedal turns', value: fmt(this.revF, 1)},
+        {label: 'Wheel turns', value: fmt(this.revF * ratio, 1)},
+      ];
+    }
+    if (this.step === 3) {
+      return [
+        {label: 'Gears', value: `${NF}:${this.nr}`},
+        {label: `Speed (${CADENCE} rpm)`, value: `${fmt(speedKmh, 0)} km/h`},
+        {label: 'Push vs 1:1', value: `x${fmt(rel, 2)}`},
+      ];
+    }
+    return [
       {label: 'Gears', value: `${NF}:${this.nr}`},
       {label: 'Gear ratio', value: fmt(ratio, 2)},
-      {label: 'Wheel / pedal turns', value: fmt(ratio, 2)},
     ];
-    if (this.step === 2) {
-      out.push({label: 'Pedal turns', value: fmt(this.revF, 1)});
-      out.push({label: 'Wheel turns', value: fmt(this.revF * ratio, 1)});
-    } else if (this.step === 3) {
-      out.push({label: `Speed at ${CADENCE} rpm`, value: `${fmt(speedKmh, 0)} km/h`});
-      out.push({label: 'Push at wheel vs 1:1', value: `x${fmt(rel, 2)}`});
-    }
-    return out;
   }
 }

@@ -93,23 +93,24 @@ export class GuitarScene implements Scene {
     }
 
     const L = this.length();
-    const v = Math.sqrt(this.tension / MU);
-    const out: Readout[] = [
+    if (this.step === 3) {
+      return [
+        {label: 'Tension T', value: `${Math.round(this.tension)} N`},
+        {label: 'Length L', value: `${fmt(L * 100, 1)} cm`},
+        {label: 'Frequency', value: `${fmt(f1, 1)} Hz`},
+      ];
+    }
+    if (this.step === 2) {
+      return [
+        {label: 'Fret', value: String(this.fret)},
+        {label: 'f', value: `${fmt(f1, 1)} Hz`},
+        {label: '2f / 3f', value: `${fmt(f1 * 2, 1)} / ${fmt(f1 * 3, 1)} Hz`},
+      ];
+    }
+    return [
       {label: 'Fret', value: String(this.fret)},
       {label: 'Length L', value: `${fmt(L * 100, 1)} cm`},
+      {label: 'Frequency', value: `${fmt(f1, 1)} Hz`},
     ];
-    if (this.step === 3) {
-      out.push({label: 'Tension T', value: `${Math.round(this.tension)} N`});
-      out.push({label: 'Mass/length', value: `${fmt(MU * 1000, 1)} g/m`});
-      out.push({label: 'f = (1/2L)√(T/μ)', value: `${fmt(f1, 1)} Hz`});
-    } else if (this.step === 2) {
-      out.push({label: 'n=1', value: `${fmt(f1, 1)} Hz`});
-      out.push({label: 'n=2', value: `${fmt(f1 * 2, 1)} Hz`});
-      out.push({label: 'n=3', value: `${fmt(f1 * 3, 1)} Hz`});
-    } else {
-      out.push({label: 'Wave speed v', value: `${fmt(v, 0)} m/s`});
-      out.push({label: 'f = v/2L', value: `${fmt(f1, 1)} Hz`});
-    }
-    return out;
   }
 }

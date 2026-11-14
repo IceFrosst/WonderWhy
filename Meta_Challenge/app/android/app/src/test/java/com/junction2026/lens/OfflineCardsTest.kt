@@ -22,15 +22,19 @@ class OfflineCardsTest {
     private val objs by lazy { OfflineCards.parse(objectsFile().readText()) }
     private fun words(s: String) = s.trim().split(Regex("\\s+")).size
 
-    @Test fun loadsAllSix() {
-        assertEquals(setOf("guitar", "ball", "bicycle", "kettle", "pendulum", "phone"), objs.keys)
+    /** The library keeps growing (7 objects on 14 Nov): assert what the app needs, not exact counts. */
+    @Test fun loadsTheLibrary() {
+        assertTrue(objs.keys.toString(), objs.keys.containsAll(setOf("guitar", "ball", "bicycle", "kettle", "pendulum", "phone")))
+        assertTrue(objs.size >= 6)
         for (o in objs.values) {
             assertTrue(o.id, o.answer.isNotBlank())
             assertTrue(o.id, o.lenses.isNotEmpty())
             assertTrue(o.id, o.lenses.first().steps.isNotEmpty())
         }
-        assertEquals(listOf("ball.motion", "ball.compare"), objs.getValue("ball").lenses.map { it.id })
-        assertEquals("Each bounce keeps only part of the energy.", objs.getValue("ball").lenses[1].lead)
+        val ball = objs.getValue("ball").lenses
+        assertEquals("ball.motion", ball.first().id) // the first lens is the one the steps come from
+        assertTrue(ball.map { it.id }.containsAll(listOf("ball.motion", "ball.compare")))
+        assertTrue(ball.single { it.id == "ball.compare" }.lead.orEmpty().isNotBlank())
     }
 
     @Test fun lookups() {
@@ -51,8 +55,9 @@ class OfflineCardsTest {
     @Test fun detectShape() {
         val d = OfflineCards.toDetect(assertNotNull(OfflineCards.lookup(objs, "ball")).let { objs.getValue("ball") })
         assertEquals("Gravity bends the path into a curve.", d.summary)
-        assertEquals(3, d.steps.size)
-        assertEquals(2, d.lenses.size)
+        assertEquals(objs.getValue("ball").lenses.first().steps, d.steps)
+        assertTrue(d.steps.isNotEmpty())
+        assertTrue(d.lenses.size >= 2)
         assertTrue(d.offline)
     }
 

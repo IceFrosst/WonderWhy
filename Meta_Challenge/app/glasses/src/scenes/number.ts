@@ -18,8 +18,8 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, max
     while (count < remaining.length && ctx.measureText(remaining.slice(0, count + 1)).width <= maxWidth) count++;
     if (lines.length === maxLines - 1) {
       let final = remaining.slice(0, count).trimEnd();
-      while (final.length > 1 && ctx.measureText(`${final}…`).width > maxWidth) final = final.slice(0, -1).trimEnd();
-      lines.push(`${final}…`);
+      while (final.length > 1 && ctx.measureText(`${final}\u2026`).width > maxWidth) final = final.slice(0, -1).trimEnd();
+      lines.push(`${final}\u2026`);
       break;
     }
     const space = remaining.lastIndexOf(' ', count);
@@ -47,6 +47,8 @@ export class NumberScene implements Scene {
   private animateToTop = false;
   private knobCurrent: number;
   private readouts: Readout[] = [];
+  private wrapCache = new Map<string, string[]>();
+  private emWidthCache = new Map<string, number>();
   private bigSize = 56;
   private smallSize = 28;
   private labelSize = 18;
@@ -70,7 +72,8 @@ export class NumberScene implements Scene {
     this.bigSize = Math.max(56, this.h * 0.28);
     this.smallSize = Math.max(28, this.bigSize * 0.5);
     this.labelSize = clamp(this.h * 0.07, 18, 24);
-    this.rowSize = clamp(this.h * 0.055, 16, 21);
+    this.rowSize = clamp(this.h * 0.065, 18, 20);
+    this.cacheText();
   }
 
   setParam(axis: 'x' | 'y', dir: -1 | 1): void {
@@ -81,6 +84,7 @@ export class NumberScene implements Scene {
     const next = Math.round((this.knobCurrent + dir * knob.step) * power) / power;
     this.knobCurrent = clamp(next, knob.min, knob.max);
     this.updateReadouts();
+    this.cacheText();
   }
 
   setStep(step: Step): void {
@@ -90,6 +94,7 @@ export class NumberScene implements Scene {
     this.stepIndex = next;
     this.show = nextShow;
     this.elapsed = 0;
+    this.cacheText();
   }
 
   param(): number {
@@ -99,6 +104,8 @@ export class NumberScene implements Scene {
   dispose(): void {
     this.ctx = null;
     this.readouts = [];
+    this.wrapCache.clear();
+    this.emWidthCache.clear();
   }
 
   private updateReadouts(): void {
@@ -120,6 +127,53 @@ export class NumberScene implements Scene {
     return item.value * (('scales' in item && item.scales === false) ? 1 : this.factor());
   }
 
+  private textWidth(text: string, size: number, weight: number): number {
+    const key = `${weight}:${text}`;
+    let em = this.emWidthCache.get(key);
+    if (em === undefined) {
+      const ctx = this.ctx!;
+      ctx.font = `${weight} 100px ${this.fontFamily}`;
+      em = ctx.measureText(text).width;
+      this.emWidthCache.set(key, em);
+    }
+    return em * size / 100;
+  }
+
+  private cachedWrap(key: string, text: string, maxWidth: number, maxLines: number, size: number, weight: number): string[] {
+    const cached = this.wrapCache.get(key);
+    if (cached) return cached;
+    const ctx = this.ctx!;
+    ctx.font = `${weight} ${size}px ${this.fontFamily}`;
+    const lines = wrap(ctx, text, maxWidth, maxLines);
+    this.wrapCache.set(key, lines);
+    return lines;
+  }
+
+  private cacheText(): void {
+    if (!this.ctx) return;
+    this.wrapCache.clear();
+    this.emWidthCache.clear();
+    this.cachedWrap('headline', this.spec.headline.label, this.w - 24, 2, this.labelSize, 400);
+    this.textWidth(this.format(this.scaled(this.spec.headline), this.spec.headline.decimals), this.bigSize, 600);
+    this.textWidth(this.spec.headline.unit, Math.max(16, this.bigSize * 0.4), 600);
+    this.spec.rows.forEach((row, index) => {
+      const valueText = this.format(this.scaled(row), row.decimals);
+      const unitWidth = this.textWidth(row.unit, this.rowSize, 600);
+      const valueWidth = this.textWidth(valueText, this.rowSize, 600);
+      const labelWidth = Math.max(50, this.w - 10 - unitWidth - valueWidth - 7 - 22);
+      this.cachedWrap(`row:${index}`, row.label, labelWidth, 2, this.rowSize, 400);
+    });
+    if (this.spec.compare) {
+      this.cachedWrap('compare', this.spec.compare.label, this.w - 24, 2, this.labelSize, 400);
+    }
+    if (this.spec.knob) {
+      const knob = this.spec.knob;
+      const size = Math.max(16, this.labelSize * 0.9);
+      const value = `${knob.label}: ${this.knobCurrent.toFixed(stepDecimals(knob.step))} ${knob.unit}`;
+      this.textWidth(value, size, 600);
+    }
+  }
+
   private drawNumber(
     item: NumberValue,
     value: number,
@@ -133,10 +187,8 @@ export class NumberScene implements Scene {
     const text = this.format(value, item.decimals);
     const unitSize = Math.max(16, size * 0.4);
     const gap = Math.max(6, size * 0.1);
-    ctx.font = `600 ${size}px ${this.fontFamily}`;
-    const numberWidth = ctx.measureText(finalText).width;
-    ctx.font = `600 ${unitSize}px ${this.fontFamily}`;
-    const unitWidth = ctx.measureText(item.unit).width;
+    const numberWidth = this.textWidth(finalText, size, 600);
+    const unitWidth = this.textWidth(item.unit, unitSize, 600);
     const left = centerX - (numberWidth + gap + unitWidth) / 2;
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'right';
@@ -160,7 +212,7 @@ export class NumberScene implements Scene {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(text, this.w / 2, y);
-    const edge = this.w / 2 + ctx.measureText(text).width / 2 + 10;
+    const edge = this.w / 2 + this.textWidth(text, size, 600) / 2 + 10;
     const r = Math.max(4, size * 0.25);
     ctx.strokeStyle = C.white;
     ctx.lineWidth = 1.4;
@@ -193,7 +245,7 @@ export class NumberScene implements Scene {
 
     const labelY = baseline + Math.max(this.labelSize * 1.25, size * 0.34);
     ctx.font = `400 ${this.labelSize}px ${this.fontFamily}`;
-    const lines = wrap(ctx, this.spec.headline.label, this.w - 24, 2);
+    const lines = this.cachedWrap('headline', this.spec.headline.label, this.w - 24, 2, this.labelSize, 400);
     const lineHeight = this.labelSize * 1.2;
     ctx.fillStyle = C.soft;
     ctx.textAlign = 'center';
@@ -218,13 +270,13 @@ export class NumberScene implements Scene {
       ctx.save();
       ctx.globalAlpha = reveal;
       ctx.font = `600 ${this.rowSize}px ${this.fontFamily}`;
-      const unitWidth = ctx.measureText(row.unit).width;
-      const valueWidth = ctx.measureText(valueText).width;
+      const unitWidth = this.textWidth(row.unit, this.rowSize, 600);
+      const valueWidth = this.textWidth(valueText, this.rowSize, 600);
       const right = this.w - 10;
       const valueLeft = right - unitWidth - valueWidth - 7;
       const labelWidth = Math.max(50, valueLeft - 22);
       ctx.font = `400 ${this.rowSize}px ${this.fontFamily}`;
-      const labelLines = wrap(ctx, row.label, labelWidth, 2);
+      const labelLines = this.cachedWrap(`row:${index}`, row.label, labelWidth, 2, this.rowSize, 400);
       const baseline = top + Math.min(rowHeight * 0.45, this.rowSize + 3);
       const lineHeight = this.rowSize * 1.05;
       ctx.fillStyle = C.soft;
@@ -257,7 +309,7 @@ export class NumberScene implements Scene {
     if (!compare) return;
     const ctx = this.ctx!;
     ctx.font = `400 ${this.labelSize}px ${this.fontFamily}`;
-    const lines = wrap(ctx, compare.label, this.w - 24, 2);
+    const lines = this.cachedWrap('compare', compare.label, this.w - 24, 2, this.labelSize, 400);
     const lineHeight = this.labelSize * 1.2;
     const labelBaseline = startY + this.labelSize;
     ctx.textAlign = 'center';

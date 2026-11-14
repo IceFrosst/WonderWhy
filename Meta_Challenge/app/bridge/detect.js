@@ -4,6 +4,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { buildSketchPrompt, parseSketchReply } from './sketch.js';
+import { buildAskPrompt, parseAskReply, pickStep } from './ask.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const OBJECTS_PATH = path.join(here, '..', 'shared', 'objects.json');
@@ -29,7 +30,7 @@ export function buildPrompt(objects, question, hasFocus = false, lang = 'en') {
   const list = objects.map((o) => `- ${o.id}: ${o.detect_hint}`).join('\n');
   const q = question
     ? `The wearer asked: "${question}". Put a reply in "answer": at most 2 short sentences, high-school level.`
-    : `If objectId is "unknown", "answer" is a 2-sentence plain explanation of the object in the photo and the physics in it. Otherwise "answer" may be an empty string.`;
+    : `If objectId is "unknown", "answer" names the object and the physics in it in at most 2 short sentences, 25 words in all, with no description of the surroundings. Otherwise "answer" may be an empty string.`;
   const aim = hasFocus
     ? `You get two images from smart glasses. Image 1 is the full view. Image 2 is a zoom on the middle of image 1: that is where the wearer is looking.
 Classify the main object in image 2. Use image 1 only to understand what that object is. Ignore objects that are only in image 1, even if they are bigger or in the list.`
@@ -57,7 +58,10 @@ export function parseModelJson(text, objects) {
   let confidence = Number(j.confidence);
   if (!Number.isFinite(confidence)) confidence = 0;
   confidence = Math.max(0, Math.min(1, confidence));
-  return { objectId, confidence, answer: typeof j.answer === 'string' ? j.answer : '' };
+  const answer = typeof j.answer === 'string'
+    ? j.answer.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)
+    : '';
+  return { objectId, confidence, answer };
 }
 
 function codeErr(code, message) {
@@ -110,25 +114,40 @@ async function callGemini({ imageBase64, focusBase64, prompt, env, timeoutMs, ma
  */
 function callPi({ imageBase64, focusBase64, prompt, env, timeoutMs, purpose }) {
   const model = env.PI_DETECT_MODEL || 'anthropic/claude-haiku-4-5';
-  const dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
-  const file = path.join(dir, 'photo.jpg');
-  writeFileSync(file, Buffer.from(imageBase64, 'base64'));
-  const files = [`@${file}`];
-  if (focusBase64) {
-    const focus = path.join(dir, 'focus.jpg');
-    writeFileSync(focus, Buffer.from(focusBase64, 'base64'));
-    files.push(`@${focus}`);
+  let dir;
+  const cleanup = () => { if (dir) try { rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ } };
+  const files = [];
+  try {
+    dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
+    if (imageBase64) {
+      const file = path.join(dir, 'photo.jpg');
+      writeFileSync(file, Buffer.from(imageBase64, 'base64'));
+      files.push(`@${file}`);
+    }
+    if (focusBase64) {
+      const focus = path.join(dir, 'focus.jpg');
+      writeFileSync(focus, Buffer.from(focusBase64, 'base64'));
+      files.push(`@${focus}`);
+    }
+  } catch (error) {
+    cleanup();
+    return Promise.reject(codeErr('detect_failed', `pi setup failed: ${error.message}`));
   }
-  const systemPrompt = purpose === 'sketch' ? 'You explain photographed objects with validated JSON only.' : 'You are an image classifier. Output JSON only.';
+  const systemPrompt = purpose === 'sketch' ? 'You explain photographed objects with validated JSON only.'
+    : purpose === 'ask' ? 'You answer questions from supplied text. Output JSON only.'
+      : 'You are an image classifier. Output JSON only.';
   const args = ['-p', '--no-session', '--no-tools', '--no-skills', '--no-context-files', '--no-prompt-templates', '--no-mcp',
     '--thinking', 'off', '--system-prompt', systemPrompt, '--model', model, ...files, prompt];
   return new Promise((resolve, reject) => {
-    const child = spawn(env.PI_BIN || 'pi', args, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
+    let child;
+    try { child = spawn(env.PI_BIN || 'pi', args, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] }); }
+    catch (error) { cleanup(); reject(codeErr('detect_failed', `pi not runnable: ${error.message}`)); return; }
     let out = '', err = '';
     const timer = setTimeout(() => { child.kill('SIGKILL'); }, timeoutMs);
     child.stdout.on('data', (d) => { out += d; });
     child.stderr.on('data', (d) => { err += d; });
-    const done = (fn) => { clearTimeout(timer); rmSync(dir, { recursive: true, force: true }); fn(); };
+    let settled = false;
+    const done = (fn) => { if (settled) return; settled = true; clearTimeout(timer); cleanup(); fn(); };
     child.on('error', (e) => done(() => reject(codeErr('detect_failed', `pi not runnable: ${e.message}`))));
     child.on('close', (code, signal) => done(() => {
       if (signal === 'SIGKILL') return reject(codeErr('detect_timeout', `Detection timed out after ${timeoutMs} ms`));
@@ -151,12 +170,16 @@ function callClaudeCli({ imageBase64, focusBase64, prompt, env, timeoutMs, purpo
   // The model name goes on a shell command line on Windows, so keep it to a safe alphabet.
   const model = /^[A-Za-z0-9._-]{1,64}$/.test(env.CLAUDE_DETECT_MODEL || '') ? env.CLAUDE_DETECT_MODEL : 'haiku';
   const dir = mkdtempSync(path.join(os.tmpdir(), 'lens-'));
-  writeFileSync(path.join(dir, 'photo.jpg'), Buffer.from(imageBase64, 'base64'));
+  if (imageBase64) writeFileSync(path.join(dir, 'photo.jpg'), Buffer.from(imageBase64, 'base64'));
   if (focusBase64) writeFileSync(path.join(dir, 'focus.jpg'), Buffer.from(focusBase64, 'base64'));
-  const role = purpose === 'sketch' ? 'You explain photographed objects.' : 'You are an image classifier.';
-  const ask = `${role} Read ${focusBase64 ? 'photo.jpg (image 1) and focus.jpg (image 2)' : 'photo.jpg'} in the current folder with the Read tool, then reply with the JSON only.\n\n${prompt}`;
+  const role = purpose === 'sketch' ? 'You explain photographed objects.'
+    : purpose === 'ask' ? 'You answer questions from supplied text.'
+      : 'You are an image classifier.';
+  const ask = imageBase64
+    ? `${role} Read ${focusBase64 ? 'photo.jpg (image 1) and focus.jpg (image 2)' : 'photo.jpg'} in the current folder with the Read tool, then reply with the JSON only.\n\n${prompt}`
+    : `${role} Reply with the JSON only.\n\n${prompt}`;
   // No argument contains a space: on Windows the command is a .cmd shim and needs a shell.
-  const args = ['-p', '--model', model, '--tools', 'Read', '--allowedTools', 'Read', '--strict-mcp-config', '--output-format', 'text'];
+  const args = ['-p', '--model', model, '--tools', 'Read', '--allowedTools', 'Read(./*.jpg)', '--strict-mcp-config', '--output-format', 'text'];
   const win = process.platform === 'win32';
   return new Promise((resolve, reject) => {
     const child = spawn(env.CLAUDE_BIN || 'claude', args, { cwd: dir, stdio: ['pipe', 'pipe', 'pipe'], shell: win });
@@ -198,9 +221,42 @@ export async function detect({ imageBase64, focusBase64, question, forceObjectId
   if (prov === 'gemini' && !env.GEMINI_API_KEY) throw codeErr('detect_failed', 'GEMINI_API_KEY not set');
   const prompt = buildPrompt(objects, question, Boolean(focusBase64), lang);
   const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : prov === 'claude' ? callClaudeCli : callGemini;
-  const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs });
+  const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs, maxTokens: 300 });
   const parsed = parseModelJson(text, objects);
   return { ...parsed, model, provider: prov, detectMs: Date.now() - t0 };
+}
+
+/** Returns {answer, lensId, step, model, provider, ms}. Throws detect_failed or detect_timeout. */
+export async function ask({ object, question, lang = 'en', env = process.env, provider, timeoutMs }) {
+  const t0 = Date.now();
+  const prov = provider || pickProvider(env);
+  const local = () => {
+    const match = pickStep(object, question);
+    return {
+      answer: match?.caption || '', lensId: match?.lensId || null, step: match?.step || null,
+      model: 'local-match', provider: 'mock', ms: Date.now() - t0,
+    };
+  };
+  const usable = prov === 'pi' || prov === 'claude'
+    || (prov === 'anthropic' && Boolean(env.ANTHROPIC_API_KEY))
+    || (prov === 'gemini' && Boolean(env.GEMINI_API_KEY));
+  if (prov === 'mock' || !usable) return local();
+  timeoutMs = timeoutMs || detectTimeout(env, prov);
+  try {
+    const prompt = buildAskPrompt({ object, question, lang });
+    const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : prov === 'claude' ? callClaudeCli : callGemini;
+    const { text, model } = await call({ prompt, env, timeoutMs, maxTokens: 300, purpose: 'ask' });
+    const parsed = parseAskReply(text, object);
+    if (!parsed) throw codeErr('detect_failed', 'No usable answer in model reply');
+    if (!parsed.lensId) {
+      const match = pickStep(object, question);
+      if (match) { parsed.lensId = match.lensId; parsed.step = match.step; }
+    }
+    return { ...parsed, model, provider: prov, ms: Date.now() - t0 };
+  } catch (error) {
+    if (error.code === 'detect_timeout') throw error;
+    throw codeErr('detect_failed', error.message || 'Follow-up question failed');
+  }
 }
 
 /** Returns {sketch, model, ms}. Throws sketch_failed or sketch_timeout. */

@@ -27,6 +27,8 @@ export interface Knob {
 export interface ObjectInfo {
   id: string;
   label: string;
+  /** One-word name for small buttons (home screen). */
+  short?: string;
   concept: string;
   tagline: string;
   answer: string;
@@ -48,6 +50,39 @@ export const UNKNOWN: ObjectInfo = {
 
 export function findObject(id: string): ObjectInfo {
   return OBJECTS.find(o => o.id === id) ?? UNKNOWN;
+}
+
+/**
+ * Copies a drawing spec while replacing only strings that already exist at the
+ * same object key or array index. Translation data is untrusted wire input, so
+ * it cannot add structure or change a non-text value.
+ */
+export function mergeSpecText(spec: unknown, text: unknown): unknown {
+  if (typeof text !== 'object' || text === null) return spec;
+
+  const merge = (value: unknown, translated: unknown): unknown => {
+    if (Array.isArray(value)) {
+      const translatedItems = Array.isArray(translated) ? translated : [];
+      return value.map((item, index) => {
+        const replacement = translatedItems[index];
+        if (typeof item === 'string') return typeof replacement === 'string' ? replacement.slice(0, 80) : item;
+        if (Array.isArray(item) || isRecord(item)) return merge(item, replacement);
+        return item;
+      });
+    }
+    if (isRecord(value)) {
+      const translatedRecord = isRecord(translated) ? translated : {};
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+        const replacement = translatedRecord[key];
+        if (typeof item === 'string') return [key, typeof replacement === 'string' ? replacement.slice(0, 80) : item];
+        if (Array.isArray(item) || isRecord(item)) return [key, merge(item, replacement)];
+        return [key, item];
+      }));
+    }
+    return value;
+  };
+
+  return merge(spec, text);
 }
 
 const SKETCH_LENSES = ['motion', 'inside', 'cutaway', 'flow', 'zoom', 'whatif', 'compare', 'number'];
@@ -111,7 +146,9 @@ export function sketchToObject(sketch: unknown): ObjectInfo | null {
         if (!isRecord(k) || (k.axis !== 'x' && k.axis !== 'y')) return null;
         const kl = capped(k.label, 40, true);
         if (kl === null) return null;
-        knobs.push({axis: k.axis, label: kl});
+        const usable = (raw.scene === 'curve' && k.axis === 'x')
+          || (raw.scene === 'number' && k.axis === 'x' && isRecord(raw.spec) && isRecord(raw.spec.knob));
+        knobs.push(usable ? {axis: k.axis, label: kl} : null);
       }
     }
     chapters.push({scene: raw.scene, lens: raw.lens, title, lead, hint: '', captions, knobs, spec: raw.spec});

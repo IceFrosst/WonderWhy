@@ -12,12 +12,14 @@ import com.meta.wearable.dat.mockdevice.MockDeviceKit
 import com.meta.wearable.dat.mockdevice.api.GlassesModel
 import com.meta.wearable.dat.mockdevice.api.MockGlasses
 import com.meta.wearable.dat.mockdevice.api.camera.CameraFacing
+import com.meta.wearable.dat.mockdevice.api.speech.MockSpeechSource
 
 /**
  * Thin wrapper around the SDK's Mock Device Kit (fake Ray-Ban Display, no hardware). Every toggle here
  * calls a real kit API (checked with javap against mwdat-mockdevice 1.0.1):
  * `don/doff`, `fold/unfold`, `setBatteryLevel`, `setThermalLevel`, `powerOff/powerOn`,
- * `MockDeviceKit.permissions.set/setRequestResult`. "Another app takes over" has no kit API; see
+ * `MockDeviceKit.permissions.set/setRequestResult`, `services.speech.simulateTranscription`.
+ * "Another app takes over" has no kit API; see
  * [GlassesController.simulateTakeOver].
  */
 class MockRig(private val ctx: Context) {
@@ -45,6 +47,9 @@ class MockRig(private val ctx: Context) {
                 donned = true; folded = false; batteryLow = false; hot = false; poweredOff = false
                 glasses = g
                 setCamera(denied = false)
+                setMicrophone()
+                // Typed (injected) speech: the "Say" button, no real microphone on the emulator.
+                runCatching { g.services.speech.setTranscriptionSource(MockSpeechSource.INJECTED) }
                 if (ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.CAMERA) ==
                     PackageManager.PERMISSION_GRANTED
                 ) {
@@ -105,6 +110,24 @@ class MockRig(private val ctx: Context) {
     }
 
     fun toggleCameraPermission() = setCamera(!cameraDenied)
+
+    /**
+     * The wearer says [text]: a final transcription through the kit's speech API. The kit drops it when the
+     * app is not listening (it only listens while a result is on screen). Returns an error text or null.
+     */
+    fun say(text: String): String? {
+        val speech = glasses?.services?.speech ?: return "Not connected"
+        if (!speech.isListening) return "The glasses are not listening: show a result first"
+        speech.simulateTranscription(text, true, 0.95f)
+        return null
+    }
+
+    private fun setMicrophone() {
+        runCatching {
+            kit.permissions.set(Permission.MICROPHONE, PermissionStatus.Granted)
+            kit.permissions.setRequestResult(Permission.MICROPHONE, PermissionStatus.Granted)
+        }
+    }
 
     private fun setCamera(denied: Boolean) {
         val st: PermissionStatus = if (denied) PermissionStatus.Denied else PermissionStatus.Granted

@@ -63,11 +63,17 @@ class ExplainerStateTest {
         assertEquals(0, other.switchLens(-1).step)
     }
 
-    @Test fun switchLensClampsAtEnds() {
-        assertSame(two, two.switchLens(-1))
+    /** PROTOCOL nav left/right: previous / next lens, wrapping (as the glasses Web App does). */
+    @Test fun switchLensWrapsAtEnds() {
+        assertEquals(1, two.switchLens(-1).lens) // left from the first lens: the last one
         val atLast = two.switchLens(+1)
-        assertSame(atLast, atLast.switchLens(+1))
-        assertSame(one, one.switchLens(+1))
+        assertEquals(0, atLast.switchLens(+1).lens) // right from the last: the first
+        assertEquals(0, atLast.switchLens(+1).step)
+        assertSame(one, one.switchLens(+1)) // one lens: nothing to switch to
+        assertSame(one, one.switchLens(-1))
+        val five = ExplainerState((1..5).map { Track("o.l$it", "L$it", null, listOf("s")) })
+        assertEquals(4, five.switchLens(-1).lens)
+        assertEquals(2, five.switchLens(+7).lens)
     }
 
     @Test fun backWalksToOverviewThenLeaves() {
@@ -88,7 +94,8 @@ class ExplainerStateTest {
     }
 
     @Test fun lensBarIsTextNotColour() {
-        assertEquals("Lens 2/2: Bounce. Left/right: lens", Cards.lensBar(two.switchLens(+1)))
+        assertEquals("○● Bounce", Cards.lensBar(two.switchLens(+1)))
+        assertEquals("●○ Projectile motion", Cards.lensBar(two.next()))
     }
 
     @Test(expected = IllegalArgumentException::class) fun emptyTracksRejected() {

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Physics Lens: proof sheet</title>
+<style>
+@page { size: A4; margin: 12mm }
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0 auto;width:186mm;background:#fbfaf6;color:#14161c;font:10.5pt/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media screen{body{padding:12mm 0 0}}
+body{overflow:hidden}
+h1{font-size:36pt;line-height:1;margin:0;font-weight:600;letter-spacing:-.5px}
+.punch{font-size:16pt;margin:2mm 0 0;font-weight:400}
+.sub{font-size:10.5pt;color:#3a4152;margin:1mm 0 0}
+h2{font-size:12pt;margin:3mm 0 1mm;text-transform:uppercase;letter-spacing:.06em;font-weight:600;border-bottom:.4mm solid #14161c;padding-bottom:.6mm}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+figure{margin:0}
+.img{background:#000;border-radius:2mm;overflow:hidden;width:38mm;height:38mm;display:flex;align-items:center;justify-content:center}
+.img img{width:100%;height:100%;object-fit:contain;display:block}
+.num{font-size:14pt;font-weight:600;margin:1mm 0 0}
+.num span{display:inline-block;background:#14161c;color:#fff;border-radius:50%;width:6.5mm;height:6.5mm;text-align:center;line-height:6.5mm;font-size:11pt;margin-right:1.5mm}
+figcaption{font-size:10pt;margin-top:.5mm}
+figcaption small{display:block;color:#4a5163;font-size:10pt}
+table{border-collapse:collapse;width:100%;font-size:10pt}
+td,th{border-bottom:.2mm solid #c9c6bc;padding:.6mm 1.5mm;text-align:left;vertical-align:top}
+th{font-size:10pt;font-weight:600;background:#eceae2}
+.t{font-weight:600;white-space:nowrap}
+.tag{display:inline-block;padding:0 1.5mm;border-radius:1mm;font-weight:600;font-size:10pt;white-space:nowrap;border:.3mm solid}
+.tag.T{background:#d9f5e3;border-color:#1e7a45;color:#0f4d2a}
+.tag.B{background:#fff1cf;border-color:#a06a00;color:#6b4600}
+.tag.P{background:#fff;border-color:#555;color:#333;border-style:dashed}
+ul{margin:0;padding-left:5mm}
+.bottom{display:grid;grid-template-columns:1fr 34mm;gap:5mm;align-items:start}
+.qr{width:30mm;height:30mm;border:.4mm dashed #14161c;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10pt;font-weight:600;padding:1mm}
+.url{font-family:ui-monospace,Menlo,monospace;font-size:10.5pt;font-weight:600;word-break:break-all}
+.why{font-size:11.5pt;margin:0}
+</style></head><body>
+<h1>Physics Lens</h1>
+<p class="punch">Look at anything. See the physics inside it.</p>
+<p class="sub">Meta Ray-Ban Display glasses: look at an object, pinch, see an animation of how it works.</p>
+
+<h2>How it works: look, pinch, see</h2>
+<div class="steps">
+<figure><div class="img"><img src="app/android/docs/screens/04_demo_ball_step1_still.png" alt="Phone app with a ball card"></div>
+<p class="num"><span>1</span>Look</p><figcaption>The glasses camera sees what you look at.<small>Phone app, mock glasses, demo data.</small></figcaption></figure>
+<figure><div class="img"><img src="app/bridge/media/ball/motion/s1.png" alt="Glasses card: thrown ball, parabola"></div>
+<p class="num"><span>2</span>Pinch</p><figcaption>One photo is taken, the object is named.<small>Glasses card, laptop render.</small></figcaption></figure>
+<figure><div class="img"><img src="app/bridge/media/ball/motion/s2.png" alt="Glasses card: step 2, sideways speed"></div>
+<p class="num"><span>3</span>See</p><figcaption>Pinch again for the next step.<small>Glasses card, laptop render.</small></figcaption></figure>
+</div>
+
+<h2>Why glasses</h2>
+<p class="why">The camera sees what you hold, so you never describe it, and the answer sits over the object.</p>
+
+<h2>What is real today</h2>
+<table>
+<tr><th>Claim</th><th>Label</th><th>Setup</th></tr>
+<tr><td>7 objects, 29 lenses, prerendered; 30 fps; 125 screens and steps pass</td><td><span class="tag T">Tested on</span></td><td>Laptop, headless Chrome, 600x600. Not on glasses</td></tr>
+<tr><td>First load 214 KB gzipped, 5 requests</td><td><span class="tag T">Tested on</span></td><td>Laptop, Meta's test gate passes</td></tr>
+<tr><td>Detection: 18 of 18 test photos right (7 objects, 4 unrelated)</td><td><span class="tag T">Tested on</span></td><td>Dev stand-in (Claude Haiku), 1 run each. Not Gemini</td></tr>
+<tr><td>Android app: connect, pinch, one photo, result card</td><td><span class="tag T">Tested on</span></td><td>Pixel 8, Meta Mock Device Kit. Phone camera stands in for glasses</td></tr>
+<tr><td>Registration, camera, pinch input and speech on real Ray-Ban Display</td><td><span class="tag B">Built, not on glasses</span></td><td>Untested on real glasses</td></tr>
+<tr><td>Web App installed on glasses by QR</td><td><span class="tag B">Built, not on glasses</span></td><td>Untested. Test plan written</td></tr>
+<tr><td>Refuses to explain people; clip playback from the phone app</td><td><span class="tag P">Planned</span></td><td>Not built</td></tr>
+</table>
+
+<h2>Honest limits</h2>
+<ul>
+<li>Nothing has run on real glasses yet. Every test used a laptop, an emulator or the mock kit.</li>
+<li>Detection numbers come from a dev stand-in model, not Gemini.</li>
+<li>Finnish and the other languages are machine-translated, not read by a native speaker.</li>
+</ul>
+
+<h2>Try it</h2>
+<div class="bottom">
+<div>
+<p style="margin:0 0 1mm">Public demo (Web App; check it is up):</p>
+<p class="url" style="margin:0 0 2.5mm">https://lens.167-71-139-39.sslip.io/</p>
+<p style="margin:0"><b>Team:</b> TODO (human)</p>
+<p style="margin:1mm 0 0;font-size:10pt;color:#4a5163">Facts: Meta_Challenge/Submission.md, claims table, 14 Nov.</p>
+</div>
+<div class="qr">QR: TODO (human)</div>
+</div>
+</body></html>

@@ -40,7 +40,10 @@ function tidyTicks(min: number, max: number): number[] {
   const power = 10 ** Math.floor(Math.log10(raw));
   const step = ([1, 2, 2.5, 5, 10].find(candidate => candidate * power >= raw - 1e-12) ?? 10) * power;
   const out: number[] = [];
-  for (let value = Math.ceil(min / step - 1e-9) * step; value <= max + step * 1e-9; value += step) {
+  let iterations = 0;
+  for (let value = Math.ceil(min / step - 1e-9) * step;
+    value <= max + step * 1e-9 && iterations < 12;
+    value += step, iterations++) {
     out.push(Math.abs(value) < step * 1e-9 ? 0 : value);
   }
   return out.length >= 2 ? out : [min, max];
@@ -84,6 +87,9 @@ export class CurveScene implements Scene {
   private yTargetMin = 0;
   private yTargetMax = 1;
   private scaleElapsed = 0.3;
+  private shownCache: CurveSeries[] = [];
+  private readoutCache: Readout[] = [];
+  private textCache = new Map<string, {text: string; width: number}>();
 
   constructor(private spec: CurveSpec) {
     this.knob = spec.x.value;
@@ -98,6 +104,7 @@ export class CurveScene implements Scene {
     this.yFromMax = max;
     this.yTargetMin = min;
     this.yTargetMax = max;
+    this.refreshCaches();
   }
 
   init(ctx: CanvasRenderingContext2D, w: number, h: number): void {
@@ -121,6 +128,7 @@ export class CurveScene implements Scene {
       bottom,
       font,
     };
+    this.refreshCaches();
   }
 
   setParam(axis: 'x' | 'y', dir: -1 | 1): void {
@@ -133,6 +141,7 @@ export class CurveScene implements Scene {
     this.markerFrom = this.markerVisual;
     this.knob = target;
     this.markerElapsed = 0;
+    this.refreshCaches();
   }
 
   setStep(step: Step): void {
@@ -147,6 +156,7 @@ export class CurveScene implements Scene {
     this.yFromMax = this.yMax;
     [this.yTargetMin, this.yTargetMax] = this.scaleForStep(next);
     this.scaleElapsed = 0;
+    this.refreshCaches();
   }
 
   param(): number {
@@ -156,11 +166,37 @@ export class CurveScene implements Scene {
   dispose(): void {
     this.ctx = null;
     this.reveal.clear();
+    this.textCache.clear();
   }
 
   private shownSeries(): CurveSeries[] {
+    return this.shownCache;
+  }
+
+  private refreshCaches(): void {
     const names = this.spec.steps[this.stepIndex].series;
-    return names.map(name => this.spec.series.find(item => item.name === name)!).filter(Boolean);
+    this.shownCache = names.map(name => this.spec.series.find(item => item.name === name)!).filter(Boolean);
+    this.readoutCache = [{
+      label: this.spec.x.label,
+      value: this.withUnit(this.knob, this.spec.x.unit, this.spec.x.decimals),
+    }];
+    for (const role of ['main', 'other'] as const) {
+      const item = this.shownCache.find(series => series.role === role);
+      if (item) this.readoutCache.push({
+        label: item.name,
+        value: this.withUnit(this.interpolate(item, this.knob), this.spec.y.unit, this.spec.y.decimals),
+      });
+    }
+    this.textCache.clear();
+    if (!this.ctx) return;
+    this.trimText(this.axisTitle(this.spec.y.label, this.spec.y.unit), this.w - 12);
+    this.trimText(this.axisTitle(this.spec.x.label, this.spec.x.unit), this.layout.right - this.layout.left);
+    for (const value of tidyTicks(this.spec.x.min, this.spec.x.max)) this.textWidth(tickText(value));
+    for (const mark of this.spec.marks) this.trimText(mark.label, Math.max(40, this.layout.right - this.layout.left));
+    for (const item of this.shownCache) {
+      this.trimText(item.name, Math.max(40, this.layout.right - this.layout.left - 8), 600);
+      this.textWidth(this.withUnit(this.interpolate(item, this.knob), this.spec.y.unit, this.spec.y.decimals), 600);
+    }
   }
 
   private scaleForStep(index: number): [number, number] {
@@ -198,13 +234,33 @@ export class CurveScene implements Scene {
   }
 
   private trimText(text: string, maxWidth: number, weight = 400): string {
+    const key = `${weight}:${maxWidth}:${text}`;
+    const cached = this.textCache.get(key);
+    if (cached) return cached.text;
     const ctx = this.ctx!;
     ctx.font = `${weight} ${this.layout.font}px ${this.fontFamily}`;
-    if (ctx.measureText(text).width <= maxWidth) return text;
+    const width = ctx.measureText(text).width;
+    if (width <= maxWidth) {
+      this.textCache.set(key, {text, width});
+      return text;
+    }
     const suffix = '\u2026';
     let clipped = text;
     while (clipped.length > 1 && ctx.measureText(clipped + suffix).width > maxWidth) clipped = clipped.slice(0, -1);
-    return clipped.trimEnd() + suffix;
+    const result = clipped.trimEnd() + suffix;
+    this.textCache.set(key, {text: result, width: ctx.measureText(result).width});
+    return result;
+  }
+
+  private textWidth(text: string, weight = 400): number {
+    const key = `${weight}:width:${text}`;
+    const cached = this.textCache.get(key);
+    if (cached) return cached.width;
+    const ctx = this.ctx!;
+    ctx.font = `${weight} ${this.layout.font}px ${this.fontFamily}`;
+    const width = ctx.measureText(text).width;
+    this.textCache.set(key, {text, width});
+    return width;
   }
 
   private mapX(value: number): number {
@@ -267,7 +323,7 @@ export class CurveScene implements Scene {
       ctx.lineTo(x, bottom + 4);
       ctx.stroke();
       const label = tickText(value);
-      const width = ctx.measureText(label).width;
+      const width = this.textWidth(label);
       ctx.textAlign = 'left';
       ctx.fillText(label, clamp(x - width / 2, 1, this.w - width - 1), bottom + font + 3);
     }
@@ -299,7 +355,7 @@ export class CurveScene implements Scene {
       const x = this.mapX(mark.x);
       const active = Math.abs(this.knob - mark.x) <= this.spec.x.step / 2 + 1e-10;
       const text = this.trimText(mark.label, Math.max(40, right - left));
-      const width = ctx.measureText(text).width;
+      const width = this.textWidth(text, 600);
       const labelX = clamp(x - width / 2, left, right - width);
       let row = 0;
       while (row < occupied.length && labelX < occupied[row][1] + 5) row++;
@@ -372,7 +428,7 @@ export class CurveScene implements Scene {
     ctx.font = `600 ${font}px ${this.fontFamily}`;
     ctx.textBaseline = 'alphabetic';
     for (const label of labels) {
-      const width = ctx.measureText(label.text).width;
+      const width = this.textWidth(label.text, 600);
       const rightSide = label.x + width + 8 <= right;
       ctx.textAlign = rightSide ? 'left' : 'right';
       ctx.fillStyle = label.color;
@@ -409,7 +465,7 @@ export class CurveScene implements Scene {
         ctx.fill();
       }
       labels.push({
-        text: this.withUnit(value, this.spec.y.unit, this.spec.y.decimals),
+        text: this.withUnit(this.interpolate(item, this.knob), this.spec.y.unit, this.spec.y.decimals),
         color: item.role === 'main' ? C.green : C.pink,
         x,
         y,
@@ -417,16 +473,16 @@ export class CurveScene implements Scene {
       });
     }
 
-    this.spreadBaselines(labels, top + font, bottom - 8);
+    this.spreadBaselines(labels, top + font, bottom - font - 10);
     ctx.font = `600 ${font}px ${this.fontFamily}`;
     ctx.textBaseline = 'alphabetic';
-    const widest = labels.reduce((width, label) => Math.max(width, ctx.measureText(label.text).width), 0);
-    const drawLeft = x + widest + 10 > right;
+    const widest = labels.reduce((width, label) => Math.max(width, this.textWidth(label.text, 600)), 0);
+    const drawLeft = x >= (left + right) / 2 || x + widest + 10 > right;
     const markerAtRight = x > right - font * 1.5;
     const nameWidth = markerAtRight
       ? series.reduce((width, item) => Math.max(
         width,
-        ctx.measureText(this.trimText(item.name, Math.max(40, right - left - 8), 600)).width,
+        this.textWidth(this.trimText(item.name, Math.max(40, right - left - 8), 600), 600),
       ), 0)
       : 0;
     const anchor = drawLeft
@@ -439,28 +495,10 @@ export class CurveScene implements Scene {
     }
   }
 
-  private readouts(series: CurveSeries[]): Readout[] {
-    const result: Readout[] = [{
-      label: this.spec.x.label,
-      value: this.withUnit(this.knob, this.spec.x.unit, this.spec.x.decimals),
-    }];
-    const main = series.find(item => item.role === 'main');
-    const other = series.find(item => item.role === 'other');
-    if (main) result.push({
-      label: main.name,
-      value: this.withUnit(this.interpolate(main, this.knob), this.spec.y.unit, this.spec.y.decimals),
-    });
-    if (other) result.push({
-      label: other.name,
-      value: this.withUnit(this.interpolate(other, this.knob), this.spec.y.unit, this.spec.y.decimals),
-    });
-    return result;
-  }
-
   frame(dt: number): Readout[] {
     const ctx = this.ctx;
     const shown = this.shownSeries();
-    if (!ctx) return this.readouts(shown);
+    if (!ctx) return this.readoutCache;
     const delta = Number.isFinite(dt) ? clamp(dt, 0, 0.1) : 0;
     this.markerElapsed = Math.min(0.15, this.markerElapsed + delta);
     this.markerVisual = this.markerFrom + (this.knob - this.markerFrom) * easeOut(this.markerElapsed / 0.15);
@@ -480,6 +518,6 @@ export class CurveScene implements Scene {
     this.drawSeriesNames(shown);
     this.drawMarker(shown);
     ctx.restore();
-    return this.readouts(shown);
+    return this.readoutCache;
   }
 }

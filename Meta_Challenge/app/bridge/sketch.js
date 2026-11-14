@@ -15,9 +15,14 @@ const finite = (value) => typeof value === 'number' && Number.isFinite(value);
 const bounded = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
 const safeValue = (value) => bounded(value, -MAX_VALUE, MAX_VALUE);
 
-function text(value, max, allowEmpty = false) {
+function text(value, max, allowEmpty = false, wordLimit = null) {
   if (typeof value !== 'string') return null;
-  const cleaned = value.trim().slice(0, max);
+  let cleaned = value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (wordLimit) {
+    const words = cleaned.split(' ').filter(Boolean);
+    if (words.length > wordLimit) cleaned = words.slice(0, wordLimit).join(' ') + '\u2026';
+  }
+  if (cleaned.length > max) cleaned = cleaned.slice(0, Math.max(0, max - 1)).trimEnd() + '\u2026';
   return cleaned.length || allowEmpty ? cleaned : null;
 }
 
@@ -67,10 +72,11 @@ function flowSpec(value) {
   }
 
   const steps = [];
-  for (const item of value.steps) {
+  if (value.steps.length > 6) return null;
+  for (const item of value.steps.slice(0, 6)) {
     if (!record(item) || !finite(item.upTo) || !Array.isArray(item.focus) || typeof item.losses !== 'boolean') return null;
     const focus = [];
-    for (const raw of item.focus) {
+    for (const raw of item.focus.slice(0, 6)) {
       const id = text(raw, 48);
       if (!id) return null;
       if (ids.has(id) && !focus.includes(id)) focus.push(id);
@@ -125,7 +131,8 @@ function numberSpec(value) {
   }
 
   const steps = [];
-  for (const item of value.steps) {
+  if (value.steps.length > 6) return null;
+  for (const item of value.steps.slice(0, 6)) {
     if (!record(item) || typeof item.show !== 'string' || !NUMBER_SHOWS.has(item.show)) return null;
     if (item.show === 'compare' && !compare) return null;
     steps.push({ show: item.show });
@@ -134,7 +141,7 @@ function numberSpec(value) {
 }
 
 function curveUnit(value) {
-  return typeof value === 'string' ? value.trim().slice(0, 48) : null;
+  return text(value, 48, true);
 }
 
 function curveSpec(value) {
@@ -150,20 +157,22 @@ function curveSpec(value) {
   const yDecimals = decimalPlaces(value.y.decimals);
   if (!xLabel || xUnit === null || Number.isNaN(xDecimals) || !yLabel || yUnit === null || Number.isNaN(yDecimals)) return null;
   if (!finite(value.x.min) || !finite(value.x.max) || !finite(value.x.step) || !finite(value.x.value)) return null;
-  if (value.x.min >= value.x.max || value.x.step <= 0) return null;
+  const xMin = safeValue(value.x.min);
+  const xMax = safeValue(value.x.max);
+  const xStep = safeValue(value.x.step);
+  if (xMin >= xMax || xStep <= 0) return null;
 
   const series = [];
   const names = new Set();
   const roles = new Set();
-  for (const item of value.series) {
+  for (const item of value.series.slice(0, 2)) {
     if (!record(item)) return null;
     const name = text(item.name, 48);
     if (!name || names.has(name) || (item.role !== 'main' && item.role !== 'other') || roles.has(item.role) || !Array.isArray(item.points)) return null;
     const points = [];
-    for (const point of item.points) {
+    for (const point of item.points.slice(0, 64)) {
       if (!Array.isArray(point) || point.length < 2 || !finite(point[0]) || !finite(point[1])) continue;
-      points.push([point[0], point[1]]);
-      if (points.length === 64) break;
+      points.push([safeValue(point[0]), safeValue(point[1])]);
     }
     if (points.length < 2) return null;
     for (let index = 1; index < points.length; index += 1) {
@@ -180,15 +189,16 @@ function curveSpec(value) {
     if (!record(item) || !finite(item.x)) return null;
     const label = text(item.label, 48);
     if (!label) return null;
-    marks.push({ x: item.x, label });
+    marks.push({ x: safeValue(item.x), label });
   }
 
   const steps = [];
   const mainName = series.find((item) => item.role === 'main').name;
-  for (const item of value.steps) {
+  if (value.steps.length > 6) return null;
+  for (const item of value.steps.slice(0, 6)) {
     if (!record(item) || !Array.isArray(item.series)) return null;
     const shown = [];
-    for (const raw of item.series) {
+    for (const raw of item.series.slice(0, 2)) {
       const name = text(raw, 48);
       if (!name) return null;
       if (names.has(name) && !shown.includes(name)) shown.push(name);
@@ -201,10 +211,10 @@ function curveSpec(value) {
     x: {
       label: xLabel,
       unit: xUnit,
-      min: value.x.min,
-      max: value.x.max,
-      step: Math.min(value.x.step, value.x.max - value.x.min),
-      value: bounded(value.x.value, value.x.min, value.x.max),
+      min: xMin,
+      max: xMax,
+      step: Math.min(xStep, xMax - xMin),
+      value: bounded(safeValue(value.x.value), xMin, xMax),
       ...(xDecimals === null ? {} : { decimals: xDecimals }),
     },
     y: { label: yLabel, unit: yUnit, ...(yDecimals === null ? {} : { decimals: yDecimals }) },
@@ -220,14 +230,14 @@ function chapter(value) {
   const lead = value.lead === undefined ? null : text(value.lead, 120, true);
   if (!title || (value.lead !== undefined && lead === null)) return null;
   if (!Array.isArray(value.captions) || value.captions.length < 1 || value.captions.length > 6) return null;
-  const captions = value.captions.map((caption) => text(caption, 200));
+  const captions = value.captions.slice(0, 6).map((caption) => text(caption, 200, false, 24));
   if (captions.some((caption) => caption === null)) return null;
 
   let knobs;
   if (value.knobs !== undefined) {
     if (!Array.isArray(value.knobs) || value.knobs.length !== captions.length) return null;
     knobs = [];
-    for (const knob of value.knobs) {
+    for (const knob of value.knobs.slice(0, 6)) {
       if (knob === null) { knobs.push(null); continue; }
       if (!record(knob) || (knob.axis !== 'x' && knob.axis !== 'y')) return null;
       const label = text(knob.label, 24);
@@ -255,10 +265,11 @@ export function validateSketch(value) {
   try {
     if (!record(value)) return null;
     const label = text(value.label, 40);
-    const answer = text(value.answer, 120);
+    const answer = text(value.answer, 120, false, 12);
     if (!label || !answer || !Array.isArray(value.chapters) || value.chapters.length < 1 || value.chapters.length > 3) return null;
-    const chapters = value.chapters.map(chapter);
+    const chapters = value.chapters.slice(0, 3).map(chapter);
     if (chapters.some((item) => item === null)) return null;
+    if (new Set(chapters.map((item) => item.lens)).size !== chapters.length) return null;
     return { label, answer, verified: false, chapters };
   } catch {
     return null;

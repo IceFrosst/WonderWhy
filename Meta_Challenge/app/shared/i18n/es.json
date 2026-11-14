@@ -16,13 +16,20 @@
     "guitar": {
       "label": "Cuerda de guitarra",
       "answer": "Una cuerda más corta vibra más rápido, así que la nota es más aguda.",
+      "tagline": "Ondas estacionarias",
+      "short": "Guitarra",
       "chapters": {
         "motion": {
           "title": "Ondas estacionarias",
           "captions": [
-            "Pulsar un traste acorta la cuerda. La mitad de longitud da el doble de frecuencia: f = v / 2L.",
+            "Al pisar un traste se acorta la cuerda. La mitad de longitud da el doble de frecuencia, así que la nota sube una octava.",
             "Una cuerda también vibra en patrones enteros: armónicos n = 1, 2, 3 a f, 2f, 3f.",
             "La velocidad de la onda depende de la tensión T y la masa por longitud: f = (1/2L) sqrt(T/mu). Más tensa = más aguda."
+          ],
+          "knobs": [
+            "traste",
+            "traste",
+            "tensión"
           ]
         },
         "whatif": {
@@ -30,8 +37,33 @@
           "lead": "Cada traste sube la nota en la misma proporción.",
           "captions": [
             "Cada traste acorta la cuerda y sube la nota un 6 por ciento aproximadamente. Doce trastes duplican la frecuencia: una octava.",
-            "Una cuerda el doble de larga suena una octava más grave en cada traste. Por eso los instrumentos graves son grandes."
-          ]
+            "Una cuerda el doble de larga suena una octava más grave en cada traste. En parte por eso los instrumentos graves son grandes."
+          ],
+          "knobs": [
+            "traste",
+            "traste"
+          ],
+          "spec": {
+            "x": {
+              "label": "traste"
+            },
+            "y": {
+              "label": "frecuencia"
+            },
+            "series": [
+              {
+                "name": "Esta cuerda"
+              },
+              {
+                "name": "Doble longitud"
+              }
+            ],
+            "marks": [
+              {
+                "label": "traste 12: doble"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Sigue el sonido",
@@ -41,47 +73,148 @@
             "La cuerda es demasiado fina para mover mucho aire sola. En cambio hace vibrar el puente al que está atada.",
             "El puente hace vibrar la tapa fina. Su gran superficie mueve mucho aire, y eso hace la nota fuerte.",
             "Las ondas de presión viajan por el aire a 343 metros por segundo hasta tu oído."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Dedo",
+                "sub": "pulsa"
+              },
+              {
+                "label": "Cuerda",
+                "sub": "vibra"
+              },
+              {
+                "label": "Puente",
+                "sub": "lo transmite"
+              },
+              {
+                "label": "Tapa",
+                "sub": "empuja el aire"
+              },
+              {
+                "label": "Tu oído",
+                "sub": "oye una nota"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Casi todo es calor, poco es sonido"
+              }
+            ]
+          }
         },
         "number": {
           "title": "El número",
           "lead": "Una cuerda La al aire vibra 110 veces cada segundo.",
           "captions": [
-            "La frecuencia cuenta las vibraciones por segundo. La cuerda La grave al aire de la guitarra hace 110: 110 hercios.",
+            "La frecuencia cuenta las vibraciones por segundo. La cuerda La al aire de la guitarra hace 110: 110 hercios.",
             "El traste 12 reduce la cuerda a la mitad, así que la nota se duplica a 220 Hz. La onda recorre la cuerda a 143 m/s.",
             "Cada duplicación es una octava. Dos octavas sobre esta cuerda están los 440 Hz con que afinan las orquestas."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "cuerda de La al aire, ciclos por segundo",
+              "unit": "Hz"
+            },
+            "rows": [
+              {
+                "label": "Misma cuerda, traste 12",
+                "unit": "Hz"
+              },
+              {
+                "label": "Velocidad de onda en la cuerda",
+                "unit": "m/s"
+              },
+              {
+                "label": "Longitud de onda sonora en aire",
+                "unit": "m"
+              }
+            ],
+            "compare": {
+              "label": "La de afinación, dos octavas más",
+              "unit": "Hz"
+            }
+          }
         }
       }
     },
     "ball": {
       "label": "Pelota lanzada",
       "answer": "La gravedad curva la trayectoria.",
+      "tagline": "Movimiento parabólico",
+      "short": "Pelota",
       "chapters": {
         "motion": {
           "title": "Tiro parabólico",
           "captions": [
             "La gravedad tira de la pelota siempre hacia abajo, y su trayectoria se curva en parábola.",
-            "La velocidad horizontal nunca cambia. Solo cambia la vertical, porque la gravedad actúa hacia abajo.",
-            "La resistencia del aire frena la pelota, así que el mejor ángulo baja de 45 grados. Gris = sin aire."
+            "Sin aire, la velocidad horizontal nunca cambia. Solo cambia la vertical, porque la gravedad actúa hacia abajo.",
+            "El aire frena la pelota, así que el mejor ángulo baja de 45 grados. La trayectoria tenue muestra el mismo lanzamiento sin aire."
+          ],
+          "knobs": [
+            "ángulo",
+            "velocidad",
+            "ángulo"
           ]
         },
         "compare": {
           "title": "Rebote",
           "lead": "Cada rebote conserva solo parte de la energía.",
           "captions": [
-            "Cada rebote es más bajo porque la pelota conserva solo parte de su energía: la razón de alturas es e al cuadrado.",
+            "Cada bote es más bajo que el anterior porque la pelota conserva solo parte de su energía cada vez que golpea el suelo.",
             "Al caer, la energía potencial pasa a energía cinética; el aplastamiento la guarda como un muelle; algo se pierde como calor y sonido en cada rebote.",
             "El rebote depende del material: una pelota superbotante vuelve casi entera, la arcilla absorbe la energía como calor y apenas rebota."
+          ],
+          "knobs": [
+            "altura de caída",
+            "altura de caída",
+            "tipo de pelota"
           ]
         },
         "whatif": {
           "title": "¿Y si...?",
           "lead": "Cambia el ángulo, luego cambia de planeta.",
           "captions": [
-            "Cambia el ángulo. Un tiro plano y uno muy inclinado se quedan cortos. Con 45 grados llega más lejos.",
+            "Cambia el ángulo. Un tiro plano y uno muy inclinado se quedan cortos. Sin aire, con 45 grados llega más lejos.",
             "En la Luna la gravedad es seis veces menor, así que cada tiro llega seis veces más lejos. El mejor ángulo sigue siendo 45."
-          ]
+          ],
+          "knobs": [
+            "ángulo",
+            "ángulo"
+          ],
+          "spec": {
+            "x": {
+              "label": "ángulo"
+            },
+            "y": {
+              "label": "distancia"
+            },
+            "series": [
+              {
+                "name": "Tierra"
+              },
+              {
+                "name": "Luna"
+              }
+            ],
+            "marks": [
+              {
+                "label": "45: máximo"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Sigue la energía",
@@ -89,31 +222,102 @@
           "captions": [
             "Tu brazo hace trabajo sobre la pelota. Una pelota de tenis lanzada a 10 metros por segundo lleva unos 2.9 julios.",
             "Al subir, la energía cinética se convierte en energía potencial. En lo alto de un tiro de 45 grados es mitad y mitad.",
-            "Al bajar, la energía potencial vuelve a ser movimiento. Un poco se pierde por la resistencia del aire.",
+            "Al bajar, la energía potencial vuelve a ser movimiento. El aire se lleva una parte: cerca de una décima en una pelota de tenis.",
             "Al caer, la energía cinética se vuelve calor, sonido y el siguiente rebote. Nada se destruye."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Tu brazo",
+                "sub": "da 2.9 J"
+              },
+              {
+                "label": "Energía cinética",
+                "sub": "al soltar"
+              },
+              {
+                "label": "Energía potencial",
+                "sub": "mitad en la cima"
+              },
+              {
+                "label": "Energía cinética",
+                "sub": "al bajar"
+              },
+              {
+                "label": "Calor, ruido, bote",
+                "sub": "al caer"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Resistencia del aire"
+              }
+            ]
+          }
         },
         "number": {
           "title": "El número",
           "lead": "Un tiro de 10 m/s a 45 grados cae a unos 10 metros.",
           "captions": [
-            "El alcance es la velocidad al cuadrado dividida por g a 45 grados: 100 dividido por 9.81 son unos 10 metros. Se ignora el aire.",
-            "La pelota está 1.4 segundos en el aire y sube a 2.5 metros. Diez metros por segundo son 36 km/h.",
+            "Lanzada a 10 metros por segundo y 45 grados, una pelota cae a unos 10 metros si se ignora el aire.",
+            "Permanece 1.4 segundos en el aire y sube hasta 2.5 metros. El alcance es la velocidad al cuadrado dividida por g: 100 / 9.81.",
             "La Luna atrae seis veces menos, así que el mismo tiro llega seis veces más lejos: unos 62 metros."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "alcance a 10 m/s y 45 grados",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Tiempo en el aire",
+                "unit": "s"
+              },
+              {
+                "label": "Punto más alto",
+                "unit": "m"
+              },
+              {
+                "label": "Velocidad de lanzamiento",
+                "unit": "km/h"
+              }
+            ],
+            "compare": {
+              "label": "El mismo lanzamiento en la Luna",
+              "unit": "m"
+            }
+          }
         }
       }
     },
     "bicycle": {
       "label": "Marchas de bici",
       "answer": "Un plato grande y un piñón pequeño cambian fuerza por velocidad.",
+      "tagline": "Relación de marchas",
+      "short": "Bici",
       "chapters": {
         "motion": {
           "title": "Relación de marchas",
           "captions": [
-            "La cadena une dos engranajes. Relación = dientes delante / dientes detrás.",
-            "Cada vuelta de pedal tira de la cadena tantos dientes como tiene el plato, así que la rueda gira según la relación.",
+            "La cadena une un plato grande con un piñón pequeño, por lo que una vuelta de pedal hace girar la rueda más de una vez.",
+            "La relación es el número de dientes delanteros dividido por los traseros. Cada vuelta de pedal hace pasar ese número de eslabones por el piñón.",
             "La energía se conserva: una relación mayor da más velocidad por pedalada pero menos empuje en la rueda."
+          ],
+          "knobs": [
+            "piñón",
+            "piñón",
+            "piñón"
           ]
         },
         "whatif": {
@@ -121,8 +325,33 @@
           "lead": "Menos dientes detrás, más velocidad por pedalada.",
           "captions": [
             "Menos dientes detrás dan más velocidad con el mismo pedaleo: 44 km/h en la marcha más corta, 14 en la más larga.",
-            "El plato pequeño baja cada marcha en un tercio aproximadamente. Vas más lento, pero cada pedalada empuja más."
-          ]
+            "El plato pequeño baja cada marcha en un 30 por ciento aproximadamente. Vas más lento, pero cada pedalada empuja más."
+          ],
+          "knobs": [
+            "dientes traseros",
+            "dientes traseros"
+          ],
+          "spec": {
+            "x": {
+              "label": "dientes traseros"
+            },
+            "y": {
+              "label": "velocidad a 80 vueltas/min"
+            },
+            "series": [
+              {
+                "name": "48 delante"
+              },
+              {
+                "name": "34 delante"
+              }
+            ],
+            "marks": [
+              {
+                "label": "16: 30 km/h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Sigue la fuerza",
@@ -132,38 +361,148 @@
             "El plato tensa la parte superior de la cadena. Una cadena limpia pierde solo un 3 por ciento por rozamiento.",
             "La cadena hace girar el piñón. Un piñón pequeño hace girar la rueda varias veces por cada vuelta de pedal.",
             "El neumático empuja el suelo hacia atrás y el suelo empuja la bici hacia delante. Ese empuje es lo que te mueve."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Tu pierna",
+                "sub": "empuja"
+              },
+              {
+                "label": "Pedal y biela",
+                "sub": "una palanca"
+              },
+              {
+                "label": "Cadena",
+                "sub": "se tensa"
+              },
+              {
+                "label": "Piñón",
+                "sub": "gira la rueda"
+              },
+              {
+                "label": "Neumático y suelo",
+                "sub": "te empuja"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Fricción de la cadena"
+              }
+            ]
+          }
         },
         "number": {
           "title": "El número",
           "lead": "Una vuelta de pedal en marcha larga te lleva más de 6 metros.",
           "captions": [
-            "48 dientes divididos entre 16 dan una relación de 3. La rueda gira tres veces por pedalada: 3 por 2.1 metros.",
-            "A 80 pedaladas por minuto son 30 km/h. El precio: solo el 17 por ciento de tu empuje llega al neumático.",
+            "El plato tiene tres veces más dientes que el piñón, así que la rueda gira tres veces por vuelta de pedal: 6.3 metros.",
+            "A 80 pedaladas por minuto son 30 km/h. El precio: el neumático empuja con solo el 17 por ciento de tu fuerza en el pedal.",
             "Una marcha corta lo invierte. Triple empuje para subir, pero solo 2.1 metros por vuelta."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "avance por pedalada, 48 dientes delante, 16 detrás",
+              "unit": "m"
+            },
+            "rows": [
+              {
+                "label": "Relación",
+                "unit": "a 1"
+              },
+              {
+                "label": "Velocidad a 80 vueltas por minuto",
+                "unit": "km/h"
+              },
+              {
+                "label": "Empuje rueda por fuerza pedal",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "Marcha corta, 34 y 34: triple empuje, pero solo",
+              "unit": "m/vuelta"
+            }
+          }
         }
       }
     },
     "kettle": {
       "label": "Hervidor hirviendo",
       "answer": "El agua caliente sube, la fría baja, las burbujas son vapor.",
+      "tagline": "Convección y ebullición",
+      "short": "Hervidor",
       "chapters": {
         "motion": {
           "title": "Convección y ebullición",
           "captions": [
             "El agua calentada se dilata y pesa menos, así que sube por el centro y baja por los lados.",
             "Los puntos calientes del fondo dejan que se formen burbujas de vapor (nucleación), luego suben y estallan.",
-            "A 100 C la energía extra convierte el agua en vapor, no la calienta. Es el calor latente."
+            "A 100 °C la energía extra convierte el agua en vapor, no la calienta. Es el calor latente."
+          ],
+          "knobs": [
+            "calor",
+            "calor",
+            "calor"
+          ]
+        },
+        "cutaway": {
+          "title": "Corte abierto",
+          "lead": "Una resistencia, agua en movimiento y un interruptor que siente el vapor.",
+          "captions": [
+            "Bajo el fondo de la jarra está la resistencia: una espiral de alambre que se calienta al pasar corriente.",
+            "El agua en contacto con el fondo caliente se calienta, sube por el centro, se enfría arriba y baja por los lados.",
+            "Al hervir, el vapor baja por un tubo hasta una tira metálica en la base. La tira se dobla y corta la corriente."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
           ]
         },
         "whatif": {
           "title": "¿Y si...?",
-          "lead": "El doble de agua tarda el doble.",
+          "lead": "El doble de agua tarda aproximadamente el doble.",
           "captions": [
-            "El tiempo de ebullición crece en línea recta con el agua. El doble de agua necesita el doble de tiempo y de energía.",
-            "El agua que empieza a 60 C necesita solo la mitad del calentamiento, así que hierve en la mitad de tiempo."
-          ]
+            "El tiempo de ebullición crece casi en línea recta con el agua. El doble de agua necesita aproximadamente el doble de tiempo y de energía.",
+            "El agua que empieza a 60 °C necesita solo la mitad del calentamiento, así que hierve en la mitad de tiempo."
+          ],
+          "knobs": [
+            "litros",
+            "litros"
+          ],
+          "spec": {
+            "x": {
+              "label": "litros"
+            },
+            "y": {
+              "label": "tiempo hasta hervir"
+            },
+            "series": [
+              {
+                "name": "Desde 20 °C"
+              },
+              {
+                "name": "Desde 60 °C"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 L: 3.2 min"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Sigue la energía",
@@ -172,8 +511,39 @@
             "La electricidad fluye del enchufe a una espiral de cable en la base: la resistencia calefactora.",
             "La resistencia se opone a la corriente, así que toda la energía eléctrica se convierte en calor, que pasa al agua.",
             "Un 88 por ciento acaba en el agua. El resto calienta la jarra y el aire de alrededor.",
-            "A 100 C el agua se vuelve vapor. El vapor calienta una lámina metálica que se dobla y apaga el hervidor con un clic."
-          ]
+            "A 100 °C el agua se vuelve vapor. El vapor calienta una lámina metálica que se dobla y apaga el hervidor con un clic."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Enchufe",
+                "sub": "230 V"
+              },
+              {
+                "label": "Resistencia",
+                "sub": "2000 W"
+              },
+              {
+                "label": "Agua",
+                "sub": "de 20 a 100 °C"
+              },
+              {
+                "label": "Vapor",
+                "sub": "activa el interruptor"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Calor al recipiente y aire"
+              }
+            ]
+          }
         },
         "number": {
           "title": "El número",
@@ -182,20 +552,60 @@
             "Calentar un litro de agua 80 grados necesita 335 kilojulios. Desde el enchufe son unos 0.11 kWh.",
             "Un hervidor de 2 kW tarda unos tres minutos, y cuesta unos dos céntimos.",
             "La misma energía encendería una lámpara LED de 10 vatios más de diez horas. Hierve solo lo que necesites."
-          ]
+          ],
+          "knobs": [
+            "litros",
+            "litros",
+            "litros"
+          ],
+          "spec": {
+            "headline": {
+              "label": "para hervir esta cantidad desde 20 °C",
+              "unit": "kWh"
+            },
+            "rows": [
+              {
+                "label": "Tiempo en un hervidor de 2 kW",
+                "unit": "min"
+              },
+              {
+                "label": "Coste a 20 céntimos/kWh",
+                "unit": "céntimos"
+              },
+              {
+                "label": "Parte que llega al agua",
+                "unit": "%"
+              }
+            ],
+            "compare": {
+              "label": "La misma energía alimenta una LED de 10 W",
+              "unit": "horas"
+            },
+            "knob": {
+              "label": "litros",
+              "unit": "L"
+            }
+          }
         }
       }
     },
     "pendulum": {
       "label": "Llaves oscilantes",
       "answer": "El tiempo depende de la longitud, no del peso.",
+      "tagline": "Periodo de oscilación",
+      "short": "Llaves",
       "chapters": {
         "motion": {
           "title": "Tiempo de oscilación",
           "captions": [
-            "Una oscilación dura T = 2 pi sqrt(L/g). Un hilo más largo oscila más despacio.",
-            "El ángulo sigue una onda seno suave. Cuatro veces la longitud da el doble de periodo.",
+            "En oscilaciones pequeñas, el tiempo de una oscilación depende solo de la longitud. Una cuerda más larga oscila más despacio.",
+            "El ángulo sigue una onda sinusoidal suave con T = 2 pi sqrt(L/g). Cuatro veces la longitud duplica el periodo.",
             "La masa se cancela: dos pesas de distinta masa en hilos iguales oscilan juntas."
+          ],
+          "knobs": [
+            "longitud",
+            "longitud",
+            "longitud"
           ]
         },
         "whatif": {
@@ -204,32 +614,119 @@
           "captions": [
             "Alarga el hilo y la oscilación se hace más lenta, pero la curva se aplana. Cuatro veces la longitud solo duplica el tiempo.",
             "En la Luna el mismo hilo oscila unas dos veces y media más despacio, porque la gravedad tira con más suavidad."
-          ]
+          ],
+          "knobs": [
+            "longitud",
+            "longitud"
+          ],
+          "spec": {
+            "x": {
+              "label": "longitud"
+            },
+            "y": {
+              "label": "tiempo de ida y vuelta"
+            },
+            "series": [
+              {
+                "name": "Tierra"
+              },
+              {
+                "name": "Luna"
+              }
+            ],
+            "marks": [
+              {
+                "label": "1 m: 2 s"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Sigue la energía",
           "lead": "La energía potencial y la cinética se intercambian.",
           "captions": [
             "Levantar las llaves a un lado guarda energía potencial. Todavía nada se mueve.",
-            "Suelta: la energía potencial pasa a movimiento. Abajo todo es movimiento, unos medio metro por segundo.",
+            "Suelta: la energía potencial pasa a movimiento. Abajo todo es movimiento: medio metro por segundo en una oscilación de 20 grados.",
             "Al otro lado las llaves suben otra vez y el movimiento vuelve a ser altura. Luego todo se invierte.",
             "En cada oscilación el aire se lleva algo de energía como calor, así que las oscilaciones se reducen. El tiempo de oscilación no cambia."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Lo levantas",
+                "sub": "energía potencial"
+              },
+              {
+                "label": "Punto más bajo",
+                "sub": "todo movimiento"
+              },
+              {
+                "label": "Otro lado",
+                "sub": "altura de nuevo"
+              },
+              {
+                "label": "El aire",
+                "sub": "la quita despacio"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Resistencia del aire, un poco por oscilación"
+              }
+            ]
+          }
         },
         "number": {
           "title": "El número",
-          "lead": "Unas llaves en un cordón de 25 cm tardan un segundo por oscilación.",
+          "lead": "Unas llaves en un cordón de 25 cm van y vuelven cada segundo.",
           "captions": [
-            "El tiempo de oscilación es 2 pi por la raíz cuadrada de longitud entre g. Para 25 centímetros es un segundo.",
-            "Cuatro veces la longitud duplica el tiempo: dos segundos para un metro. El peso de las llaves no cambia nada.",
+            "Unas llaves en un cordón de 25 centímetros van y vuelven en cerca de un segundo.",
+            "El periodo es 2 pi por la raíz cuadrada de la longitud dividida por g. Cuatro veces la longitud lo duplica. El peso no influye.",
             "Una gravedad más débil tira con más suavidad. En la Luna el mismo cordón necesita dos segundos y medio."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "una oscilación completa con cuerda de 25 cm",
+              "unit": "s"
+            },
+            "rows": [
+              {
+                "label": "Con una cuerda de 1 m",
+                "unit": "s"
+              },
+              {
+                "label": "Con llaves del doble de peso",
+                "unit": "s"
+              },
+              {
+                "label": "Velocidad abajo, oscilación 20°",
+                "unit": "m/s"
+              }
+            ],
+            "compare": {
+              "label": "Las mismas llaves en la Luna oscilan en",
+              "unit": "s"
+            }
+          }
         }
       }
     },
     "phone": {
       "label": "Teléfono móvil",
       "answer": "Unas nueve capas finas: cristal, táctil, píxeles, chips y una batería.",
+      "tagline": "Qué hay dentro",
+      "short": "Móvil",
       "chapters": {
         "inside": {
           "title": "Capas",
@@ -240,6 +737,14 @@
             "La placa lógica lleva procesador, memoria y chips de radio. El procesador hace miles de millones de pasos simples por segundo.",
             "Iones de litio se mueven entre dos capas de electrodos al cargar y usar el móvil. La batería es la parte más grande del interior.",
             "La bobina carga sin cable por inducción magnética. La cámara apila varias lentes sobre un sensor diminuto."
+          ],
+          "knobs": [
+            "girar",
+            "girar",
+            "girar",
+            "girar",
+            "girar",
+            "girar"
           ]
         },
         "whatif": {
@@ -248,7 +753,32 @@
           "captions": [
             "Un cargador de 5 vatios necesita más de tres horas. Uno de 20 vatios, menos de una. Los móviles reales frenan cerca del final.",
             "La batería de una tableta guarda el doble de energía, así que cualquier cargador tarda el doble en llenarla."
-          ]
+          ],
+          "knobs": [
+            "cargador",
+            "cargador"
+          ],
+          "spec": {
+            "x": {
+              "label": "cargador"
+            },
+            "y": {
+              "label": "tiempo mínimo de carga"
+            },
+            "series": [
+              {
+                "name": "Móvil, 15 Wh"
+              },
+              {
+                "name": "Tableta, 31 Wh"
+              }
+            ],
+            "marks": [
+              {
+                "label": "20 W: 0.9 h"
+              }
+            ]
+          }
         },
         "flow": {
           "title": "Sigue la energía",
@@ -258,7 +788,42 @@
             "En la batería, los iones de litio pasan de una capa de electrodos a la otra. Así se guarda la energía.",
             "Al usar el móvil, los iones vuelven. La corriente alimenta el procesador, la radio y la pantalla.",
             "Al final todo sale como luz, ondas de radio y calor. Por eso un móvil ocupado se siente caliente."
-          ]
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Enchufe",
+                "sub": "230 V AC"
+              },
+              {
+                "label": "Cargador",
+                "sub": "produce de 5 a 20 V DC"
+              },
+              {
+                "label": "Batería",
+                "sub": "guarda 15 Wh"
+              },
+              {
+                "label": "Chips y pantalla",
+                "sub": "la usan"
+              },
+              {
+                "label": "Luz, radio y calor",
+                "sub": "salen del móvil"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Calor del cargador"
+              }
+            ]
+          }
         },
         "number": {
           "title": "El número",
@@ -266,8 +831,158 @@
           "captions": [
             "4000 miliamperios hora a 3.85 voltios son unos 15 vatios hora: la energía de una batería llena.",
             "Cargarla cuesta menos de medio céntimo. Un año entero de cargas diarias cuesta algo más de un euro.",
-            "Un hervidor gasta la misma energía en 28 segundos. Calentar agua cuesta mucho más que calcular."
-          ]
+            "Un hervidor de 2 kW gasta la carga completa de un móvil en 28 segundos. El móvil gasta esa energía durante todo un día."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "energía de una batería llena",
+              "unit": "Wh"
+            },
+            "rows": [
+              {
+                "label": "Una carga a 20 céntimos/kWh",
+                "unit": "céntimos"
+              },
+              {
+                "label": "Un año de carga diaria",
+                "unit": "euros"
+              },
+              {
+                "label": "Píxeles de la pantalla",
+                "unit": "millones"
+              }
+            ],
+            "compare": {
+              "label": "Un hervidor usa la misma energía en",
+              "unit": "segundos"
+            }
+          }
+        }
+      }
+    },
+    "spoon": {
+      "label": "Cuchara de metal",
+      "answer": "El metal aleja el calor de tu piel con rapidez.",
+      "tagline": "Por qué el metal parece frío",
+      "short": "Cuchara",
+      "chapters": {
+        "zoom": {
+          "title": "Acércate",
+          "lead": "El metal es una red de átomos en un mar de electrones libres.",
+          "captions": [
+            "Una cuchara de acero parece lisa y maciza. Sus secretos son demasiado pequeños para verlos.",
+            "Trescientas veces más cerca, el acero es un mosaico de diminutos granos cristalinos, cada uno de unas centésimas de milímetro.",
+            "Cien mil veces más cerca aún, cada grano es una red ordenada de átomos. Electrones libres se mueven entre ellos y ayudan a transportar el calor."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "levels": [
+              {
+                "label": "Cuchara"
+              },
+              {
+                "label": "Granos cristalinos",
+                "times": "x 300"
+              },
+              {
+                "label": "Átomos y electrones",
+                "times": "x 50 000 000"
+              }
+            ],
+            "heat": {
+              "label": "calor"
+            }
+          }
+        },
+        "flow": {
+          "title": "Sigue el calor",
+          "lead": "El calor recorre el metal desde el extremo caliente hasta tu mano.",
+          "captions": [
+            "El té caliente hace vibrar los átomos de la cuchara. Esa vibración es calor.",
+            "La vibración avanza por el metal, ayudada por los electrones libres. En un minuto el mango está tibio.",
+            "Tus dedos toman el calor del mango. Una parte también se pierde en el aire por el camino."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "nodes": [
+              {
+                "label": "Té caliente",
+                "sub": "80 °C"
+              },
+              {
+                "label": "Cuenco",
+                "sub": "los átomos vibran"
+              },
+              {
+                "label": "Mango",
+                "sub": "el calor avanza"
+              },
+              {
+                "label": "Tus dedos",
+                "sub": "notan calor"
+              }
+            ],
+            "losses": [
+              {
+                "label": "Calor al aire"
+              }
+            ]
+          }
+        },
+        "number": {
+          "title": "El número",
+          "lead": "El acero conduce el calor unas cien veces mejor que la madera.",
+          "captions": [
+            "El acero conduce el calor unas 100 veces mejor que la madera y le quita calor a tu piel mucho más rápido. Por eso se siente frío.",
+            "Ambas cucharas están a temperatura ambiente. La de acero solo quita el calor de tu piel más rápido.",
+            "La plata conduce 27 veces mejor que el acero. Una cuchara de plata en té caliente puede quemar demasiado para sostenerla en menos de un minuto."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "label": "cuánto mejor conduce el acero que la madera",
+              "unit": "veces"
+            },
+            "rows": [
+              {
+                "label": "Acero inoxidable",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Madera",
+                "unit": "W/(m K)"
+              },
+              {
+                "label": "Tu piel",
+                "unit": "°C"
+              },
+              {
+                "label": "La cuchara y la sala",
+                "unit": "°C"
+              }
+            ],
+            "compare": {
+              "label": "La plata conduce mejor que el acero",
+              "unit": "veces"
+            }
+          }
         }
       }
     }

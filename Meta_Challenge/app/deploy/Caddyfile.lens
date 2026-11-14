@@ -3,4 +3,16 @@
 lens.167-71-139-39.sslip.io {
     encode zstd gzip
     reverse_proxy lens-bridge:8787
+
+    # If request logging is enabled, filter the legacy query token first.
+    # log {
+    #     format filter {
+    #         wrap json
+    #         fields {
+    #             request>uri query {
+    #                 delete k
+    #             }
+    #         }
+    #     }
+    # }
 }

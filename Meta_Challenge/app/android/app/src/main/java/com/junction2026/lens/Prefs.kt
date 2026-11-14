@@ -14,4 +14,16 @@ object Prefs {
     fun setFixture(c: Context, v: Boolean) = sp(c).edit().putBoolean("fixture", v).apply()
     fun bridgeToken(c: Context) = sp(c).getString("bridgeToken", "") ?: ""
     fun setBridgeToken(c: Context, v: String) = sp(c).edit().putString("bridgeToken", v).apply()
+    /** Language picker on the phone screen: "" = phone language, else one of [Lang.SUPPORTED]. */
+    fun lang(c: Context) = sp(c).getString("lang", "") ?: ""
+    fun setLang(c: Context, v: String) = sp(c).edit().putString("lang", v).apply()
+    /** First-run consent: the wearer agreed to photos being sent to the bridge and a model. */
+    fun consent(c: Context) = sp(c).getBoolean("consent", false)
+    fun setConsent(c: Context, v: Boolean) = sp(c).edit().putBoolean("consent", v).apply()
+    /** "Seen today" as JSON ([Journal.toJson]); no pictures. */
+    fun journal(c: Context) = sp(c).getString("journal", "") ?: ""
+    fun setJournal(c: Context, v: String) = sp(c).edit().putString("journal", v).apply()
+    /** "Glasses check" verdicts and notes as JSON ([GlassesCheck.encode]). */
+    fun glassesCheck(c: Context) = sp(c).getString("glassesCheck", "") ?: ""
+    fun setGlassesCheck(c: Context, v: String) = sp(c).edit().putString("glassesCheck", v).apply()
 }

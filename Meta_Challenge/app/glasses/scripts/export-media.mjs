@@ -11,15 +11,16 @@ const DEFAULT_OUT = path.resolve(ROOT, '../bridge/media');
 
 function usage(message) {
   if (message) console.error(message);
-  console.error('Usage: npm run export:media -- [--only <objectId>] [--no-clips] [--size <n>] [--clip-size <n>] [--out <dir>]');
+  console.error('Usage: npm run export:media -- [--only <objectId>] [--no-clips] [--no-clean] [--size <n>] [--clip-size <n>] [--out <dir>]');
   process.exitCode = 1;
 }
 
 function parseArgs(args) {
-  const options = {only: null, clips: true, size: 600, clipSize: 264, out: DEFAULT_OUT};
+  const options = {only: null, clips: true, clean: true, size: 600, clipSize: 264, out: DEFAULT_OUT};
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (arg === '--no-clips') options.clips = false;
+    else if (arg === '--no-clean') options.clean = false;
     else if (['--only', '--size', '--clip-size', '--out'].includes(arg)) {
       const value = args[++index];
       if (!value) throw new Error(`Missing value for ${arg}`);
@@ -176,6 +177,7 @@ async function main() {
       }
       await mkdir(lensDir, {recursive: true});
       const stills = [];
+      const clean = [];
       for (let step = 1; step <= lens.captions.length; step++) {
         const dataUrl = step === 1 ? first : await page.evaluate(
           args => window.__lensExport.still(args),
@@ -190,6 +192,22 @@ async function main() {
         totalBytes += bytes.length;
         stillCount++;
         stills.push(relative);
+
+        if (options.clean) {
+          const cleanDataUrl = await page.evaluate(
+            args => window.__lensExport.sceneStill(args),
+            {objectId: lens.objectId, chapterIndex: lens.chapterIndex, step, size: options.size, settle: 2},
+          );
+          if (cleanDataUrl === null) throw new Error(`${lens.lensId} became unavailable while rendering clean stills`);
+          const cleanRelative = `${lens.kind}/c${step}.png`;
+          const cleanTarget = path.join(objectDir, ...cleanRelative.split('/'));
+          const cleanBytes = dataUrlBuffer(cleanDataUrl);
+          await writeFile(cleanTarget, cleanBytes);
+          totalFiles++;
+          totalBytes += cleanBytes.length;
+          stillCount++;
+          clean.push(cleanRelative);
+        }
       }
 
       let clip;
@@ -217,6 +235,7 @@ async function main() {
         kind: lens.kind,
         title: lens.title,
         stills,
+        ...(options.clean ? {clean} : {}),
         ...(clip ? {clip} : {}),
         captions: lens.captions,
         size: options.size,

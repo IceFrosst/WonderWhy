@@ -118,16 +118,22 @@ export class PendulumScene implements Scene {
       glowStroke(ctx, C.amber, 2.5);
     }
 
-    const out: Readout[] = [
+    if (this.step === 2) return [
+      {label: 'Length L', value: `${fmt(this.len, 1)} m`},
+      {label: 'Period T', value: `${fmt(T, 2)} s`},
+      {label: 'T vs L = 1 m', value: `x${fmt(Math.sqrt(this.len), 2)}`},
+    ];
+    if (this.step === 3) {
+      return [
+        {label: 'Length', value: `${fmt(this.len, 1)} m`},
+        {label: 'Masses', value: '0.1 / 0.5 kg'},
+        {label: 'Period', value: `${fmt(T, 2)} s`},
+      ];
+    }
+    return [
       {label: 'Length L', value: `${fmt(this.len, 1)} m`},
       {label: 'Period T', value: `${fmt(T, 2)} s`},
       {label: 'Frequency', value: `${fmt(1 / T, 2)} Hz`},
     ];
-    if (this.step === 2) out.push({label: 'T vs L = 1 m', value: `x${fmt(Math.sqrt(this.len), 2)}`});
-    if (this.step === 3) {
-      out.push({label: 'Mass A / B', value: '0.1 / 0.5 kg'});
-      out.push({label: 'Period A = B', value: `${fmt(T, 2)} s`});
-    }
-    return out;
   }
 }

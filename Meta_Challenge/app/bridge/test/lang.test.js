@@ -73,7 +73,7 @@ test('translated show fields merge per field without changing lens ids', async (
   assert.deepEqual(show.lenses, [
     { id: 'thing.motion', kind: 'motion', title: 'Liike', lead: 'English lead.', steps: ['Ensimm\u00e4inen', 'Toinen'] },
     { id: 'thing.inside', kind: 'inside', title: 'Inside', lead: 'Sis\u00e4puolen johdanto.', steps: ['Third', 'Fourth'] },
-    { id: 'thing.heat', kind: 'heat', title: 'Heat', lead: '', steps: ['Warm'] },
+    { id: 'thing.heat', kind: 'heat', title: 'Heat', steps: ['Warm'] },
   ]);
   assert.deepEqual(show.lenses.map((lens) => lens.id), ['thing.motion', 'thing.inside', 'thing.heat']);
 
@@ -122,7 +122,7 @@ The wearer aims by looking: classify the object at or nearest the centre of the 
 Choose exactly one id, or "unknown" if it fits none:
 - thing: a test thing
 - unknown: anything else
-If objectId is "unknown", "answer" is a 2-sentence plain explanation of the object in the photo and the physics in it. Otherwise "answer" may be an empty string.
+If objectId is "unknown", "answer" names the object and the physics in it in at most 2 short sentences, 25 words in all, with no description of the surroundings. Otherwise "answer" may be an empty string.
 Reply with strict JSON only, no markdown: {"objectId": string, "confidence": number 0-1, "answer": string}`;
   assert.equal(buildPrompt(input, undefined, false, 'en'), expected);
   assert.equal(buildPrompt(input, undefined, false), expected);
