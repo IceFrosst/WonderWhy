@@ -1,0 +1,163 @@
+<!doctype html>
+<!-- Act 1, variant C "Real grass + type". Real footage slots (labelled placeholders until the clips exist),
+     typed questions, code-drawn light and seeds that carry the cut to grey. Deterministic: window.renderFrame(t). -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Act 1 · C · Real grass + type</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../lib/kit.js"></script>
+<script>
+(async () => {
+  const { W, H, clamp, lerp, prog, ease, hash } = K;
+  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+  const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+  await K.loadFonts(); await K.loadFootage();
+  const TM = cfg.timing, TY = cfg.type, GR = cfg.grade, F = cfg.footage, EPS = 1e-4, CUT = TM.cut;
+  const SHARP = K.layer(), sg = SHARP.getContext('2d');        // seeds in focus
+  const NEAR = K.layer(), ng = NEAR.getContext('2d');          // seeds close to the lens, out of focus
+
+  // ---- plates ---------------------------------------------------------------------------------------------------
+  const warmPlate = async (g, t) => {
+    const f = F.b1_grass, z = 1 + GR.push * t, im = await K.footageFrame('b1_grass', t - f.start);
+    if (im) {
+      g.save(); g.filter = GR.filter; K.cover(g, im, z, f.focus[0], f.focus[1]); g.restore();
+    } else {
+      K.placeholder(g, f.label, f.sub, { top: '#4a3413', bottom: '#140d05', ink: '#f6e7c6', zoom: z, y: 130 });
+    }
+    g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = GR.tint; g.fillRect(0, 0, W, H); g.restore();
+  };
+
+  // ---- code-drawn light: sun leak + slow bokeh --------------------------------------------------------------------
+  const BOKEH = Array.from({ length: 16 }, (_, i) => ({
+    x: hash(i * 6 + 201) * W, y: hash(i * 6 + 202) * H * 0.85, r: 40 + 110 * hash(i * 6 + 203),
+    a: 0.05 + 0.10 * hash(i * 6 + 204), vx: (hash(i * 6 + 205) - .3) * 34, ph: hash(i * 6 + 206) * 6.28,
+  }));
+  const light = (g, t, k) => {
+    if (k <= 0) return;
+    g.save(); g.globalCompositeOperation = 'screen';
+    const sun = g.createRadialGradient(W * 0.12, -80, 0, W * 0.12, -80, 1250);
+    sun.addColorStop(0, `rgba(255,222,150,${0.55 * k * (0.9 + 0.1 * Math.sin(t * 1.1))})`); sun.addColorStop(1, 'rgba(255,200,120,0)');
+    g.fillStyle = sun; g.fillRect(0, 0, W, H);
+    for (const b of BOKEH) {
+      const x = b.x + b.vx * t, y = b.y + 14 * Math.sin(t * 0.6 + b.ph), a = b.a * k * (0.75 + 0.25 * Math.sin(t * 1.3 + b.ph));
+      const gr = g.createRadialGradient(x, y, 0, x, y, b.r);
+      gr.addColorStop(0, `rgba(255,214,140,${a})`); gr.addColorStop(0.75, `rgba(255,196,100,${a * 0.8})`); gr.addColorStop(1, 'rgba(255,190,90,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, b.r, 0, 7); g.fill();
+    }
+    g.restore();
+  };
+
+  // ---- dandelion seeds: a few drift from the start, then a gust sends them at the lens ----------------------------
+  const VP = [W * 0.6, H * 0.52];
+  const SEEDS = Array.from({ length: 84 }, (_, i) => {
+    const amb = i < 12;
+    return {
+      amb, sx: VP[0] + (hash(i * 8 + 301) - .5) * (amb ? 1700 : 620), sy: VP[1] + (hash(i * 8 + 302) - .5) * (amb ? 800 : 360),
+      ts: amb ? -1 : TM.seedsGo + 1.55 * Math.pow(hash(i * 8 + 303), 0.8), life: 0.85 + 0.7 * hash(i * 8 + 304),
+      ang: hash(i * 8 + 305) * 6.283, s: 46 + 30 * hash(i * 8 + 306), spin: (hash(i * 8 + 307) - .5) * 2.4, ph: hash(i * 8 + 308) * 6.28,
+    };
+  });
+  const seeds = (t) => {
+    for (const c of [sg, ng]) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.clearRect(0, 0, W, H); c.lineCap = 'round'; }
+    const after = Math.max(0, t - CUT), tt = Math.min(t, CUT) + after * 0.3;            // after the cut the gust dies
+    const fade = 1 - prog(after, 0, 0.6), col = K.mix('#fff1cf', '#b9c1cd', clamp(after * 6));
+    if (fade <= 0) return;
+    for (let i = 0; i < SEEDS.length; i++) {
+      const sd = SEEDS[i]; let x, y, sc, a, rot;
+      if (sd.amb) {
+        const go = Math.max(0, tt - TM.seedsGo - sd.ph * 0.12);
+        x = sd.sx + 30 * tt + 20 * Math.sin(tt * 0.9 + sd.ph) + 500 * go * go; y = sd.sy - 14 * tt + 12 * Math.sin(tt * 1.4 + sd.ph) - 120 * go * go;
+        sc = 0.55 + 0.9 * go * go; a = 0.8 * prog(t, -0.2 + sd.ph * 0.05, 0.5 + sd.ph * 0.1); rot = 0.4 + 0.2 * Math.sin(tt + sd.ph) + go;
+      } else {
+        const u = (tt - sd.ts) / sd.life; if (u <= 0) continue;
+        const r = 1500 * Math.pow(u, 2.2);
+        x = sd.sx + Math.cos(sd.ang) * r + 16 * Math.sin(tt * 2 + sd.ph); y = sd.sy + Math.sin(sd.ang) * r * 0.62 + 12 * Math.cos(tt * 1.6 + sd.ph);
+        sc = 0.3 + 8.5 * Math.pow(u, 2.3); a = prog(u, 0, 0.15) * clamp(1.15 - 0.05 * sc, 0.5, 1); rot = sd.spin * u + sd.ph * 0.2;
+      }
+      const size = sd.s * sc;
+      if (x < -size || x > W + size || y < -size * 1.2 || y > H + size * 1.2) continue;
+      const near = prog(sc, 1.8, 3.6);
+      for (const [c, w] of [[sg, 1 - near], [ng, near]]) {
+        if (w <= 0) continue;
+        c.save(); c.globalAlpha = a * w * fade; c.strokeStyle = c.fillStyle = col; c.lineWidth = Math.min(8, 2.3 * Math.pow(Math.max(sc, 0.4), 0.5));
+        K.seed(c, x, y, size, rot, i); c.restore();
+      }
+    }
+  };
+
+  // ---- typed questions ----------------------------------------------------------------------------------------------
+  const FONT = `700 ${TY.size}px Archivo`, LH = TY.size * TY.lineHeight;
+  const typed = (g, lines, p, t, ink, accentWord, accentCol, alpha = 1) => {
+    if (alpha <= 0 || p <= 0) return;
+    const total = lines.reduce((a, l) => a + l.length, 0), n = Math.floor(p * total + 1e-6);
+    g.save(); g.font = FONT; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.globalAlpha = alpha;
+    g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowBlur = 30; g.shadowOffsetY = 6;
+    let left = n, cx = TY.x, cy = TY.y;
+    lines.forEach((ln, i) => {
+      const k = Math.min(ln.length, left); if (i && left <= 0) return; left -= k;
+      const sub = ln.slice(0, k), y = TY.y + i * LH, ai = accentWord ? ln.indexOf(accentWord) : -1;
+      if (ai >= 0 && k > ai) {
+        g.fillStyle = ink; g.fillText(sub.slice(0, ai), TY.x, y);
+        g.fillStyle = accentCol; g.fillText(sub.slice(ai), TY.x + g.measureText(ln.slice(0, ai)).width, y);
+      } else { g.fillStyle = ink; g.fillText(sub, TY.x, y); }
+      cx = TY.x + g.measureText(sub).width; cy = y;
+    });
+    if (p < 1 || Math.floor(t * 2.4) % 2 === 0) {                                  // caret: solid while typing, then blinks
+      g.fillStyle = ink; g.fillRect(cx + TY.size * 0.07, cy - TY.size * 0.74, TY.size * 0.07, TY.size * 0.82);
+    }
+    g.restore();
+  };
+  // soft dark backing behind the type block, wherever config.type puts it (keeps the type readable on any footage)
+  const scrim = (g, k = 1) => {
+    const a = (TY.backing == null ? 0.5 : TY.backing) * k, cx = TY.x + TY.size * 2.3, cy = TY.y + LH - TY.size * 0.35;
+    g.save(); g.translate(cx, cy); g.scale(1, 0.72);
+    const gr = g.createRadialGradient(0, 0, 0, 0, 0, TY.size * 4.6);
+    gr.addColorStop(0, `rgba(0,0,0,${a})`); gr.addColorStop(0.55, `rgba(0,0,0,${a * 0.6})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(-W, -H * 2, W * 2, H * 4); g.restore();
+  };
+
+  window.renderFrame = async (t) => {
+    const te = t + EPS, warm = te < CUT;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+    if (warm) {
+      await warmPlate(ctx, te);
+      light(ctx, te, 1);
+      scrim(ctx, 1);
+      const q1 = TM.q1, q2 = TM.q2, a1 = 1 - prog(te, q1.out, q1.out + 0.12);
+      const done = prog(te, q1.typeEnd, q1.typeEnd + 0.3);
+      typed(ctx, cfg.text.q1, prog(te, q1.type, q1.typeEnd), te, TY.ink, 'green?', K.mix(TY.ink, TY.accent, ease.out3(done)), a1);
+      typed(ctx, cfg.text.q2, prog(te, q2.type, q2.typeEnd), te, TY.ink, null, null);
+    } else {
+      await K.coldPlate(ctx, F.earbuds_in, te, te - CUT);
+      scrim(ctx, 0.8);
+      typed(ctx, cfg.text.grey, prog(te, TM.grey.type, TM.grey.typeEnd), te < TM.grey.typeEnd ? te : 0, TY.cold, null, null);
+    }
+    // seeds: in focus, then soft as they reach the lens
+    seeds(te);
+    ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.drawImage(SHARP, 0, 0); ctx.restore();
+    K.glow(ctx, SHARP, 12, 0.35);
+    K.glow(ctx, NEAR, 30, 1.0); K.glow(ctx, NEAR, 80, 0.7);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.14; ctx.drawImage(NEAR, 0, 0); ctx.restore();
+    // the seed blur whites the frame out; the cut to grey happens inside it
+    const hz = warm ? 0.82 * ease.in3(prog(te, 3.0, CUT)) : 0.82 * (1 - ease.out2(prog(te, CUT, CUT + 0.5)));
+    if (hz > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = hz;
+      const k = clamp((te - CUT) * 5);
+      K.radial(ctx, K.mix('#fff4d8', '#e3e8ef', k), K.mix('#ffc76a', '#9aa3b0', k), VP[0], VP[1], 1300); ctx.restore();
+    }
+    K.vignette(ctx, warm ? 0.32 : 0.55);
+    K.grain(ctx, t, warm ? 0.08 : 0.10);
+  };
+  window.cfg = cfg;
+  window.ready = true;
+})();
+</script>
+</body>
+</html>

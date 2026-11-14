@@ -1,0 +1,218 @@
+<!doctype html>
+<!-- Act 1, variant B "Kinetic questions". Deterministic: window.renderFrame(t) draws frame t (seconds). No clocks, no random. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Act 1 · B · Kinetic questions</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../lib/kit.js"></script>
+<script>
+(async () => {
+  const { W, H, clamp, lerp, prog, ease, hash, hash2 } = K;
+  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+  const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+  await K.loadFonts(); await K.loadFootage();
+  const BEAT = 60 / cfg.bpm, C = cfg.colors, EPS = 1e-4;
+  const col = k => C[k] || k;
+
+  // ---- layout: every phrase is a stack of rows justified to one width -----------------------------------------
+  const STYLE = {
+    q1: { font: '900 expanded', rowW: 1660, gap: 0.2, maxH: 800, cy: 505 },
+    q2: { font: '900 expanded', rowW: 1660, gap: 0.2, maxH: 800, cy: 505 },
+    grey: { font: '500 semi-condensed', rowW: 1400, gap: 0.42, maxH: 560, cy: 580 },
+  };
+  const m = K.layer(8, 8).getContext('2d');
+  const widthOf = (font, s) => { m.font = `${font} 100px Archivo`; return m.measureText(s).width / 100; }; // em
+  m.font = '900 expanded 100px Archivo';
+  const CAP = m.measureText('H').actualBoundingBoxAscent / 100;                                           // em
+  const phrases = cfg.phrases.map((p, pi) => {
+    const st = STYLE[p.id], rows = p.rows.map(r => ({ words: r, text: r.map(w => w.w).join(' ') }));
+    rows.forEach(r => { r.fs = st.rowW / widthOf(st.font, r.text); r.cap = r.fs * CAP; });
+    let total = rows.reduce((a, r) => a + r.cap, 0), gap = st.gap * total / rows.length;
+    let k = Math.min(1, st.maxH / (total + gap * (rows.length - 1)));
+    rows.forEach(r => { r.fs *= k; r.cap *= k; }); gap *= k; total *= k;
+    const blockW = st.rowW * k, blockH = total + gap * (rows.length - 1), x0 = (W - blockW) / 2;
+    let y = st.cy - blockH / 2;
+    const words = [];
+    rows.forEach(r => {
+      y += r.cap; let prefix = '';
+      r.words.forEach(w => {
+        const x = x0 + widthOf(st.font, prefix) * r.fs, ww = widthOf(st.font, w.w) * r.fs;
+        words.push({ ...w, x, y, wd: ww, fs: r.fs, cap: r.cap, t: w.b * BEAT, cx: x + ww / 2, cy: y - r.cap / 2 });
+        prefix += w.w + ' ';
+      });
+      y += gap;
+    });
+    const start = pi ? cfg.phrases[pi - 1].end * BEAT : 0;
+    // camera keys: one per word (fill the frame with it), then the whole stack on `full`
+    const keys = [];
+    words.slice().sort((a, b) => a.t - b.t).forEach(w => {
+      if (keys.length && Math.abs(keys[keys.length - 1].t - w.t) < 1e-6) return;
+      if (w.wd > 0.8 * st.rowW * k) keys.push({ t: w.t, cx: W / 2, cy: lerp(st.cy, w.cy, 0.14), z: 1.035 });   // full-width word: lean towards it, keep the stack readable
+      else keys.push({ t: w.t, cx: w.cx, cy: w.cy, z: Math.min(0.86 * W / w.wd, 0.56 * H / w.cap, 2.6) });  // short word: fill the frame with it
+    });
+    if (p.full != null) keys.push({ t: p.full * BEAT, cx: W / 2, cy: st.cy + 18, z: 1 });
+    return { ...p, st, words, keys, start, endT: p.end * BEAT, x0, blockW, blockH };
+  });
+  const [Q1, Q2, GREY] = phrases;
+
+  // ---- camera: glide to the next key so it lands with the word (gentle, no whip) ------------------------------
+  const LEAD = 0.09, MOVE = 0.29;
+  const camAt = (p, t) => {
+    const ks = p.keys; let k = 0;
+    while (k + 1 < ks.length && t >= ks[k + 1].t - LEAD) k++;
+    const b = ks[k], a = ks[Math.max(0, k - 1)], u = k ? ease.inOut3(prog(t, b.t - LEAD, b.t - LEAD + MOVE)) : 1;
+    const drift = 1 + 0.022 * (t - p.start);                                   // never park: slow push the whole time
+    return { cx: lerp(a.cx, b.cx, u), cy: lerp(a.cy, b.cy, u), z: Math.exp(lerp(Math.log(a.z), Math.log(b.z), u)) * drift };
+  };
+  const applyCam = (g, c) => { g.translate(W / 2, H / 2); g.scale(c.z, c.z); g.translate(-c.cx, -c.cy); };
+  const toScreen = (c, x, y) => [(x - c.cx) * c.z + W / 2, (y - c.cy) * c.z + H / 2];
+
+  // ---- drawing --------------------------------------------------------------------------------------------------
+  const ground = (g, pair, t) => {
+    const cx = W * (0.5 + 0.05 * Math.sin(t * 0.7)), cy = H * (0.42 + 0.03 * Math.cos(t * 0.5));
+    K.radial(g, pair[0], pair[1], cx, cy, 1250);
+  };
+  const drawWords = (g, p, t) => {
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    for (const w of p.words) {
+      const lt = t - w.t; if (lt < 0) continue;
+      const land = ease.out5(prog(lt, 0, 0.5));
+      const s = 1 + 0.06 * (1 - land), dy = 0.10 * w.cap * (1 - land);
+      g.save();
+      g.globalAlpha = prog(lt, -0.001, 0.07);
+      g.translate(w.cx, w.cy + dy); g.scale(s * (1 + 0.02 * (1 - land)), s); g.translate(-w.cx, -w.cy);
+      g.font = `${p.st.font} ${w.fs}px Archivo`;
+      let fill = col(p.type);
+      if (w.accent) {                                                  // the word that matters takes its colour as it lands
+        const a = ease.out3(prog(lt, 0.02, 0.32));
+        fill = K.mix(col(p.type), col(w.accent), a);
+      }
+      g.fillStyle = fill; g.fillText(w.w, w.x, w.y);
+      g.restore();
+    }
+  };
+  // grass along the bottom edge: grows when GREEN? lands, sways, stays through the second question
+  const BLADES = Array.from({ length: 64 }, (_, i) => ({
+    x: (i + 0.5 + (hash(i * 5 + 1) - .5) * 0.9) / 64 * (W + 80) - 40,
+    h: 60 + 120 * Math.pow(hash(i * 5 + 2), 1.5),
+    w: 16 + 16 * hash(i * 5 + 3),
+    lean: (hash(i * 5 + 4) - .5) * 0.9,
+    d: hash(i * 5 + 5) * 0.55,
+    shade: hash(i * 5 + 6),
+  }));
+  const tGrass = Q1.words.find(w => w.accent).t;
+  const drawGrass = (g, t, warm) => {
+    for (const b of BLADES) {
+      const gr = ease.out3(prog(t, tGrass + b.d, tGrass + b.d + 0.6)); if (gr <= 0) continue;
+      const h = b.h * gr, sway = (b.lean + 0.22 * Math.sin(t * 1.9 + b.x * 0.011) + 0.5 * warm) * h * 0.45;
+      g.beginPath();
+      g.moveTo(b.x - b.w / 2, H + 2);
+      g.quadraticCurveTo(b.x - b.w * 0.3 + sway * 0.25, H - h * 0.55, b.x + sway, H - h);
+      g.quadraticCurveTo(b.x + b.w * 0.5 + sway * 0.25, H - h * 0.5, b.x + b.w / 2, H + 2);
+      g.closePath();
+      g.fillStyle = K.mix(C.leaf, C.leafLight, b.shade, 0.92); g.fill();
+    }
+  };
+  // dandelion seeds: drift gently, then blow at the camera before the flip
+  const tBlow = Q2.keys[Q2.keys.length - 1].t - 0.3, tFlip = Q2.endT;
+  const SEEDS = Array.from({ length: 26 }, (_, i) => ({
+    x: hash(i * 7 + 11) * W * 1.1 - 200, y: 120 + hash(i * 7 + 12) * 800, s: 34 + 34 * hash(i * 7 + 13),
+    vx: 26 + 34 * hash(i * 7 + 14), vy: -(6 + 16 * hash(i * 7 + 15)), ph: hash(i * 7 + 16) * 6.28, z: hash(i * 7 + 17),
+  }));
+  const drawSeeds = (g, t) => {
+    const blow = Math.max(0, t - tBlow);
+    for (let i = 0; i < SEEDS.length; i++) {
+      const sd = SEEDS[i];
+      const grow = 1 + (1.5 + 7 * sd.z) * blow * blow * 1.6;
+      let x = sd.x + sd.vx * t + 18 * Math.sin(t * 0.9 + sd.ph), y = sd.y + sd.vy * t + 12 * Math.sin(t * 1.3 + sd.ph * 2);
+      x = W / 2 + (x - W / 2) * (1 + 0.16 * (grow - 1)) + 300 * blow * blow; y = H / 2 + (y - H / 2) * (1 + 0.16 * (grow - 1));
+      const s = sd.s * grow, a = clamp(0.3 + 0.5 * prog(t, 0.2 + sd.z, 1.6 + sd.z)) * clamp(1.5 - grow * 0.07, 0.35, 1);
+      if (x < -s || x > W + s || y < -s || y > H + s * 2) continue;
+      g.save(); g.globalAlpha = a; g.strokeStyle = g.fillStyle = C.cream; g.lineWidth = Math.max(2.2, s * 0.04); g.lineCap = 'round';
+      K.seed(g, x, y, s, 0.35 + 0.25 * Math.sin(t * 0.8 + sd.ph) + 0.5 * blow, i);
+      g.restore();
+    }
+  };
+  // warm scene = both questions; q2 opens as a sun disc growing out of the question mark's dot
+  const qDot = (() => {
+    const w = Q1.words.find(w => w.accent), st = Q1.st;
+    const x = w.x + (widthOf(st.font, w.w.slice(0, -1)) + widthOf(st.font, '?') * 0.47) * w.fs;
+    return [x, w.y - 0.075 * w.fs];
+  })();
+  const T_DISC = Q2.start - 0.22, DISC_LEN = 0.30;
+  const drawWarm = (g, t) => {
+    const c1 = camAt(Q1, Math.min(t, Q2.start + 0.1));
+    if (t < T_DISC + DISC_LEN) {
+      ground(g, C[Q1.ground], t);
+      g.save(); applyCam(g, c1); drawWords(g, Q1, t); g.restore();
+    }
+    if (t >= T_DISC) {
+      const u = ease.in2(prog(t, T_DISC, T_DISC + DISC_LEN)), [sx, sy] = toScreen(c1, qDot[0], qDot[1]);
+      g.save();
+      if (u < 1) { g.beginPath(); g.arc(sx, sy, 12 + u * 2300, 0, 7); g.clip(); }
+      ground(g, C[Q2.ground], t);
+      g.save(); applyCam(g, camAt(Q2, t)); drawWords(g, Q2, t); g.restore();
+      g.restore();
+    }
+    drawGrass(g, t, prog(t, tBlow, tFlip) * 0.9);
+    drawSeeds(g, t);
+    // soft sun bloom, top left
+    const sun = g.createRadialGradient(W * 0.16, -60, 0, W * 0.16, -60, 900);
+    sun.addColorStop(0, 'rgba(255,250,225,0.50)'); sun.addColorStop(1, 'rgba(255,250,225,0)');
+    g.save(); g.globalCompositeOperation = 'screen'; g.fillStyle = sun; g.fillRect(0, 0, W, H); g.restore();
+    K.vignette(g, 0.22, '120,50,0');
+  };
+  // cold scene: the footage slot (or its labelled placeholder) drained of colour, rigid type, camera backing away
+  const drawCold = async (g, t) => {
+    const f = cfg.footage.earbuds_in, lt = t - GREY.start;
+    const im = await K.footageFrame('earbuds_in', t - f.start);
+    if (im) {
+      g.save(); g.filter = 'grayscale(1) contrast(1.12) brightness(0.62)'; K.cover(g, im, 1.06 - 0.012 * lt); g.restore();
+      g.save(); g.globalCompositeOperation = 'soft-light'; g.fillStyle = 'rgba(70,110,170,0.55)'; g.fillRect(0, 0, W, H); g.restore();
+      g.fillStyle = 'rgba(12,14,18,0.38)'; g.fillRect(0, 0, W, H);
+    } else {
+      K.placeholder(g, f.label, f.sub, { top: C.cold[0], bottom: C.cold[1], ink: '#aeb8c8', zoom: 1.05 - 0.012 * lt, y: 130 });
+    }
+    const z = 1.05 - 0.02 * lt;
+    g.save(); g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2, -H / 2);
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round';
+    for (const w of GREY.words) {
+      if (t < w.t) continue;
+      g.font = `${GREY.st.font} ${w.fs}px Archivo`;
+      g.globalAlpha = 0.92;
+      if (w.outline) { g.strokeStyle = C.coldInk; g.lineWidth = Math.max(3, w.fs * 0.022); g.strokeText(w.w, w.x, w.y); }
+      else { g.fillStyle = C.coldInk; g.fillText(w.w, w.x, w.y); }
+    }
+    g.restore();
+    K.vignette(g, 0.55);
+  };
+
+  const inMove = t => [Q1, Q2].some(p => t < p.endT + 0.3 && p.keys.some((k, i) => i && t > k.t - LEAD - 0.04 && t < k.t - LEAD + MOVE + 0.02))
+    || (t > T_DISC - 0.04 && t < T_DISC + DISC_LEN) || t > tBlow;
+
+  window.renderFrame = async (t) => {
+    const te = t + EPS;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+    if (te >= GREY.start) {
+      await drawCold(ctx, te);
+      K.grain(ctx, t, 0.10);
+    } else {
+      // sub-frame samples (real motion blur) while the camera glides; never across the flip
+      const sh = Math.min(0.5 / cfg.fps, Math.max(0, GREY.start - te - 1e-3));
+      K.accumulate(ctx, te, inMove(te) ? 12 : 1, sh, drawWarm);
+      K.grain(ctx, t, 0.05);
+    }
+  };
+  window.cfg = cfg;
+  window.ready = true;
+})();
+</script>
+</body>
+</html>

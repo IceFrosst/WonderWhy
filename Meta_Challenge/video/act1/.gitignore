@@ -1,0 +1,5 @@
+# real footage is not for git (cut again with C/prepare_footage.sh)
+footage/*.mp4
+C/footage/
+*/frames/
+out/

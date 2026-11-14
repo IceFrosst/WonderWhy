@@ -1,0 +1,261 @@
+<!doctype html>
+<!-- Act 1, variant A "Drawn memory". Glowing line art on black, drawn live. Deterministic: window.renderFrame(t). -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Act 1 · A · Drawn memory</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../lib/kit.js"></script>
+<script>
+(async () => {
+  const { W, H, clamp, lerp, prog, ease, hash, hash2 } = K;
+  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+  const cfg = await (await fetch('config.json', { cache: 'no-store' })).json();
+  await K.loadFonts(); await K.loadFootage();
+  const C = cfg.colors, TM = cfg.timing, EPS = 1e-4;
+  const LINE = K.layer(), lg = LINE.getContext('2d');          // all glowing lines + handwriting
+  const TXT = K.layer(), tg = TXT.getContext('2d');             // scratch layer for the write-on mask
+  const NEAR = K.layer(), ng = NEAR.getContext('2d');           // seeds close to the lens (drawn out of focus)
+
+  // ---- hand-drawn strokes ---------------------------------------------------------------------------------------
+  const cr = (a, b, c, d, u) => 0.5 * (2 * b + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u * u * u);
+  const dense = (pts, step = 6) => {
+    const out = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(i + 2, pts.length - 1)];
+      const n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+      for (let j = 0; j < n; j++) out.push([cr(p0[0], p1[0], p2[0], p3[0], j / n), cr(p0[1], p1[1], p2[1], p3[1], j / n)]);
+    }
+    out.push(pts[pts.length - 1].slice()); return out;
+  };
+  const strokes = [], PRE = cfg.timing.preroll;
+  // o: { t0, dur, col, w, a, group, wob }.  Three "boil" variants give the line a living, hand-held wobble.
+  const S = (pts, o) => {
+    const id = strokes.length, d = dense(pts), wob = o.wob == null ? 1 : o.wob;
+    const variants = [0, 1, 2].map(v => d.map(([x, y], i) => [
+      x + wob * (3.2 * K.noise(i * 0.045, id * 13 + 1) + 1.1 * K.noise(i * 0.4, id * 13 + 2 + v * 7)),
+      y + wob * (3.2 * K.noise(i * 0.045, id * 13 + 3) + 1.1 * K.noise(i * 0.4, id * 13 + 4 + v * 7))]));
+    const s = { id, variants, n: d.length, col: 'gold', w: 5, a: 1, dur: 0.3, ...o };
+    s.t0 -= PRE;                                                  // pre-roll: the drawing is already under way on frame 0
+    strokes.push(s); return s;
+  };
+
+  // hero blade (sunlit, turns green on the word "green?")
+  const HERO = { col: 'amber', w: 5.5, hero: true };
+  S([[995, 1090], [1005, 850], [985, 650], [940, 505], [905, 440]], { ...HERO, t0: -0.45, dur: 0.7 });
+  S([[1030, 1090], [1042, 850], [1020, 650], [962, 510], [905, 440]], { ...HERO, t0: -0.35, dur: 0.7 });
+  S([[1012, 1090], [1024, 850], [1002, 650], [952, 508]], { ...HERO, w: 3, a: 0.7, t0: 0.3, dur: 0.4 });
+
+  // the child: big head in profile, facing the blade
+  const HD = { group: 'head' };
+  S([[575, 585], [528, 545], [508, 480], [522, 410], [565, 360], [630, 340], [695, 352], [742, 392], [760, 440], [764, 468],
+     [786, 494], [764, 512], [766, 530], [758, 548], [760, 566], [735, 590], [690, 600], [660, 612]], { ...HD, w: 6, t0: -0.3, dur: 1.0 });
+  S([[590, 352], [660, 372], [720, 402], [752, 446]], { ...HD, t0: 0.45, dur: 0.3 });                 // fringe
+  S([[602, 350], [560, 400], [540, 470], [552, 530]], { ...HD, t0: 0.55, dur: 0.3 });                 // side hair
+  S([[625, 340], [640, 305], [662, 318]], { ...HD, w: 4, t0: 0.70, dur: 0.16 });                       // tufts
+  S([[660, 343], [690, 312], [706, 335]], { ...HD, w: 4, t0: 0.78, dur: 0.16 });
+  S([[520, 420], [492, 440], [500, 480]], { ...HD, w: 4, t0: 0.82, dur: 0.16 });
+  S([[510, 500], [486, 525], [505, 555]], { ...HD, w: 4, t0: 0.88, dur: 0.16 });
+  S([[628, 468], [606, 474], [604, 500], [624, 512]], { ...HD, w: 4, t0: 0.70, dur: 0.22 });           // ear
+  S([[712, 446], [733, 437], [750, 444]], { ...HD, w: 4, t0: 0.86, dur: 0.14 });                       // brow
+  S([[720, 474], [733, 463], [747, 472]], { ...HD, w: 5, t0: 0.92, dur: 0.14 });                       // eye
+  S([[742, 546], [750, 554], [761, 548]], { ...HD, w: 4, t0: 1.0, dur: 0.14 });                        // smile
+  S([[696, 524], [710, 514]], { ...HD, col: 'deep', w: 4, a: 0.8, t0: 1.06, dur: 0.08 });              // blush
+  S([[712, 530], [726, 520]], { ...HD, col: 'deep', w: 4, a: 0.8, t0: 1.10, dur: 0.08 });
+  // body, half hidden in the grass
+  S([[580, 600], [530, 660], [495, 750], [490, 860], [510, 960], [530, 1090]], { w: 6, t0: 0.35, dur: 0.55 });   // back
+  S([[668, 618], [690, 680], [700, 740]], { t0: 0.7, dur: 0.22 });                                               // chest
+  S([[640, 650], [720, 715], [790, 735], [860, 690], [925, 640]], { t0: 0.8, dur: 0.36 });                       // arm, top edge
+  S([[615, 700], [690, 775], [790, 800], [880, 745], [940, 672]], { t0: 0.9, dur: 0.36 });                       // arm, bottom edge
+  S([[925, 640], [952, 618], [980, 626], [974, 652], [940, 672]], { t0: 1.15, dur: 0.2 });                       // hand on the blade
+  S([[700, 745], [760, 830], [790, 940], [780, 1090]], { t0: 1.1, dur: 0.35 });                                  // knee
+
+  // grass: single-stroke blades growing outwards from the hero blade
+  const NG = 74;
+  for (let i = 0; i < NG; i++) {
+    const x = -30 + (i + 0.5 + (hash(i * 9 + 1) - .5) * 0.8) / NG * (W + 60);
+    if (Math.abs(x - 1012) < 46) continue;
+    const overChild = x > 470 && x < 900, underClock = Math.abs(x - 1500) < 90;
+    const h = (overChild ? 120 + 190 * hash(i * 9 + 2) : 170 + 250 * hash(i * 9 + 2)) * (underClock ? 0.7 : 1);
+    const lean = (hash(i * 9 + 3) - .45) * 150, depth = hash(i * 9 + 4);
+    S([[x, 1092], [x + lean * 0.22, 1092 - h * 0.5], [x + lean, 1092 - h]], {
+      col: depth > 0.5 ? 'amber' : 'deep', w: 2.6 + 2 * depth, a: 0.4 + 0.5 * depth, grass: Math.abs(x - 1012),
+      t0: -0.3 + 1.5 * Math.abs(x - 1012) / 1000 * (0.55 + 0.45 * hash(i * 9 + 5)), dur: 0.34,
+    });
+  }
+  // dandelion clock: stem + seeds that let go when the child looks up
+  const CLK = [1500, 648];
+  S([[1542, 1092], [1524, 860], [1502, 700], CLK], { col: 'amber', w: 4, t0: 0.9, dur: 0.4 });
+  const NS = 30;
+  const SEEDS = Array.from({ length: NS }, (_, i) => {
+    const ang = (i / NS) * Math.PI * 2 + hash(i * 3 + 70) * 0.25, z = hash(i * 3 + 71);
+    return {
+      ang, s: 74 + 22 * hash(i * 3 + 72), z,
+      born: 1.2 - PRE + 0.55 * (i / NS),
+      go: TM.seedsGo + 1.15 * hash(i * 3 + 73) * hash(i * 3 + 73) + (i % 5 === 0 ? 0 : 0.1),
+      tx: -150 + hash(i * 3 + 74) * (W + 300), ty: -100 + hash(i * 3 + 75) * (H + 200),   // where it passes the lens
+      big: 3.5 + 8 * z, spin: (hash(i * 3 + 76) - .5) * 3,
+    };
+  });
+
+  const colorAt = (s, t) => {
+    let c = C[s.col];
+    const g = TM.green;
+    if (s.hero) return K.mix(C.amber, C.green, ease.out3(prog(t, g, g + 0.35)));
+    if (s.grass != null && s.grass < 420) return K.mix(c, C.green, 0.62 * (1 - s.grass / 420) * ease.out3(prog(t, g + s.grass / 900, g + 0.4 + s.grass / 900)));
+    return c;
+  };
+  const HEAD_PIVOT = [640, 602];
+  const drawStrokes = (g, t, du) => {
+    const v = ((Math.floor(t * 8) % 3) + 3) % 3;                                    // line boil at 8 fps
+    const up = -0.33 * ease.outBack(prog(t, TM.lookUp, TM.lookUp + 0.5));           // the child looks up
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const s of strokes) {
+      const p = ease.inOut(prog(t, s.t0, s.t0 + s.dur)); if (p <= 0) continue;
+      const h = hash(s.id * 17 + 5), h2 = hash(s.id * 17 + 6);
+      let alpha = s.a, col = colorAt(s, t);
+      g.save();
+      if (du > 0) {                                                               // crumble to ash
+        alpha *= 1 - ease.in2(prog(du, 0.15 + 0.3 * h, 0.7 + 0.3 * h));
+        if (alpha <= 0.003) { g.restore(); continue; }
+        col = K.mix(s.hero ? C.green : C[s.col], C.ash, clamp(du * 2.2));
+        g.setLineDash([Math.max(1, 30 * (1 - du)), 3 + 70 * du * du]); g.lineDashOffset = h * 40;
+        g.translate(46 * du * du * (h2 - .3), (30 + 150 * h) * du * du);
+      }
+      if (s.group === 'head') { g.translate(HEAD_PIVOT[0], HEAD_PIVOT[1]); g.rotate(up); g.translate(-HEAD_PIVOT[0], -HEAD_PIVOT[1]); }
+      const n = Math.max(2, Math.ceil(p * (s.n - 1)) + 1);
+      for (let pass = 0; pass < 2; pass++) {                                      // main line + a lighter second pass (sketchy)
+        const pts = s.variants[(v + pass) % 3];
+        g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < n; i++) g.lineTo(pts[i][0], pts[i][1]);
+        g.strokeStyle = col; g.globalAlpha = alpha * (pass ? 0.45 : 0.95); g.lineWidth = s.w * (pass ? 0.5 : 1); g.stroke();
+      }
+      if (p < 1 && du <= 0) {                                                     // the pen tip
+        const e = s.variants[v][n - 1];
+        g.globalAlpha = 1; g.fillStyle = C.white; g.beginPath(); g.arc(e[0], e[1], s.w * 1.5, 0, 7); g.fill();
+      }
+      g.restore();
+    }
+    // pupil
+    const pe = prog(t, 1.02 - PRE, 1.08 - PRE);
+    if (pe > 0 && du < 0.3) {
+      g.save(); g.translate(HEAD_PIVOT[0], HEAD_PIVOT[1]); g.rotate(up); g.translate(-HEAD_PIVOT[0], -HEAD_PIVOT[1]);
+      g.globalAlpha = pe * (1 - prog(du, 0, 0.3)); g.fillStyle = C.gold; g.beginPath(); g.arc(736 + 3 * prog(t, TM.lookUp, TM.lookUp + 0.3), 476, 5.5, 0, 7); g.fill(); g.restore();
+    }
+  };
+  const drawSeeds = (g, gn, t, du) => {
+    g.lineCap = gn.lineCap = 'round';
+    for (let i = 0; i < NS; i++) {
+      const sd = SEEDS[i], b = ease.outBack(prog(t, sd.born, sd.born + 0.22)); if (b <= 0) continue;
+      const dx = Math.cos(sd.ang), dy = Math.sin(sd.ang);
+      let x = CLK[0] + dx * 9, y = CLK[1] + dy * 9, rot = sd.ang + Math.PI / 2, sc = b, a = 0.95;
+      const tremble = 0.05 * Math.sin(t * 5 + i) * prog(t, TM.lookUp - 0.4, sd.go);
+      rot += tremble;
+      if (t > sd.go) {
+        const u = (t - sd.go) / (TM.dissolve + 0.2 - sd.go), e = u * u;
+        const k = ease.out2(clamp(u * 0.9)) * 0.2 + e * 0.8;
+        x = lerp(x, sd.tx, k) + 26 * Math.sin(t * 2.2 + i) * Math.min(1, u * 2);
+        y = lerp(y, sd.ty, k) - 60 * Math.sin(Math.min(1, u) * Math.PI) + 18 * Math.cos(t * 1.7 + i * 2);
+        sc = 1 + (sd.big - 1) * e * e;
+        rot += sd.spin * u + 0.5 * u;
+        a = 0.95 * clamp(1.25 - 0.045 * sc) * (1 - prog(du, 0, 0.5));
+        if (a <= 0.003) continue;
+      } else if (du > 0) a *= 1 - prog(du, 0.1, 0.6);
+      const col = K.mix(C.cream, C.ash, clamp(du * 2.5));
+      const near = prog(sc, 2.0, 4.0);                                            // cross-fade into the out-of-focus layer
+      for (const [c, w] of [[g, 1 - near], [gn, near]]) {
+        if (w <= 0) continue;
+        c.save(); c.globalAlpha = a * w; c.strokeStyle = c.fillStyle = col; c.lineWidth = Math.min(8, 2.4 * Math.pow(sc, 0.5));
+        K.seed(c, x, y, sd.s * sc, rot, i); c.restore();
+      }
+    }
+    // the bare head of the clock
+    const hb = prog(t, 1.25 - PRE, 1.4 - PRE);
+    if (hb > 0) { g.save(); g.globalAlpha = hb * (1 - prog(du, 0, 0.5)); g.fillStyle = K.mix(C.amber, C.ash, clamp(du * 2)); g.beginPath(); g.arc(CLK[0], CLK[1], 9, 0, 7); g.fill(); g.restore(); }
+  };
+
+  // ---- handwriting (Caveat), written on left to right -----------------------------------------------------------
+  tg.font = '700 100px Caveat';
+  const FS = Math.min(196, 100 * 790 / Math.max(...cfg.text.q1.concat(cfg.text.q2).map(l => tg.measureText(l).width)));
+  const TX = 1000, TY = 268, LH = FS * 0.9, ROT = -0.055;
+  const writeLines = (g, lines, p, alpha, accentWord, accentCol, dy = 0) => {
+    tg.font = `700 ${FS}px Caveat`;
+    const ws = lines.map(l => tg.measureText(l).width), tot = ws.reduce((a, b) => a + b, 0);
+    let acc = 0;
+    lines.forEach((ln, i) => {
+      const lp = clamp((p * tot - acc) / ws[i]); acc += ws[i]; if (lp <= 0) return;
+      tg.setTransform(1, 0, 0, 1, 0, 0); tg.globalCompositeOperation = 'source-over'; tg.clearRect(0, 0, W, H);
+      tg.translate(TX, TY + dy); tg.rotate(ROT);
+      tg.font = `700 ${FS}px Caveat`; tg.textBaseline = 'alphabetic'; tg.textAlign = 'left';
+      let x = 0;
+      ln.split(' ').forEach((wd, k, arr) => {
+        tg.fillStyle = wd === accentWord ? accentCol : C.cream;
+        tg.fillText(wd, x, i * LH); x += tg.measureText(wd + (k < arr.length - 1 ? ' ' : '')).width;
+      });
+      if (lp < 1) {
+        const rx = lp * (ws[i] + 50), gr = tg.createLinearGradient(rx - 50, 0, rx, 0);
+        gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
+        tg.globalCompositeOperation = 'destination-out'; tg.fillStyle = gr; tg.fillRect(rx - 50, i * LH - FS * 1.2, ws[i] + 400, FS * 2);
+      }
+      g.save(); g.globalAlpha = alpha; g.drawImage(TXT, 0, 0); g.restore();
+    });
+  };
+  const drawText = (g, t, du) => {
+    const q1 = TM.q1, q2 = TM.q2;
+    const a1 = 1 - prog(t, q1.out, q1.out + 0.22);
+    if (a1 > 0) writeLines(g, cfg.text.q1, prog(t, q1.write, q1.writeEnd), a1,
+      'green?', K.mix(C.cream, C.green, ease.out3(prog(t, TM.green, TM.green + 0.35))), -26 * (1 - a1));
+    const a2 = 1 - prog(du, 0.0, 0.3);
+    if (t > q2.write && a2 > 0) writeLines(g, cfg.text.q2, prog(t, q2.write, q2.writeEnd), a2, 'world', C.gold, 40 * du * du);
+  };
+
+  window.renderFrame = async (t) => {
+    const te = t + EPS, du = prog(te, TM.dissolve, TM.dissolveEnd);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+    // ground: black with a breath of warm light behind the child; the grey plate rises through it
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    const warm = 1 - prog(du, 0, 0.4);
+    if (warm > 0) { ctx.save(); ctx.globalAlpha = warm; K.radial(ctx, '#241504', '#000000', 820, 600, 1100); ctx.restore(); }
+    if (du > 0) {
+      const f = cfg.footage.earbuds_in;
+      const P = K.layer.plate || (K.layer.plate = K.layer()), pg = P.getContext('2d');
+      pg.setTransform(1, 0, 0, 1, 0, 0); pg.globalAlpha = 1; pg.filter = 'none'; pg.globalCompositeOperation = 'source-over';
+      await K.coldPlate(pg, f, te, te - TM.dissolve);
+      K.vignette(pg, 0.55);
+      ctx.save(); ctx.globalAlpha = ease.inOut(prog(du, 0, 0.6)); ctx.drawImage(P, 0, 0); ctx.restore();
+    }
+    // lines
+    lg.setTransform(1, 0, 0, 1, 0, 0); lg.globalAlpha = 1; lg.clearRect(0, 0, W, H);
+    const z = 1 + 0.014 * Math.min(te, TM.dissolveEnd);                              // slow push-in on the face and the blade
+    ng.setTransform(1, 0, 0, 1, 0, 0); ng.globalAlpha = 1; ng.clearRect(0, 0, W, H);
+    for (const c of [lg, ng]) { c.translate(860, 540); c.scale(z, z); c.translate(-860, -540); }
+    if (du < 1) { drawStrokes(lg, te, du); drawSeeds(lg, ng, te, du); drawText(lg, te, du); }
+    lg.setTransform(1, 0, 0, 1, 0, 0); ng.setTransform(1, 0, 0, 1, 0, 0);
+    const pulse = 1 + 0.5 * Math.sin(Math.PI * prog(te, TM.green, TM.green + 0.5));   // the green moment breathes
+    const gl = (1 - 0.8 * du) * pulse;
+    K.glow(ctx, LINE, 46, 0.55 * gl);
+    K.glow(ctx, LINE, 14, 0.75 * gl);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(LINE, 0, 0); ctx.restore();
+    if (te > TM.seedsGo && du < 0.6) {                                              // near seeds: soft, like a shallow lens
+      K.glow(ctx, NEAR, 30, 1.0); K.glow(ctx, NEAR, 70, 0.6);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.16; ctx.drawImage(NEAR, 0, 0); ctx.restore();
+    }
+    // seed haze before the cut to grey
+    const haze = prog(te, 3.3, TM.dissolve) * (1 - prog(du, 0, 0.25));
+    if (haze > 0) { ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha = 0.22 * haze * haze; K.radial(ctx, '#ffe9b8', '#ff9d2e', W / 2, H / 2, 1300); ctx.restore(); }
+    if (du > 0) K.coldTitle(ctx, te, TM.grey.row1, TM.grey.row2, TM.grey.fade);
+    K.vignette(ctx, 0.3);
+    K.grain(ctx, t, lerp(0.06, 0.10, du));
+  };
+  window.cfg = cfg;
+  window.ready = true;
+})();
+</script>
+</body>
+</html>

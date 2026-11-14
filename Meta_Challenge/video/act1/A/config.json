@@ -1,0 +1,60 @@
+{
+  "variant": "A",
+  "title": "Drawn memory",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration": 6.0,
+  "note": "Everything in the warm part is code-drawn line art (no footage needed). Only the grey beat has a footage slot.",
+  "colors": {
+    "amber": "#ffc247",
+    "gold": "#ffd98a",
+    "deep": "#ff9d2e",
+    "cream": "#ffe9b8",
+    "green": "#6dff9c",
+    "white": "#ffffff",
+    "ash": "#aab4c4"
+  },
+  "timing": {
+    "preroll": 0.45,
+    "q1": { "write": -0.1, "writeEnd": 0.95, "out": 1.95 },
+    "green": 0.85,
+    "lookUp": 2.0,
+    "q2": { "write": 2.15, "writeEnd": 3.1 },
+    "seedsGo": 2.15,
+    "dissolve": 4.0,
+    "dissolveEnd": 4.8,
+    "grey": { "row1": 4.35, "row2": 4.9, "fade": 0.25 }
+  },
+  "text": {
+    "q1": ["Why is the", "grass green?"],
+    "q2": ["How does the", "world work?"],
+    "grey": "You used to ask why."
+  },
+  "footage": {
+    "earbuds_in": {
+      "path": "../footage/earbuds_in.mp4",
+      "in": 0,
+      "speed": 1,
+      "start": 4.0,
+      "duration": 2.0,
+      "label": "FOOTAGE: earbuds going in",
+      "sub": "REAL shot 3 · close-up of fingers pushing the earbuds in · graded grey in the page"
+    }
+  },
+  "cues": [
+    { "t": 0.0, "sound": "music", "line": "soft piano in" },
+    { "t": 0.0, "sound": "sfx pencil / chalk scratch (runs to 1.2, follows the strokes)", "line": "" },
+    { "t": 0.0, "sound": "voice_child", "line": "Why is the grass green?" },
+    { "t": 0.4, "sound": "sfx summer air, crickets (low bed, to 4.0)", "line": "" },
+    { "t": 0.85, "sound": "sfx soft chime", "line": "the blade and the word 'green?' turn green" },
+    { "t": 2.0, "sound": "sfx cloth rustle", "line": "the child looks up" },
+    { "t": 2.15, "sound": "voice_child", "line": "How does the world work?" },
+    { "t": 2.2, "sound": "sfx breath / puff, then wind rising to 4.0", "line": "dandelion seeds let go and fly at the camera" },
+    { "t": 4.0, "sound": "music cut (hard stop on 'work')", "line": "" },
+    { "t": 4.0, "sound": "sfx earbud seal thump, everything low-passed (muffled)", "line": "the drawing crumbles to ash" },
+    { "t": 4.35, "sound": "sfx dull tick", "line": "You used to" },
+    { "t": 4.9, "sound": "sfx dull tick", "line": "ask why." }
+  ],
+  "sheet": [0.0, 0.5, 1.2, 1.9, 2.6, 3.5, 4.2, 5.3]
+}

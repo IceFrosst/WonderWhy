@@ -1,0 +1,68 @@
+{
+  "variant": "C",
+  "title": "Real grass + type",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "duration": 6.0,
+  "note": "Built around real footage. ./prepare_footage.sh cuts the two clips below from the raw phone files into C/footage/ (1920x1080). Paths are relative to this folder (or absolute). If a file is missing the page shows the labelled placeholder instead. To swap a shot: change the cut in prepare_footage.sh or point 'path' at another 16:9 file, then ./render.sh. Phone HDR clips should be tone-mapped to SDR first (these two are SDR).",
+  "footage": {
+    "b1_grass": {
+      "path": "footage/b1_grass.mp4",
+      "source": "raw/mrnetwork/A001_11141519_C100.MOV, 13.4-17.8 s, 16:9 window at top=720 px of the rotated 2160x3840 frame, 24 fps",
+      "in": 0,
+      "speed": 1,
+      "start": 0,
+      "duration": 4.0,
+      "focus": [0.3, 0.35],
+      "label": "FOOTAGE: B1 adult in grass",
+      "sub": "REAL shot B1 · low in the grass, face close to one sunlit blade · warm grade and push-in are added in the page"
+    },
+    "earbuds_in": {
+      "path": "footage/earbuds_in_grass.mp4",
+      "source": "raw/mrnetwork/A001_11141516_C098_2.MOV, 18.3-20.7 s, 16:9 window at top=1250 px, 24 fps. Stand-in for shot 3: earbuds are already in, the hand goes to the earbud and then over the eyes.",
+      "in": 0,
+      "speed": 1,
+      "start": 4.0,
+      "duration": 2.0,
+      "label": "FOOTAGE: earbuds going in",
+      "sub": "REAL shot 3 · close-up of fingers pushing the earbuds in · graded grey in the page"
+    }
+  },
+  "grade": {
+    "filter": "saturate(1.22) sepia(0.2) contrast(1.06) brightness(1.04)",
+    "tint": "rgba(255,176,56,0.36)",
+    "push": 0.022
+  },
+  "type": {
+    "x": 1040, "y": 420, "size": 172, "lineHeight": 1.03, "backing": 0.62,
+    "ink": "#fff3d6", "accent": "#8dffae", "cold": "#d3dae6"
+  },
+  "timing": {
+    "q1": { "type": -0.08, "typeEnd": 0.95, "out": 1.95 },
+    "q2": { "type": 2.1, "typeEnd": 3.0 },
+    "seedsGo": 2.3,
+    "cut": 4.0,
+    "grey": { "type": 4.3, "typeEnd": 5.0 }
+  },
+  "text": {
+    "q1": ["Why is", "the grass", "green?"],
+    "q2": ["How does", "the world", "work?"],
+    "grey": ["You used", "to ask", "why."]
+  },
+  "cues": [
+    { "t": 0.0, "sound": "music", "line": "soft piano in" },
+    { "t": 0.0, "sound": "ambience: real grass, wind, birds from the B1 clip (to 4.0)", "line": "" },
+    { "t": 0.0, "sound": "voice_child", "line": "Why is the grass green?" },
+    { "t": 0.0, "sound": "sfx soft key ticks, one per typed letter (to 0.95)", "line": "" },
+    { "t": 0.95, "sound": "sfx soft chime", "line": "'green?' turns green" },
+    { "t": 2.1, "sound": "voice_child", "line": "How does the world work?" },
+    { "t": 2.1, "sound": "sfx soft key ticks (to 3.0)", "line": "" },
+    { "t": 2.3, "sound": "sfx wind gust rising to 4.0", "line": "seeds blow towards the camera" },
+    { "t": 4.0, "sound": "music cut (hard stop on 'work')", "line": "" },
+    { "t": 4.0, "sound": "sfx earbud seal thump, everything low-passed (muffled)", "line": "match cut: seed blur -> earbuds going in" },
+    { "t": 4.3, "sound": "sfx dull key ticks, muffled (to 5.0)", "line": "You used to ask why." },
+    { "t": 5.2, "sound": "sfx dull tick", "line": "" }
+  ],
+  "sheet": [0.1, 0.6, 1.4, 2.7, 3.4, 3.9, 4.2, 5.4]
+}
