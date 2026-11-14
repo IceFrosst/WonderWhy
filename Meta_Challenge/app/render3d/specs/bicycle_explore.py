@@ -13,6 +13,8 @@ ZC = 4.5                # chain plane
 R1, R2 = 10.35, 3.45    # chain path radius round the chainring and the cog (exactly 3:1)
 CIRC = 210.0            # wheel circumference, cm
 RPM1, RPM2 = 20, 60
+CY = 22                 # beat 2: the chain lifts this far off its sprockets
+XO = 8                  # beat 2: the whole drivetrain slides this far out from the frame (stays engaged)
 
 
 def tube(pid, label, path, r, pos=(0, 0, 0), **extra):
@@ -66,7 +68,7 @@ for k, a in enumerate([10, 55, 100, 145]):
     t = math.radians(a)
     p = (H[0] + 30.4 * math.cos(t), H[1] + 30.4 * math.sin(t), 0)
     q = (H[0] - 30.4 * math.cos(t), H[1] - 30.4 * math.sin(t), 0)
-    spokes.append(tube(f"spoke{k + 1}", "Spoke", [p, q], 0.18, pos=(H[0], H[1], 0), parent="rim"))
+    spokes.append(tube(f"spoke{k + 1}", "Spoke", [p, q], 0.18, pos=(H[0], H[1], 0), parent="hub"))
 
 CRANK = 30  # crank angle above the horizontal at rest (start of the power stroke)
 CA, SA = math.cos(math.radians(CRANK)), math.sin(math.radians(CRANK))
@@ -85,32 +87,34 @@ sx, sy = seat(86.5)
 
 parts = [
     # drivetrain
-    {"id": "chainring", "label": "Chainring", "prim": "gear", "teeth": 48, "r": 10.2, "h": 0.35, "toothDepth": 0.55,
-     "pos": pt(BB[0], BB[1], ZC), "rot": [90, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 6],
+    {"id": "chainring", "label": "Chainring, 48 teeth", "prim": "gear", "teeth": 48, "r": 10.2, "h": 0.35, "toothDepth": 0.55,
+     "pos": pt(BB[0], BB[1], ZC), "rot": [90, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, XO]},
+    # the spinning parts are the round-symmetric axles: label anchors on the rings and the cog then stay still
+    {"id": "spindle", "label": "Crank axle", "prim": "cylinder", "r": 2.2, "h": 13.0, "segments": 24,
+     "pos": pt(BB[0], BB[1], 0), "rot": [90, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, XO],
      "anim": {"spin": {"axis": SPIN, "rpm": RPM1}}},
     {"id": "crank", "label": "Crank", "prim": "box", "size": [19.6, 3.0, 1.4], "round": 0.6,
      "pos": pt(BB[0] + 8.75 * CA, BB[1] + 8.75 * SA, 6.6), "rot": [0, 0, CRANK], "scale": 1, "role": "object",
-     "explode": [0, 0, 0], "parent": "chainring"},
+     "explode": [0, 0, 0], "parent": "spindle"},
     {"id": "pedal", "label": "Pedal", "prim": "box", "size": [8.0, 2.2, 9.0], "round": 0.6,
-     "pos": pt(*PEDAL), "rot": [0, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0], "parent": "chainring"},
+     "pos": pt(*PEDAL), "rot": [0, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0], "parent": "spindle"},
     {"id": "crank_l", "label": "Left crank", "prim": "box", "size": [19.6, 3.0, 1.4], "round": 0.6,
      "pos": pt(BB[0] - 8.75 * CA, BB[1] - 8.75 * SA, -6.6), "rot": [0, 0, CRANK], "scale": 1, "role": "object",
-     "explode": [0, 0, 0], "parent": "chainring"},
+     "explode": [0, 0, 0], "parent": "spindle"},
     {"id": "pedal_l", "label": "Left pedal", "prim": "box", "size": [8.0, 2.2, 9.0], "round": 0.6,
      "pos": pt(BB[0] - 17.5 * CA, BB[1] - 17.5 * SA, -12.4), "rot": [0, 0, 0], "scale": 1, "role": "object",
-     "explode": [0, 0, 0], "parent": "chainring"},
-    tube("chain", "Chain", chain, 0.3, closed=True, explode=[0, 8, 10], role="actor"),
-    {"id": "cog", "label": "Rear cog", "prim": "gear", "teeth": 16, "r": 3.4, "h": 0.35, "toothDepth": 0.45,
-     "pos": pt(H[0], H[1], ZC), "rot": [90, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 6],
-     "anim": {"spin": {"axis": SPIN, "rpm": RPM2}}},
+     "explode": [0, 0, 0], "parent": "spindle"},
+    tube("chain", "Chain", chain, 0.3, closed=True, explode=[0, CY, XO + 5], role="actor"),
+    {"id": "cog", "label": "Rear cog, 16 teeth", "prim": "gear", "teeth": 16, "r": 3.4, "h": 0.35, "toothDepth": 0.45,
+     "pos": pt(H[0], H[1], ZC), "rot": [90, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, XO]},
     # rear wheel
     {"id": "rim", "label": "Rear wheel", "prim": "torus", "r": RIM_R, "tube": RIM_T,
-     "pos": pt(H[0], H[1], 0), "rot": [0, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0],
-     "anim": {"spin": {"axis": SPIN, "rpm": RPM2}}},
+     "pos": pt(H[0], H[1], 0), "rot": [0, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0]},
     {"id": "tyre", "label": "Tyre", "prim": "torus", "r": TYRE_R, "tube": TYRE_T,
      "pos": pt(H[0], H[1], 0), "rot": [0, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0], "parent": "rim"},
     {"id": "hub", "label": "Hub", "prim": "cylinder", "r": 2.0, "h": 11.0, "segments": 24,
-     "pos": pt(H[0], H[1], 0), "rot": [90, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0], "parent": "rim"},
+     "pos": pt(H[0], H[1], 0), "rot": [90, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0],
+     "anim": {"spin": {"axis": SPIN, "rpm": RPM2}}},
 ] + spokes + [
     # frame (drive side stays only)
     tube("chainstay", "Chainstay", [(BB[0], BB[1], 3.0), (H[0], H[1], 3.0)], 1.0),
@@ -129,42 +133,50 @@ parts = [
     {"id": "tyre_f", "label": "Front tyre", "prim": "torus", "r": TYRE_R, "tube": TYRE_T,
      "pos": pt(HF[0], HF[1], 0), "rot": [0, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0]},
     # the road: one wheel turn long, starting under the rear tyre
-    {"id": "road", "label": "One wheel turn", "prim": "box", "size": [CIRC, 0.2, 12.0],
+    {"id": "road", "label": "2.1 m", "prim": "box", "size": [CIRC, 0.2, 5.0],
      "pos": pt(H[0] + CIRC / 2, -0.15, 0), "rot": [0, 0, 0], "scale": 1, "role": "object", "explode": [0, 0, 0]},
 ]
 assert len(parts) <= 28, len(parts)
 
 FRAME = ["chainstay", "seatstay", "seattube", "toptube", "downtube", "fork", "bar", "saddle"]
-DRIVE = ["chainring", "crank", "pedal", "chain", "cog"]
+DRIVE = ["chainring", "spindle", "crank", "pedal", "chain", "cog"]
 contact = pt(H[0], 0.2, 0)
 
-chain_x = [[x, y + 8, z + 10] for x, y, z in chain]  # the chain where beat 2's explode puts it
+chain_x = [[x, r2(y + CY), r2(z + XO + 5)] for x, y, z in chain]  # the chain where beat 2's explode puts it
 PUSH = 56
+
+# a point on the tyre, round once clockwise from the road contact (rolling direction seen from the drive side)
+LOOP_R = 36.0  # just outside the tyre (outer radius 33.5) so the dot reads against black
+TYRE_LOOP = [pt(H[0] + LOOP_R * math.cos(math.radians(-90 - 360 * k / 40)), H[1] + LOOP_R * math.sin(math.radians(-90 - 360 * k / 40)), 1.3)
+             for k in range(40)]
+FORCE_RATIO = 17.5 / (TYRE_R + TYRE_T) * 16 / 48  # crank 17.5 cm, 48/16, wheel radius 33.5 cm -> 0.17
 
 beats = [
     {"camera": {"yaw": -24, "pitch": 12, "zoom": 2.45, "target": [8, 42, 0]}, "turn": 8, "dur": 6,
-     "ghost": ["road"], "play": ["chainring", "cog", "rim"]},
-    {"camera": {"yaw": -16, "pitch": 14, "zoom": 3.0, "target": [-20, 34, 8]}, "explode": 1, "dur": 6,
-     "focus": DRIVE, "play": ["chainring", "cog"], "labels": ["chainring", "chain", "cog"],
+     "ghost": ["road"], "play": ["spindle", "hub"]},
+    {"camera": {"yaw": -18, "pitch": 12, "zoom": 2.2, "target": [-8, 46, 8]}, "explode": 1, "dur": 6,
+     "focus": DRIVE, "play": ["spindle"], "labels": ["chainring", "chain", "cog"],
      "fx": [{"type": "flow", "path": chain_x, "role": "actor", "speed": r2(chain_speed), "count": count, "closed": True,
              "label": "chain"}]},
-    {"camera": {"yaw": -18, "pitch": 10, "zoom": 2.9, "target": [-22, 33, 2]}, "dur": 6,
-     "focus": DRIVE + ["tyre", "spoke1"], "play": ["chainring", "cog", "rim"],
+    {"camera": {"yaw": -16, "pitch": 10, "zoom": 2.2, "target": [-32, 36, 2]}, "dur": 6,
+     "focus": DRIVE + ["tyre", "rim", "hub", "spoke1"], "play": ["spindle", "hub"], "labels": ["chainring", "cog"],
      "fx": [{"type": "flow", "path": chain, "role": "actor", "speed": r2(chain_speed), "count": count, "closed": True,
              "label": "chain"}]},
-    {"camera": {"yaw": -14, "pitch": 8, "zoom": 2.6, "target": [-16, 44, 0]}, "dur": 6,
+    {"camera": {"yaw": -14, "pitch": 10, "zoom": 2.6, "target": [-16, 44, 0]}, "dur": 6,
      "focus": ["crank", "pedal", "chainring", "chain", "cog", "tyre"], "labels": ["pedal", "tyre"],
      "fx": [{"type": "arrow", "from": pt(PEDAL[0], PEDAL[1] + 1.1 + PUSH, PEDAL[2]), "dir": [0, -1, 0], "len": PUSH, "role": "energy",
              "label": "foot pushes"},
-            {"type": "arrow", "from": pt(H[0] - 1.5, 0.8, 0), "dir": [-1, 0, 0], "len": r2(PUSH * 0.17), "role": "energy",
+            {"type": "arrow", "from": pt(H[0] + 3.0, -2.2, 1.5), "dir": [-1, 0, 0], "len": r2(PUSH * FORCE_RATIO), "role": "energy",
              "label": "tyre pushes road"}]},
-    {"camera": {"yaw": -34, "pitch": 12, "zoom": 1.45, "target": [72, 26, 0]}, "dur": 6,
-     "focus": ["tyre", "rim", "spoke1", "spoke2", "spoke3", "spoke4"], "play": ["rim"], "labels": ["road"],
-     "fx": [{"type": "dim", "on": "road", "text": "2.1 m"},
-            {"type": "flow", "path": [pt(H[0], 1.0, 0), pt(H[0] + CIRC, 1.0, 0)], "role": "actor", "speed": CIRC * RPM2 / 60,
-             "count": 1, "label": "one wheel turn"}]},
+    {"camera": {"yaw": -12, "pitch": 9, "zoom": 1.5, "target": [52, 40, 0]}, "dur": 6,
+     "focus": ["tyre", "rim", "hub", "spoke1", "spoke2", "spoke3", "spoke4"], "play": ["hub"], "labels": ["road"],
+     "fx": [{"type": "dim", "on": "road", "text": "one wheel turn"},
+            {"type": "flow", "path": TYRE_LOOP, "role": "actor", "speed": r2(2 * math.pi * LOOP_R * RPM2 / 60), "count": 2,
+             "closed": True, "label": "a point on the tyre"},
+            {"type": "flow", "path": [pt(H[0], 3.0, 1.3), pt(H[0] + CIRC, 3.0, 1.3)], "role": "actor", "speed": CIRC * RPM2 / 60,
+             "count": 2, "label": "one wheel turn"}]},
     {"camera": {"yaw": -22, "pitch": 12, "zoom": 2.3, "target": [12, 30, 0]}, "dur": 6,
-     "focus": ["chainring", "crank", "pedal", "tyre"], "play": ["chainring", "cog", "rim"],
+     "focus": ["chainring", "crank", "pedal", "tyre"], "play": ["spindle", "hub"],
      "number": {"value": "6.3", "unit": "m", "label": "forward per pedal turn"}},
 ]
 
