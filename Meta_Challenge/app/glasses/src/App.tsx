@@ -57,6 +57,8 @@ export default function App() {
   viewRef.current = view;
   const bridgeRef = useRef<BridgeClient | null>(null);
   const cardTimer = useRef<number | undefined>(undefined);
+  const detectTimer = useRef<number | undefined>(undefined);
+  const paintFrame = useRef<number | undefined>(undefined);
 
   const flashCard = useCallback((c: Card | null, ms?: number) => {
     window.clearTimeout(cardTimer.current);
@@ -69,25 +71,58 @@ export default function App() {
     setView({k: 'explain', key: keyRef.current, objectId, ...extra} as View);
   }, []);
 
+  const clearDetectTimer = useCallback(() => {
+    window.clearTimeout(detectTimer.current);
+    detectTimer.current = undefined;
+  }, []);
+
   // Bridge connection.
   useEffect(() => {
     const onMessage = (m: BridgeMsg): void => {
       switch (m.type) {
         case 'detecting':
+          clearDetectTimer();
           setView({k: 'detecting', reqId: m.reqId});
+          detectTimer.current = window.setTimeout(() => {
+            if (viewRef.current.k === 'detecting' && viewRef.current.reqId === m.reqId) {
+              setView({k: 'home'});
+              flashCard({title: 'Took too long', body: 'Try again.'}, ERROR_MS);
+            }
+            detectTimer.current = undefined;
+          }, m.timeoutMs ?? 12000);
           break;
         case 'show':
+          clearDetectTimer();
+          if (m.lowConfidence) {
+            setView({k: 'home'});
+            flashCard(
+              {title: 'Not sure', body: `Maybe: ${m.label ?? 'that object'}. Look again, a bit closer.`},
+              CARD_MS,
+            );
+            if (!m.replay) {
+              window.cancelAnimationFrame(paintFrame.current ?? 0);
+              paintFrame.current = window.requestAnimationFrame(() => {
+                paintFrame.current = window.requestAnimationFrame(() => {
+                  bridgeRef.current?.send({type: 'rendered', reqId: m.reqId, t_rendered: Date.now()});
+                });
+              });
+            }
+            break;
+          }
           openObject(m.objectId, {
             label: m.label,
-            reqId: m.reqId,
+            reqId: m.replay ? undefined : m.reqId,
             answer: m.answer,
             question: m.question,
           });
+          break;
+        case 'ping':
           break;
         case 'nav':
           emitNav(m.action);
           break;
         case 'clear':
+          clearDetectTimer();
           setView({k: 'blank'});
           break;
         case 'device':
@@ -102,21 +137,37 @@ export default function App() {
           }
           break;
         case 'error':
+          clearDetectTimer();
+          if (viewRef.current.k === 'detecting') setView({k: 'home'});
           flashCard({title: 'Something went wrong', body: m.message || m.code}, ERROR_MS);
           break;
       }
     };
     const url = bridgeUrl();
     if (!url) return;
-    const client = new BridgeClient(url, onMessage, setConnected);
+    const onStatus = (isConnected: boolean, closeCode?: number): void => {
+      setConnected(isConnected);
+      if (isConnected) return;
+      if (viewRef.current.k === 'detecting') {
+        clearDetectTimer();
+        setView({k: 'home'});
+        flashCard({title: 'Bridge offline', body: 'Built-in demos still work.'}, ERROR_MS);
+      }
+      if (closeCode === 4401) {
+        flashCard({title: 'Bridge locked', body: 'Open the link with the key.'});
+      }
+    };
+    const client = new BridgeClient(url, onMessage, onStatus);
     bridgeRef.current = client;
     client.start();
     return () => {
       client.stop();
       bridgeRef.current = null;
       window.clearTimeout(cardTimer.current);
+      clearDetectTimer();
+      window.cancelAnimationFrame(paintFrame.current ?? 0);
     };
-  }, [openObject, flashCard]);
+  }, [openObject, flashCard, clearDetectTimer]);
 
   // `done` from the bridge or Back on the glasses returns home; any key wakes a blank screen.
   useEffect(() => {

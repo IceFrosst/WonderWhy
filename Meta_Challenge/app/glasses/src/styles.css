@@ -48,6 +48,10 @@ body {
   padding: var(--uit-spacing-large);
 }
 
+.card > p {
+  font-size: 16px;
+}
+
 /* Explainer: title, canvas stage, readouts, caption, step button. */
 .ex {
   display: grid;
