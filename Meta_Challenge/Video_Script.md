@@ -5,17 +5,19 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 9, FINAL for the edit, 1:22)
+# Video script: "Never stop asking why" (draft 10; current viewing cut 1:30.13)
 
 > [!summary]
 > **Product: WonderWhy** (Meta Ray-Ban Display + Neural Band). **Max 1:30.** Every shot readable muted (phone viewer, first 3 s must hold).
 > Story in colour: **gold (child) → grey (adult, earbuds in, shut off) → gold + glowing lines (glasses)**.
-> **Objects:** grass (child + ending), **noise-cancelling earbuds** (reveal, built and live), **3D printer** (real run; follow-up = **comparison with a second printer**), **sauna** + **gym bike** (montage), **the glasses explaining themselves** (share scene).
+> **Objects:** grass (child + ending), **noise-cancelling earbuds** (reveal, built and live), **3D printer** (one real run + answer; no second-printer comparison), **sauna** + **gym bike** (montage), **the glasses explaining themselves** (share scene).
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
 
 Changes 14 Nov 22:10: the earbuds-case-on-table shot (old shot 3) is cut (weak); Act 2 opens on the grass.
-Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), not AI · printer follow-up is a **comparison** · footage now mapped to real clip names (see [Footage map](#footage-map)) · object animations are **custom from scratch** (team, added later).
+Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), not AI · footage now mapped to real clip names (see [Footage map](#footage-map)) · object animations are **custom from scratch** (team, added later).
+
+**Latest edit:** owner removed the second-printer video, its follow-up question and comparison answer (shots 13–14; edit items 5/D). First printer + answer remain. `cinematic_v4.mp4` is **1:30.13** (0.13 s over 1:30); every retained segment is unchanged. Shot/caption IDs stay stable; scene time ranges below are story targets, not the current whole-clip viewing timeline. **Pending:** first-printer and glasses explanation placeholders, listening review, and an approved final timing adjustment. **Checked:** full audio/video decode; only items 5/D removed; all retained frames, durations, grades and captions match v3; local preview returns HTTP 200. **Next:** insert the first-printer explanation.
 
 ## All on-screen copy, in order
 | # | Line | Style |
@@ -31,7 +33,6 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 | 9 | **Feed your curiosity. Grow your understanding of the world.** · *WonderWhy* | big + tag |
 | 10 | *Ask out loud* | label |
 | 11 | *Opens the part you asked about* | label |
-| 12 | *Keep asking. It goes deeper.* | label |
 | 13 | *Why steam bites* | label |
 | 14 | *Brakes without touching* | label |
 | 15 | *It sees it. AI names it. Real physics explains it.* | diagram caption |
@@ -51,7 +52,6 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 | Child, happy | "Why?" | 24 |
 | IceFrost | "Wait, how did these block all that?" | 8 |
 | IceFrost (VO) | "How does it build this?" | 11 |
-| IceFrost (VO) | Comparison follow-up, e.g. "And why is that one different?" **(TBD: depends on the second printer type)** | 13 |
 | IceFrost | "Here, try these." | 19 |
 | Friend | "Wait, how do these even work?" | 20 |
 | Friend | real laugh / "no way" | 23 |
@@ -79,17 +79,15 @@ Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pas
 | 9 | 0:14-0:17 | REAL + RENDER | Noise wave + flipped "anti-noise" wave merge into a **flat line** | Fade in at the fixed square | **See how it really works.** | Music in, bright; crowd dips |
 | 10 | 0:17-0:20 | GLASS | Real recording of the earbuds answer, yellow system frame left in | Corner tag | **Feed your curiosity. Grow your understanding of the world.** · *WonderWhy* | Music |
 
-## Act 4: real run + follow-up — 3D printer (0:20-0:38)
+## Act 4: real run + answer — 3D printer
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
 | 11 | 0:20-0:23 | REAL (POV) | POV at the printer, hand reaches, pinch | Slow POV push | *Ask out loud* | Printer hum, click · VO "How does it build this?" |
 | 12 | 0:23-0:29 | GLASS | Answer: hot plastic squeezed out, laid layer by layer | Cut on each pinch | *Opens the part you asked about* | Click per step |
-| 13 | 0:29-0:31 | REAL (POV) | POV turns to the **second printer** next to it | | | VO: comparison question (TBD) |
-| 14 | 0:31-0:38 | GLASS + RENDER | Comparison answer: how the two printers differ (custom animation) | | *Keep asking. It goes deeper.* | Music |
 
 ## Act 5: everyday life has a backstage (0:38-0:46) — montage
 
-**Sauna choice (22:44): S2 Journey**, selected by IceFrost's screenshot. Full 5 s composite; [source on the animation branch](https://github.com/IceFrosst/Junction-2026/tree/claude/confident-keller-pxs2tu/Meta_Challenge/video/act5_sauna/S2_journey). Fixed display: water → hot stones → steam → condensation on skin. Current viewing cut `cinematic_v3.mp4` is **1:45.17**; no other clips trimmed. Printer/glasses placeholders remain; final 1:30 timing and audio review are still pending. **Checked:** full audio/video decode, unchanged clip order and all non-sauna durations; local preview responds. **Next:** incorporate the printer explanations.
+**Sauna choice (22:44): S2 Journey**, selected by IceFrost's screenshot. Full 5 s composite; [source on the animation branch](https://github.com/IceFrosst/Junction-2026/tree/claude/confident-keller-pxs2tu/Meta_Challenge/video/act5_sauna/S2_journey). Fixed display: water → hot stones → steam → condensation on skin. Included in the current viewing cut. Its full five seconds remain unchanged after removing the second-printer sequence.
 
 | # | Time | Source | Shot | Effect | Text | Audio |
 |---|---|---|---|---|---|---|
@@ -124,13 +122,13 @@ All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index:
 | 6 glasses on | `mrnetwork/IMG_5543.MOV` / `IMG_5544.MOV` or a trim of IMG_5557 (`icefrost-trims/IMG_5557~2.mp4`) | glasses on | ok |
 | 8 earbuds in palm | `icefrost/PXL_20261114_145509708.mp4` (5 s) | open earbuds case on a table | ok |
 | 8 alt | `mrnetwork/IMG_5560.MOV` (10 s) | hand with the glasses' charging case | b-roll |
-| 11-13 printers | `icefrost/PXL_20261114_153800338.mp4`, `PXL_20261114_153844169.mp4` (8 s each) | Prusa Core One printing + second printer beside it | ok (identify printer 2 for the comparison) |
+| 11 printer | `icefrost/PXL_20261114_153800338.mp4` (8 s) | Prusa Core One printing | first printer retained; second-printer clip excluded (source preserved) |
 | 15 sauna | `icefrost/PXL_20261114_135130437.mp4` (15 s; trim `icefrost-trims/PXL_20261114_135130437~2.mp4`) | sauna benches, stove; **no water pour or visible steam** | S2 Journey selected and inserted; 5 s composite rendered from the 4K trim |
 | 16 gym bike | `mrnetwork/A001_11141614_C103.MOV` (trim: `icefrost-trims/A001_11141614_C103~2.mp4`) (13 s, 24 fps) | someone on an **air bike** (fan wheel) | ok, but **it is a fan bike, not a magnet bike**: change the line to air resistance (*The harder you push, the harder the air pushes back*) or film a magnet spin bike |
 | 18 / 21 / 23 band, glasses on a face | `mrnetwork/IMG_5557.MOV` (24 s), `IMG_5561.MOV` (8 s) | facing camera with glasses; at the table with glasses | ok |
 | 19-23 share scene | `icefrost/PXL_20261114_153315589.mp4` (12 s) | 0-2 s glasses held out over the table (19), 3-5 s friend turns them over (20), 6.5 s puts them on (23), 8-11 s looks, smiles at camera (23/24) | ok; shots 21-22 (IceFrost pinches at the pair, GLASS of the glasses explaining themselves) still to record |
 | B-roll | `PXL_20261113_*` (6 clips), `PXL_20261114_135208665` (balcony), `PXL_20261114_141728301` (CRT TV wall) | hall, stage, robot, tables | spare |
-| GLASS 10, 12, 14, 22 | — | "Record display" on the glasses | **to record** |
+| GLASS 10, 12, 22 | — | "Record display" on the glasses | **to record** |
 Phone trims (the `~2`/`~3` files from IceFrost's phone folder `Movies/WonderWhy/DemoVideos/`) are in `raw/icefrost-trims/`; trimmed grass clips there too.
 App renders (earbuds, ball, bicycle, guitar, kettle, pendulum, phone, spoon) are in `raw/mrnetwork-friend-next/` and `app/bridge/media/`.
 
@@ -138,10 +136,9 @@ App renders (earbuds, ball, bicycle, guitar, kettle, pendulum, phone, spoon) are
 | What | How | Who | Blocker |
 |---|---|---|---|
 | Act 1 variant pick | Watch `act1/out/{A,B,C}.mp4` | IceFrost | render in progress |
-| Remaining shots: 21 (pinch at the pair), GLASS 10/12/14/22 | Phone + Record display | IceFrost | — |
-| Second printer type | Read its label | IceFrost | — |
-| Custom object animations: printer + comparison, sauna, gym bike, glasses/band, grass | Code renders on black, palette cyan #4df0ff, amber #ffc247, green #6dff9c | team (Alex owns some, see issue #22) | — |
-| GLASS recordings 10, 12, 14, 22 | Meta AI "Record display", two takes each | IceFrost | objects in the library |
+| Remaining shots: 21 (pinch at the pair), GLASS 10/12/22 | Phone + Record display | IceFrost | — |
+| Custom object animations: first printer, sauna, gym bike, glasses/band, grass | Code renders on black, palette cyan #4df0ff, amber #ffc247, green #6dff9c | team (Alex owns some, see issue #22) | — |
+| GLASS recordings 10, 12, 22 | Meta AI "Record display", two takes each | IceFrost | objects in the library |
 | Child voice (3 lines) + SFX (click, whoosh, muffled crowd, rising tone, printer hum, hiss, whirr) | ElevenLabs, **Junction key** (not Medly's) → 1Password `agent-general` | IceFrost | key |
 | IceFrost lines + VO | Quiet room | IceFrost | — |
 | Music | Free track: soft start, cut 0:04, lift 0:09, peak 0:42 | — | — |
