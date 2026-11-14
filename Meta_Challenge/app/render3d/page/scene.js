@@ -163,6 +163,34 @@ function lineMaterial(width, options = {}) {
   return material;
 }
 
+// style "real": a dark halo under fx and outlines so they stay readable over bright metal. Min
+// blending caps what is already drawn to cap / brightness of the line (no beading where segments
+// overlap, no effect on dark pixels), and is drawn just before the line itself.
+function haloLineMaterial(width, cap, depthTest = false) {
+  const material = lineMaterial(width, {depthTest});
+  material.blendEquation = THREE.MinEquation;
+  material.onBeforeCompile = shader => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      'gl_FragColor = vec4( diffuseColor.rgb, alpha );',
+      `float hk = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)) * alpha;
+      gl_FragColor = vec4(vec3(${cap.toFixed(4)} / max(hk, 1e-3)), 1.0);`,
+    );
+  };
+  material.customProgramCacheKey = () => `r3d-halo-${cap}`;
+  return material;
+}
+
+const POINT_HALO_FRAGMENT = /* glsl */ `
+  uniform float uCap;
+  varying vec3 vC;
+  void main() {
+    float r = length(gl_PointCoord - 0.5) * 2.0;
+    if (r > 1.0) discard;
+    float hk = max(vC.r, max(vC.g, vC.b)) * (1.0 - smoothstep(0.55, 1.0, r));
+    gl_FragColor = vec4(vec3(uCap / max(hk, 1e-3)), 1.0);
+  }
+`;
+
 function stencilTest(material, ref) {
   material.stencilWrite = true;
   material.stencilWriteMask = 0x00;
@@ -302,6 +330,26 @@ class PointBatch {
     this.n = 0;
   }
 
+  /** style "real": a min-blended dark halo under the points (see haloLineMaterial). */
+  addHalo(scale, cap) {
+    const material = new THREE.ShaderMaterial({
+      uniforms: {uPointScale: {value: scale}, uCap: {value: cap}},
+      vertexShader: POINT_VERTEX,
+      fragmentShader: POINT_HALO_FRAGMENT,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.MinEquation,
+    });
+    const halo = new THREE.Points(this.geometry, material);
+    halo.frustumCulled = false;
+    halo.renderOrder = 2.9;
+    this.object.parent.add(halo);
+    this.halo = halo;
+    return halo;
+  }
+
   begin() {
     this.n = 0;
   }
@@ -319,6 +367,7 @@ class PointBatch {
     for (const name of ['position', 'aColor', 'aSize']) this.geometry.attributes[name].needsUpdate = true;
     this.geometry.setDrawRange(0, this.n);
     this.object.visible = this.n > 0;
+    if (this.halo) this.halo.visible = this.n > 0;
   }
 }
 
@@ -492,8 +541,15 @@ class Explore {
     composer.setSize(SIZE, SIZE);
     composer.addPass(new RenderPass(this.scene, this.camera));
     const glow = new GlowPass(this.scene, this.camera, SIZE);
-    glow.onBefore = () => (POINT_SCALE.value = 0.5);
-    glow.onAfter = () => (POINT_SCALE.value = 1);
+    // In the glow buffer points are half size and outlines weaker (REAL.outline.glow).
+    glow.onBefore = () => {
+      POINT_SCALE.value = 0.5;
+      for (const part of this.parts ?? []) part.outlineMaterial?.color.setScalar(REAL.outline.glow);
+    };
+    glow.onAfter = () => {
+      POINT_SCALE.value = 1;
+      for (const part of this.parts ?? []) part.outlineMaterial?.color.setScalar(1);
+    };
     composer.addPass(glow);
     composer.addPass(new ShaderPass(BAND_MASK));
     composer.addPass(new OutputPass());
@@ -508,6 +564,8 @@ class Explore {
       r.toneMapping = THREE.ACESFilmicToneMapping;
       r.toneMappingExposure = REAL.exposure;
       r.localClippingEnabled = true;
+      r.shadowMap.enabled = true;
+      r.shadowMap.type = THREE.PCFShadowMap;
       this.envMap ??= studioEnvironment(r);
       this.scene.environment = this.envMap;
       this.scene.environmentIntensity = REAL.envIntensity;
@@ -518,6 +576,7 @@ class Explore {
       r.toneMapping = THREE.NoToneMapping;
       r.toneMappingExposure = 1;
       r.localClippingEnabled = false;
+      r.shadowMap.enabled = false;
       this.scene.environment = null;
       this.composer = this.linesComposer;
       this.lights = null;
@@ -583,6 +642,12 @@ class Explore {
     this.fxLayer(this.fxWide.addMaterial(lineMaterial(7, {depthTest: false}), 3));
     this.points = new PointBatch(this.scene, 1024);
     this.fxLayer(this.points.object);
+    if (real) {
+      const h = REAL.halo;
+      this.fxThin.addMaterial(haloLineMaterial(1.3 + h.px, h.cap), 2.9);
+      this.fxMid.addMaterial(haloLineMaterial(2.4 + h.px, h.cap), 2.9);
+      this.points.addHalo(h.point, h.cap);
+    }
     this.puffs = null; // steam (created on first use)
     this.beamBatches = new Map(); // beam core and halo batches by width
     this.arrowMeshes = [];
@@ -601,6 +666,13 @@ class Explore {
     let radius = 0;
     for (const point of points) radius = Math.max(radius, point.distanceTo(center));
     this.sphere = new THREE.Sphere(center, radius || 1);
+    // style "real": thin parts (wires, threads) glow and outline less; they are lines already.
+    if (real) {
+      for (const part of parts) {
+        const size = part.geometry.boundingBox.getSize(new THREE.Vector3()).multiply(part.scale).toArray().map(Math.abs).sort((a, b) => a - b);
+        part.thin = clamp(size[1] / (this.sphere.radius * REAL.thin.size), REAL.thin.min, 1);
+      }
+    }
 
     this.staggerCache = new Map();
     this.rest = beats.map(beat => this.restState(beat));
@@ -610,9 +682,10 @@ class Explore {
   /** style "real": PBR mesh, glow-buffer twin, ghost shell, faint edge and focus outline batches. */
   buildRealPart(part) {
     part.realGeometry = creasedGeometry(part.geometry);
-    part.material = makeMaterial(part.mat);
+    part.material = makeMaterial(part.mat, part.geometry);
     part.material.envMap = this.envMap;
     part.mesh = new THREE.Mesh(part.realGeometry, part.material);
+    part.mesh.receiveShadow = !part.mat.glass;
     part.glowMesh = new THREE.Mesh(part.realGeometry, glowMaterial());
     part.glowMesh.layers.set(GLOW_LAYER);
     part.shell = new THREE.Mesh(part.realGeometry, shellMaterial(part.mat.color));
@@ -628,6 +701,8 @@ class Explore {
     part.outline = new LineBatch(this.scene, 128);
     part.outlineMaterial = lineMaterial(REAL.outline.width);
     part.outline.addMaterial(part.outlineMaterial, 2).layers.enable(GLOW_LAYER);
+    part.outlineHalo = haloLineMaterial(REAL.outline.width + REAL.halo.px * 0.5, REAL.halo.outlineCap, true);
+    part.outline.addMaterial(part.outlineHalo, 1.9);
     part.restMatrix = new THREE.Matrix4().compose(part.pos, part.quat, part.scale);
     part.restInverse = part.restMatrix.clone().invert();
     part.scratchEdges = [];
@@ -1054,7 +1129,7 @@ class Explore {
     const glow = this.glowWeights(state);
     // Studio follows the camera: environment turned with the yaw, lights re-aimed.
     this.scene.environmentRotation.set(0, state.yaw * DEG, 0);
-    this.lights.aim(this.camera, state.target, this.sphere.radius);
+    this.lights.aim(this.camera, state.target, this.sphere.radius, this.shadowBounds(state));
     for (const part of this.parts) {
       const look = state.realLooks.get(part.id);
       const world = state.worlds.get(part.id);
@@ -1082,6 +1157,8 @@ class Explore {
       const bright = lerp(1, REAL.dim.bright, look.dim);
       m.emissive.copy(emissive);
       u.uDesat.value = REAL.dim.desat * look.dim;
+      // Focus parts keep more of their light under other parts (occlusion halved).
+      u.uShadowAO.value = REAL.shadow.ao * (1 - 0.5 * look.outline);
       u.uBright.value = bright;
       // Ghost: the solid fades out while the glass shell fades in. See-through parts are additive and
       // fade by brightness; opaque ones by opacity.
@@ -1106,14 +1183,14 @@ class Explore {
       const lit = emissive.r + emissive.g + emissive.b > 1e-3;
       const solid = !mat.glass && look.ghost < 0.5;
       part.glowMesh.visible = solid || lit;
-      part.glowMesh.material.color.copy(emissive).multiplyScalar(REAL.glowEmissive * bright * keep);
+      part.glowMesh.material.color.copy(emissive).multiplyScalar(REAL.glowEmissive * bright * keep * part.thin);
       part.glowMesh.material.depthWrite = solid;
       // Cut.
       const plane = this.cutOf(state, part);
       const planes = plane ? [plane] : null;
       if (Boolean(plane) !== part.clipping) {
         part.clipping = Boolean(plane);
-        for (const material of [m, part.glowMesh.material, part.shell.material, part.lineMaterials[0], part.outlineMaterial]) {
+        for (const material of [m, part.glowMesh.material, part.shell.material, part.lineMaterials[0], part.outlineMaterial, part.outlineHalo]) {
           material.clippingPlanes = planes;
           material.needsUpdate = true;
         }
@@ -1128,7 +1205,7 @@ class Explore {
       part.batch.commit();
       part.outline.begin();
       // Parts that glow already get a fainter outline.
-      if (look.outline > 0.01) this.pushOutline(state, part, look.color, REAL.outline.strength * look.outline * (lit ? 0.4 : 1));
+      if (look.outline > 0.01) this.pushOutline(state, part, look.color, REAL.outline.strength * look.outline * (lit ? 0.4 : 1) * part.thin);
       if (plane) this.pushSection(part, world, plane, mat.color.clone().lerp(WHITE, 0.6), REAL.cutEdge * bright * (1 - look.ghost));
       part.outline.commit();
     }
@@ -1136,6 +1213,28 @@ class Explore {
     this.drawAnswerGlow(state);
     this.fxWide.commit();
     this.composer.render();
+  }
+
+  /**
+   * style "real": which parts cast the occlusion shadows this frame (solid, not ghosted, in view;
+   * parts parked far off screen would stretch the shadow map), and a sphere around them.
+   */
+  shadowBounds(state) {
+    const box = new THREE.Box3();
+    const sphere = new THREE.Sphere();
+    const frustum = new THREE.Frustum().setFromProjectionMatrix(
+      new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse),
+    );
+    for (const part of this.parts) {
+      const look = state.realLooks.get(part.id);
+      sphere.copy(part.realGeometry.boundingSphere).applyMatrix4(state.worlds.get(part.id));
+      part.mesh.castShadow = !part.mat.glass && look.ghost < 0.5 && frustum.intersectsSphere(sphere);
+      if (!part.mesh.castShadow) continue;
+      box.expandByPoint(sphere.center.clone().addScalar(sphere.radius));
+      box.expandByPoint(sphere.center.clone().addScalar(-sphere.radius));
+    }
+    if (box.isEmpty()) return new THREE.Sphere(this.sphere.center.clone(), this.sphere.radius);
+    return box.getBoundingSphere(new THREE.Sphere());
   }
 
   /** The cut's edge: where the clip plane crosses the part's triangles, as a thin glowing line. */
@@ -1337,6 +1436,7 @@ class Explore {
     if (!batch) {
       batch = new LineBatch(this.scene, 256);
       this.fxLayer(batch.addMaterial(lineMaterial(key, {depthTest: false}), 3));
+      if (this.real && key <= REAL.halo.beamMax) batch.addMaterial(haloLineMaterial(key + REAL.halo.px, REAL.halo.cap), 2.9);
       batch.begin();
       this.beamBatches.set(key, batch);
     }

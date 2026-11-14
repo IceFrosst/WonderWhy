@@ -19,18 +19,19 @@ const DEFAULT_CRF = 18;
 const MIME = {'.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json'};
 
 function parseArgs(argv) {
-  const options = {only: null, beat: null, stillsOnly: false, strip: false, out: DEFAULT_OUT, spec: null, id: null, maxKb: null, crf: DEFAULT_CRF};
+  const options = {only: null, beat: null, stillsOnly: false, strip: false, out: DEFAULT_OUT, spec: null, id: null, maxKb: null, crf: DEFAULT_CRF, fps: 30};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--stills-only') options.stillsOnly = true;
     else if (arg === '--strip') options.strip = true;
-    else if (['--only', '--beat', '--out', '--spec', '--id', '--max-kb', '--crf'].includes(arg)) {
+    else if (['--only', '--beat', '--out', '--spec', '--id', '--max-kb', '--crf', '--fps'].includes(arg)) {
       const value = argv[++i];
       if (!value) throw new Error(`Missing value for ${arg}`);
       if (arg === '--only') options.only = value;
       else if (arg === '--beat') options.beat = Number(value);
       else if (arg === '--max-kb') options.maxKb = Number(value);
       else if (arg === '--crf') options.crf = Number(value);
+      else if (arg === '--fps') options.fps = Math.max(1, Math.min(30, Number(value)));
       else if (arg === '--out') options.out = path.resolve(process.cwd(), value);
       else if (arg === '--spec') options.spec = path.resolve(process.cwd(), value);
       else options.id = value;
@@ -73,11 +74,11 @@ async function launch() {
 
 const fromDataUrl = url => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
 
-function encode(target, frames, crf, loopFrom) {
+function encode(target, frames, crf, loopFrom, fps = 30) {
   return new Promise((resolve, reject) => {
     const args = [
       '-hide_banner', '-loglevel', 'error', '-y',
-      '-f', 'image2pipe', '-c:v', 'png', '-framerate', '30', '-i', 'pipe:0',
+      '-f', 'image2pipe', '-c:v', 'png', '-framerate', String(fps), '-i', 'pipe:0',
       '-an', '-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-crf', String(crf),
       '-pix_fmt', 'yuv420p', '-force_key_frames', `0,${loopFrom}`,
       '-movflags', '+faststart', target,
@@ -190,17 +191,25 @@ async function renderChapter(page, job, options) {
     }
 
     const frames = [];
-    for (let i = 0; i < plan.frames; i += 15) {
-      const count = Math.min(15, plan.frames - i);
-      const urls = await page.evaluate(([bb, i0, c]) => window.R3D.frames(bb, i0, c), [b, i, count]);
-      for (const url of urls) frames.push(fromDataUrl(url));
+    if (options.fps >= 30) {
+      for (let i = 0; i < plan.frames; i += 15) {
+        const count = Math.min(15, plan.frames - i);
+        const urls = await page.evaluate(([bb, i0, c]) => window.R3D.frames(bb, i0, c), [b, i, count]);
+        for (const url of urls) frames.push(fromDataUrl(url));
+      }
+    } else {
+      // Preview: sample the same timeline at a lower frame rate (same length, fewer frames). Final clips use 30.
+      const count = Math.max(1, Math.round((plan.frames / 30) * options.fps));
+      for (let k = 0; k < count; k++) {
+        frames.push(fromDataUrl(await page.evaluate(([bb, t]) => window.R3D.frameAt(bb, t), [b, k / options.fps])));
+      }
     }
     const seam = await page.evaluate(([i, a, e]) => window.R3D.diff(i, a, e), [b, plan.loopFrom, plan.dur]);
     const target = path.join(dir, `b${n}.mp4`);
     let crf = options.crf;
     let bytes = 0;
     for (;;) {
-      await encode(target, frames, crf, plan.loopFrom);
+      await encode(target, frames, crf, plan.loopFrom, options.fps);
       bytes = (await stat(target)).size;
       if (bytes <= maxKb * 1024 || crf >= 36) break;
       crf += 2;

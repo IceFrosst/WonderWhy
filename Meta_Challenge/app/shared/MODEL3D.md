@@ -187,7 +187,7 @@ Owner decision: the Explore film is **the** explanation. It is now a photo-real,
 | `--max-kb` | Default 3072 for `style: "real"` |
 | Warnings | Unknown `material`, `prim` or `fx` names print `WARNING <id>: ...` (material falls back to the role default; prim and fx are skipped) |
 
-## As built (renderer, 14 Nov evening)
+## As built (renderer, 14 Nov evening; shadows, panes, glow and halos 14 Nov night)
 | Topic | Behaviour |
 |---|---|
 | See-through | `glass`, `glass_tint`, `water`, `acrylic` and any `opacity` < 1 are drawn additively: reflections, rim and a faint lit tint are added to what is behind (no absorption). That is how glass reads on black and on the additive display |
@@ -200,6 +200,10 @@ Owner decision: the Explore film is **the** explanation. It is now a photo-real,
 | Timing | `move` and `dur` are rounded to whole frames (1/30 s) so loops close exactly |
 | New fx in the line look | `sine`, `steam` and `beam` also draw in the line look; `glow` there brightens the part's edges |
 | Steam | Puffs are soft and not bloomed; `at` a part id starts at the top centre of the part |
+| Shadows (real) | Soft occlusion only, no cast light: where one solid part shades another (lid lip, body into base, an exploded layer onto the one below) its light drops by up to 60%, 30% on focus parts. See-through and ghosted parts neither cast nor receive. No floor shadow (black is see-through on the glasses) |
+| Panes (real) | Big flat faces of a thin `glass`, `glass_tint`, `water`, `acrylic` or `screen` part read as dark glossy glass: only bright reflections, one crisp reflected strip, a faint face rim; the pane's edges keep the full rim |
+| Glow (real) | Thin emissive parts (wires, under 3% of the model radius across) bloom and outline at 30 to 100%. Focus outlines are softer and bloom at 45% |
+| fx over metal (real) | fx lines, flow dots, thin beams and focus outlines draw a soft dark halo under themselves, so they stay readable over bright highlights |
 
 ## Beat plan for a v2 film (7 or 8 beats)
 | Beat | Job | Typical `dur` |

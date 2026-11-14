@@ -24,8 +24,24 @@ export const REAL = {
   glassRim: 0.8, // their fresnel rim, x rim
   glassEnv: 0.35, // their environment reflections (a flat pane at a grazing angle otherwise turns white)
   edge: 0.22, // faint material-tinted edge line (0 = off)
-  outline: {width: 1.5, strength: 0.7},
+  outline: {width: 1.5, strength: 0.5, glow: 0.45}, // glow: its weight in the glow buffer
+  thin: {size: 0.03, min: 0.3}, // parts whose middle extent < size x model radius: glow and outline x down to min
+  // Dark halo under fx lines, flow dots, thin beams and outlines (min-blended cap, linear): what is
+  // drawn under a line of brightness k is capped to cap / k, so lines stay visible over bright metal.
+  // px: extra width (outlines get half); point: halo size x dot size.
+  halo: {cap: 0.1, outlineCap: 0.22, px: 4, point: 1.7, beamMax: 6},
   glowEmissive: 0.55, // emissive colour written into the glow buffer
+  // Occlusion shadows: soft shadow maps from lights that add no light of their own, above and a
+  // little in front of the camera, one from each side (`dirs`, camera space). Where a part shades
+  // another (handle onto body, lid lip, body into base, an exploded layer onto the one below) all
+  // light there drops by up to `ao`: cheap directional ambient occlusion, any number of parts.
+  shadow: {dirs: [[-0.65, 0.6, 0.3], [0.65, 0.6, 0.3]], mapSize: 512, radius: 4, bias: -0.0005, ao: 0.6},
+  // Big flat faces of thin glass / screen / acrylic parts: environment reflection below `floor` is
+  // cut (only the bright studio strips show, as crisp bands) and the fresnel rim is x `rim`, so a
+  // pane reads as dark glossy glass; its edges keep the full rim. `thin`: min / mid bbox extent.
+  // `band`: a crisp reflected strip light on the pane (view-space reflection x in `at` +- `width`,
+  // slanted), so the pane reads as glossy; it moves when the pane tilts relative to the camera.
+  pane: {floor: 0.05, gain: 1.3, rim: 0.12, thin: 0.2, band: {strength: 0.07, at: 0.06, width: 0.009, soft: 0.005}},
   fx: 1.15, // fx brightness multiplier
   bloom: {strength: 0.8, radius: 0.15, factors: [1.0, 0.55, 0.22, 0.0, 0.0]},
   key: {color: '#fff0dc', intensity: 1.6},
@@ -129,6 +145,16 @@ export function creasedGeometry(geometry) {
 }
 
 const RIM_PARS = /* glsl */ `
+// Occlusion: sum of the shadow-casting lights' shadows (1 = open), weighted by how much the
+// surface faces each light (faces turned away would only shadow themselves). Set in the light loop.
+float rShadowSum = 0.0;
+float rShadowW = 0.0;
+uniform float uShadowAO;
+uniform float uEnvFloor;
+uniform float uEnvGain;
+uniform float uPaneRim;
+uniform vec4 uBand;
+varying float vFlat;
 uniform vec3 uRim;
 uniform float uRimPow;
 uniform float uLift;
@@ -140,7 +166,7 @@ uniform vec3 uCutColor;
 const RIM_MAIN = /* glsl */ `
 {
   float ndvR = clamp(abs(dot(normalize(normal), normalize(vViewPosition))), 0.0, 1.0);
-  outgoingLight += uRim * pow(1.0 - ndvR, uRimPow);
+  outgoingLight += uRim * pow(1.0 - ndvR, uRimPow) * mix(1.0, uPaneRim, rPane);
   outgoingLight += uLift * diffuseColor.rgb;
   // Inside of a cut shell: its own light, never darker than a mid-dark grey, hardly dimmed.
   if (uCutFlat > 0.5 && !gl_FrontFacing) outgoingLight = (uCutColor + 0.12 * min(outgoingLight, vec3(0.25))) * mix(1.0, uBright, 0.25);
@@ -151,9 +177,76 @@ const RIM_MAIN = /* glsl */ `
 }
 #include <opaque_fragment>
 `;
+// Shadow casters are only the occlusion lights (three sorts casters first); their shadows go to rShadow*.
+const SHADOW_LINE = 'directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;';
+if (!THREE.ShaderChunk.lights_fragment_begin.includes(SHADOW_LINE)) throw new Error('real.js: three.js light chunk changed');
+// Shadow camera depth range is 3 x its half width (StudioLights.aim), so this is resolution-free.
+const SHADOW_SLOPE = ((1.5 * REAL.shadow.radius * 2) / REAL.shadow.mapSize / 3).toFixed(6);
+const LIGHTS_BEGIN = `#define SHADOW_SLOPE ${SHADOW_SLOPE}\n` + THREE.ShaderChunk.lights_fragment_begin.replace(
+  SHADOW_LINE,
+  `{
+    // Receiver-side slope bias: the soft PCF kernel spans several texels, so a tilted face would
+    // otherwise shadow itself (moire). SHADOW_SLOPE = kernel width in shadow depth units.
+    float rNL = dot(geometryNormal, directLight.direction);
+    float rN = max(rNL, 0.1);
+    float rBias = directionalLightShadow.shadowBias - SHADOW_SLOPE * min(sqrt(1.0 - rN * rN) / rN, 6.0);
+    float rS = ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, rBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;
+    float rW = smoothstep(0.15, 0.5, rNL); // none at grazing angles, where the bias runs out
+    directLight.color *= rS; // the occlusion lights are black: no-op, but keeps them debuggable
+    rShadowSum += rW * rS;
+    rShadowW += rW;
+  }`,
+);
+const OCCLUSION = /* glsl */ `
+#include <aomap_fragment>
+float rPane = uEnvFloor > 0.0 ? smoothstep(0.85, 0.98, vFlat) : 0.0; // 1 on a pane's big flat faces
+{
+  #if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+  // Shaded surfaces lose up to uShadowAO of all their light.
+  float occ = mix(1.0, rShadowSum / max(rShadowW, 1e-4), uShadowAO * min(rShadowW, 1.0));
+  reflectedLight.directDiffuse *= occ;
+  reflectedLight.directSpecular *= occ;
+  reflectedLight.indirectDiffuse *= occ;
+  reflectedLight.indirectSpecular *= occ;
+  #endif
+  // Pane faces (REAL.pane): only the bright studio strips reflect, as crisp bands; the dim dome
+  // and the overhead box would fill the whole pane grey.
+  if (rPane > 0.0) {
+    reflectedLight.indirectSpecular = mix(reflectedLight.indirectSpecular, max(reflectedLight.indirectSpecular - uEnvFloor, 0.0) * uEnvGain, rPane);
+    #ifdef USE_CLEARCOAT
+    clearcoatSpecularIndirect = mix(clearcoatSpecularIndirect, max(clearcoatSpecularIndirect - uEnvFloor, 0.0) * uEnvGain, rPane);
+    #endif
+    // Slanted by the screen height, like a tall strip light seen in tilted glass.
+    float rx = reflect(-geometryViewDir, geometryNormal).x + 0.45 * geometryViewDir.y - uBand.y;
+    float band = smoothstep(-uBand.z - uBand.w, -uBand.z, rx) * (1.0 - smoothstep(uBand.z, uBand.z + uBand.w, rx));
+    reflectedLight.indirectSpecular += vec3(uBand.x * band * rPane);
+  }
+}
+`;
 
-/** The part's PBR material with the rim / dim / cut hooks. */
-export function makeMaterial(mat) {
+/** Materials that get the pane treatment on their big flat faces (REAL.pane). */
+export const isPane = mat => mat.glass || mat.name === 'screen';
+
+/** Local axis of a thin, flat geometry (its smallest bounding-box extent), or null. */
+export function thinAxis(geometry) {
+  if (!geometry) return null;
+  if (!geometry.boundingBox) geometry.computeBoundingBox();
+  const size = geometry.boundingBox.getSize(new THREE.Vector3()).toArray();
+  const order = [0, 1, 2].sort((a, b) => size[a] - size[b]);
+  if (size[order[0]] > REAL.pane.thin * size[order[1]]) return null;
+  return new THREE.Vector3().setComponent(order[0], 1);
+}
+
+const PANE_VERTEX_PARS = /* glsl */ `
+uniform vec3 uThinAxis;
+varying float vFlat;
+`;
+
+/**
+ * The part's PBR material with the rim / dim / cut / shadow / pane hooks. `geometry` (optional,
+ * local space) lets a thin glass or screen part get the pane look on its flat faces.
+ */
+export function makeMaterial(mat, geometry = null) {
   const physical = mat.clearcoat > 0 || mat.sheen > 0 || mat.anisotropy > 0;
   // See-through materials are additive: reflections, rim and a faint lit tint are added to what is
   // behind (no absorption), the way glass reads on black and on an additive display.
@@ -185,7 +278,14 @@ export function makeMaterial(mat) {
     });
   } else material = new THREE.MeshStandardMaterial(options);
   const rimColor = mat.color.clone().lerp(new THREE.Color(1, 1, 1), 0.55).multiplyScalar(REAL.rim * (glass ? REAL.glassRim : 1));
+  const axis = isPane(mat) ? thinAxis(geometry) : null;
   const u = {
+    uShadowAO: {value: REAL.shadow.ao},
+    uThinAxis: {value: axis ?? new THREE.Vector3()},
+    uEnvFloor: {value: axis ? REAL.pane.floor : 0},
+    uEnvGain: {value: REAL.pane.gain},
+    uPaneRim: {value: REAL.pane.rim},
+    uBand: {value: new THREE.Vector4(REAL.pane.band.strength, REAL.pane.band.at, REAL.pane.band.width, REAL.pane.band.soft)},
     uRim: {value: rimColor},
     uRimPow: {value: glass ? REAL.rimPow + 1.5 : REAL.rimPow},
     uLift: {value: mat.glass ? 0 : REAL.lift},
@@ -200,10 +300,17 @@ export function makeMaterial(mat) {
   material.userData.rimBase = rimColor.clone();
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, u);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>\n${PANE_VERTEX_PARS}`)
+      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n  vFlat = abs(dot(normalize(objectNormal), uThinAxis));');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\n${RIM_PARS}`)
+      .replace('#include <lights_fragment_begin>', LIGHTS_BEGIN)
+      .replace('#include <aomap_fragment>', OCCLUSION)
       .replace('#include <opaque_fragment>', RIM_MAIN);
   };
+  // Cut parts: the clipped-away half casts no shadow either.
+  material.clipShadows = true;
   material.customProgramCacheKey = () => 'r3d-real';
   return material;
 }
@@ -323,7 +430,7 @@ export function studioEnvironment(renderer) {
   return target.texture;
 }
 
-/** Key, fill and rim lights, re-aimed every frame relative to the camera. */
+/** Key, fill and rim lights (plus the occlusion lights), re-aimed every frame relative to the camera. */
 export class StudioLights {
   constructor() {
     this.key = new THREE.DirectionalLight(REAL.key.color, REAL.key.intensity);
@@ -338,6 +445,19 @@ export class StudioLights {
       new THREE.Vector3(0.55, 0.6, -0.9),
       new THREE.Vector3(-0.7, 0.35, -0.85),
     ].map(v => v.normalize());
+    // The occlusion lights (REAL.shadow): no light of their own, only soft PCF shadow maps. They need
+    // the renderer's shadowMap.enabled; without it nothing changes.
+    const s = REAL.shadow;
+    this.shades = s.dirs.map(dir => {
+      const light = new THREE.DirectionalLight(0xffffff, 0);
+      light.castShadow = true;
+      light.shadow.mapSize.set(s.mapSize, s.mapSize);
+      light.shadow.radius = s.radius;
+      light.shadow.bias = s.bias;
+      this.lights.push(light);
+      this.dirs.push(new THREE.Vector3(...dir).normalize());
+      return light;
+    });
   }
 
   addTo(scene) {
@@ -347,14 +467,27 @@ export class StudioLights {
     }
   }
 
-  aim(camera, target, radius) {
+  /**
+   * `bounds` (optional THREE.Sphere around the parts that cast shadows) frames the occlusion
+   * lights' shadow cameras; without it they frame `target` and `radius`.
+   */
+  aim(camera, target, radius, bounds = null) {
     const basis = new THREE.Matrix3().setFromMatrix4(camera.matrixWorld);
+    const box = bounds ?? new THREE.Sphere(target, radius);
     this.lights.forEach((light, i) => {
       const dir = this.dirs[i].clone().applyMatrix3(basis).normalize();
-      light.position.copy(target).addScaledVector(dir, radius * 4);
-      light.target.position.copy(target);
+      // Only the direction lights; a shadow caster sits on its bounds so its camera frames them.
+      const centre = light.castShadow ? box.center : target;
+      light.position.copy(centre).addScaledVector(dir, (light.castShadow ? box.radius : radius) * 4);
+      light.target.position.copy(centre);
       light.target.updateMatrixWorld();
     });
+    const r = box.radius;
+    for (const light of this.shades) {
+      const cam = light.shadow.camera;
+      Object.assign(cam, {left: -r, right: r, top: r, bottom: -r, near: r * 2.5, far: r * 5.5});
+      cam.updateProjectionMatrix();
+    }
   }
 }
 
@@ -413,7 +546,11 @@ export class GlowPass extends Pass {
     renderer.setRenderTarget(this.target);
     renderer.clear();
     this.onBefore?.();
+    // The glow buffer has no lit materials: keep the main pass's shadow map, do not redraw it.
+    const shadowAuto = renderer.shadowMap.autoUpdate;
+    renderer.shadowMap.autoUpdate = false;
     renderer.render(this.scene, this.camera);
+    renderer.shadowMap.autoUpdate = shadowAuto;
     this.onAfter?.();
     this.camera.layers.mask = mask;
     this.scene.background = background;

@@ -13,8 +13,9 @@ Renders every Explore chapter (`lens: "explore"`, `scene: "model3d"`, spec in [M
 | `npm run render -- --spec chapter.json --id test --out /tmp/media` | A chapter from a file (testing a sketch) |
 | `npm run render -- --spec chapter.json --id test --out /tmp/media --stills-only --strip` | Also `k<n>.png`: 900x600 contact sheet, 3 frames in the move + 3 after rest. Review motion without video |
 | `--max-kb <kb>`, `--crf <n>` | Size cap per clip (default 1024 KB, 3072 KB for `style: "real"`), start CRF (18) |
+| `--fps <n>` | Preview clips at n frames per second (1 to 30, default 30): same timeline, a third of the work at 10. Use for a quick look on a laptop; final clips are rendered at 30 on a machine with a GPU |
 
-Needs `ffmpeg` on PATH. The kettle (6 beats, 1224 frames) takes about **25 s** on a machine with a GPU (Chromium uses ANGLE/D3D11); software WebGL is slower but works: on the Iris Xe laptop Chromium falls back to SwiftShader, about **0.3 s per frame in both looks** (a 6.8 s beat in about 60 s, a 2000-frame film in about 10 min). Stills only: about 3 s per beat.
+Needs `ffmpeg` on PATH. The kettle (6 beats, 1224 frames) takes about **25 s** on a machine with a GPU (Chromium uses ANGLE/D3D11); software WebGL is slower but works: on the Iris Xe laptop Chromium falls back to SwiftShader, about **0.3 s per frame** in the line look. The real look's occlusion shadows, panes and halos cost about +15 to 18% per frame (paired A/B in one browser, 14 Nov night). Stills only: about 3 s per beat.
 
 Unknown `material`, `prim` and `fx` names print a `WARNING <id>:` line (the part falls back to its role's material; unknown prims and fx are skipped). Clips over the size cap or with a loop seam over 1 also warn.
 
@@ -45,12 +46,16 @@ Unknown `material`, `prim` and `fx` names print a `WARNING <id>:` line (the part
 | Materials | `MeshStandardMaterial` (Physical where the preset has clearcoat or sheen) from the MODEL3D v2 preset table; `color`, `metalness`, `roughness`, `opacity`, `emissive`, `glow` override; no `material` = role default. Dark presets are pre-lifted and any non-metal colour darker than 4.5% linear luminance is lifted to it |
 | Normals | Split at creases over 40 degrees (`toCreasedNormals`): lathes and tubes smooth, boxes and lathe corners crisp |
 | Light | Studio environment built once with PMREM (dark grey dome, overhead box, warm key strip, cool fill strip, two rim strips behind) turned with the camera yaw; warm key, cool fill and two rim directional lights aimed relative to the camera each frame; ACES filmic, sRGB, black background, no floor |
+| Occlusion | Two black directional lights (upper left and upper right, camera-relative) only cast soft PCF shadows (512 px, radius 4) framed on the solid parts in view. Their shadows, weighted by how much a face looks at each light, cut all light there by up to `REAL.shadow.ao` (60%, half on focus parts): lid lip, body into base, an exploded layer onto the one below. Receiver-side slope bias, no occlusion at grazing angles. See-through and ghosted parts neither cast nor receive |
 | Rim | Every part gets a fresnel rim (material colour lifted to white, power 3.5) so silhouettes read on the additive display; a faint material-tinted edge line (`REAL.edge`, max-blended, so it only shows against darker pixels) |
 | See-through | `glass`, `water`, `acrylic`, `glass_tint` and any `opacity` < 1 are additive (reflections, rim and a faint lit tint added to what is behind, no absorption), reflections at 35% |
-| Focus / dim / ghost | Focus parts keep their material and get a silhouette outline in their role colour (green on number beats; fainter on parts that glow already). Others: 35% brightness, 85% desaturated. Ghost parts: the solid fades out and an additive fresnel glass shell fades in. Ghost wins over dim |
+| Panes | On the big flat faces of a thin see-through or `screen` part (smallest bbox extent under 20% of the middle one): environment reflection under `REAL.pane.floor` is cut, the face rim is x0.12, and one crisp slanted reflected strip is added, so it reads as dark glossy glass; the pane's edges keep the full rim |
+| Focus / dim / ghost | Focus parts keep their material and get a silhouette outline in their role colour (green on number beats; fainter on parts that glow already and on thin parts). Others: 35% brightness, 85% desaturated. Ghost parts: the solid fades out and an additive fresnel glass shell fades in. Ghost wins over dim |
 | Cut | A clip plane on the listed parts slides in from outside the part over the move (and out again on the next beat). Inside faces of a cut part are a flat mid-dark grey; a thin glowing line marks where the plane crosses the part |
-| Glow | A glow layer (black occluders, emissive parts, outlines, fx) rendered at half size, bloomed, and only the bloom added. White plastic never blooms. fx lines and points are drawn sharp in the main pass (max blending) |
+| Glow | A glow layer (black occluders, emissive parts, outlines at 45%, fx) rendered at half size, bloomed, and only the bloom added. White plastic never blooms. Thin parts (middle bbox extent under 3% of the model radius: wires) glow at 30 to 100%. fx lines and points are drawn sharp in the main pass (max blending) |
+| Halos | fx lines, flow dots, beams up to 6 px and focus outlines first draw a wider min-blended dark halo: what is under a line of brightness k is capped to `cap / k` (no beading, no effect on dark pixels), so they stay readable over bright metal |
 | Tuning | Every number of the look is in `REAL` and `PRESETS` at the top of `page/real.js` |
+| Line look unchanged | Checked after every real-look change: `npm run render -- --stills-only --out <tmp>`, then every `c<n>.png` and `s<n>.png` compared pixel by pixel with the same run of the previous code (`git archive HEAD`) on the same machine (14 Nov night: 84 of 84 identical). Do not compare with `bridge/media/`: those were rendered on another machine and differ by rasterisation |
 
 ## Decisions where MODEL3D.md leaves room
 | Topic | Choice |
@@ -71,6 +76,6 @@ Unknown `material`, `prim` and `fx` names print a `WARNING <id>:` line (the part
 | `render.mjs` | Node driver: static server, Playwright, ffmpeg, manifest merge |
 | `page/index.html` | Import map to `node_modules/three` |
 | `page/scene.js` | Scene builder, spec normaliser (v2 limits) and deterministic `renderAt(beat, t)`; exposes `window.R3D` |
-| `page/real.js` | The real look: presets, materials, studio environment and lights, glow pass |
+| `page/real.js` | The real look: presets, materials (rim, occlusion and pane shader hooks), studio environment, lights and occlusion lights, glow pass |
 | `page/geometry.js` | Primitives (incl. `capsule`), edge, outline and contour extraction |
 | `page/overlay.js` | The captioned still |
