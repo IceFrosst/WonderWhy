@@ -47,5 +47,7 @@ cd ../bridge && npm install && npm start
 | Bridge identified → scene painted on glasses | ~50 ms |
 | First load | ~182 KB gzipped, 4 requests (limit 300 KB, 15) |
 | Meta test gate | Passes |
-| Model detection time | Not measured yet (needs an API key; run `npm run bench` in bridge/) |
+| Detection accuracy, dev stand-in (14 Nov, desktop) | **14 of 14** photos right (2 each of guitar, bicycle, keys, phone; 1 kettle, 1 ball; 4 unrelated objects answered "unknown"). Provider `claude` stand-in (Claude Haiku through the local command line), longest side 896 px, 1 run each. Freely licensed test photos from Wikimedia Commons, not in git |
+| Detection time, dev stand-in | p50 6.9 s, p90 8.4 s. This is the stand-in's process start, **not** the demo provider's speed |
+| Detection time and accuracy on Gemini | Not measured yet (no `GEMINI_API_KEY` on a test machine). Run `npm run bench` in bridge/ with the key set |
 | Photo glasses → phone over Bluetooth | Can't be simulated; use the delay slider, measure on real glasses |
