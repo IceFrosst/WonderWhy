@@ -19,7 +19,7 @@ case "$cmd" in
       b="$(basename "$f")"
       if [ -e "$dst/$b" ]; then continue; fi
       echo "pull $b"; adb pull -a "$f" "$dst/$b" >/dev/null; n=$((n+1))
-    done < <(adb shell "find /sdcard/DCIM /sdcard/Movies /sdcard/Download -type f -mtime -$days 2>/dev/null" | tr -d '\r' | grep -E "\.($VIDEXT)$" || true)
+    done < <(adb shell "find /sdcard/DCIM /sdcard/Movies /sdcard/Download -type f -mtime -$days 2>/dev/null" | tr -d '\r' | grep -v "/Movies/WonderWhy/" | grep -E "\.($VIDEXT)$" || true)
     echo "pulled $n new file(s) -> $dst"
     ;;
   sort)
