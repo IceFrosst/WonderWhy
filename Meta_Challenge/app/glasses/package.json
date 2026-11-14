@@ -8,6 +8,8 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "export:media": "node scripts/export-media.mjs",
+    "export:video": "node scripts/video-kit.mjs",
+    "test:states": "node scripts/states.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
