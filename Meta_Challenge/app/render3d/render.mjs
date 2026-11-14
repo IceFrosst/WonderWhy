@@ -12,20 +12,22 @@ import {chromium} from 'playwright';
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const OBJECTS = path.resolve(ROOT, '../shared/objects.json');
 const DEFAULT_OUT = path.resolve(ROOT, '../bridge/media');
-const MAX_BYTES = 400 * 1024;
-const FIRST_CRF = 20;
+const DEFAULT_MAX_KB = 1024; // per beat (was 400: bicycle beat 1 then had to drop to crf 26, visibly blocky); --max-kb overrides
+const DEFAULT_CRF = 18;
 const MIME = {'.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json'};
 
 function parseArgs(argv) {
-  const options = {only: null, beat: null, stillsOnly: false, out: DEFAULT_OUT, spec: null, id: null};
+  const options = {only: null, beat: null, stillsOnly: false, out: DEFAULT_OUT, spec: null, id: null, maxKb: DEFAULT_MAX_KB, crf: DEFAULT_CRF};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--stills-only') options.stillsOnly = true;
-    else if (['--only', '--beat', '--out', '--spec', '--id'].includes(arg)) {
+    else if (['--only', '--beat', '--out', '--spec', '--id', '--max-kb', '--crf'].includes(arg)) {
       const value = argv[++i];
       if (!value) throw new Error(`Missing value for ${arg}`);
       if (arg === '--only') options.only = value;
       else if (arg === '--beat') options.beat = Number(value);
+      else if (arg === '--max-kb') options.maxKb = Number(value);
+      else if (arg === '--crf') options.crf = Number(value);
       else if (arg === '--out') options.out = path.resolve(process.cwd(), value);
       else if (arg === '--spec') options.spec = path.resolve(process.cwd(), value);
       else options.id = value;
@@ -186,12 +188,12 @@ async function renderChapter(page, job, options) {
     }
     const seam = await page.evaluate(([i, a, e]) => window.R3D.diff(i, a, e), [b, plan.loopFrom, plan.dur]);
     const target = path.join(dir, `b${n}.mp4`);
-    let crf = FIRST_CRF;
+    let crf = options.crf;
     let bytes = 0;
     for (;;) {
       await encode(target, frames, crf, plan.loopFrom);
       bytes = (await stat(target)).size;
-      if (bytes <= MAX_BYTES || crf >= 36) break;
+      if (bytes <= options.maxKb * 1024 || crf >= 36) break;
       crf += 2;
     }
     const seconds = ((Date.now() - started) / 1000).toFixed(1);

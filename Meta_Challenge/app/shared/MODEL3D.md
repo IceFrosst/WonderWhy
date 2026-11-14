@@ -22,7 +22,7 @@ The glasses never run a 3D engine. `Meta_Challenge/app/render3d/` renders every 
 
 | File | What |
 |---|---|
-| `b<n>.mp4` | Beat n: 600x600, 30 fps, H.264 yuv420p, `+faststart`, black background, **no text in the picture**. Starts with the move from beat n-1's resting state (about 0.8 s), then the beat's own motion. Target under 400 KB per beat |
+| `b<n>.mp4` | Beat n: 600x600, 30 fps, H.264 yuv420p, `+faststart`, black background, **no text in the picture**. Starts with the move from beat n-1's resting state (about 0.8 s), then the beat's own motion. Target under 1 MB per beat at CRF 18 (raised from 400 KB on 14 Nov: the cap forced visible blocking on busy beats; all 42 clips now fit at CRF 18, largest 929 KB, 13 MB in total) |
 | `s<n>.png`, `c<n>.png` | The beat's frame at rest: captioned (for the phone and Android cards) and text-free |
 | `tracks.json` | Per beat: `dur`, `loopFrom` (seconds; the player loops `[loopFrom, end]` so continuing motion keeps going), `labels` (part id, side `l` or `r`, and the anchor's screen position sampled at 10 Hz: `[[t, x, y], ...]`), `number` |
 
