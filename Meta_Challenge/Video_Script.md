@@ -14,6 +14,7 @@ updated: 2026-11-14
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
 
+Changes 14 Nov 22:10: the earbuds-case-on-table shot (old shot 3) is cut (weak); Act 2 opens on the grass.
 Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), not AI · printer follow-up is a **comparison** · footage now mapped to real clip names (see [Footage map](#footage-map)) · object animations are **custom from scratch** (team, added later).
 
 ## All on-screen copy, in order
@@ -66,8 +67,7 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 Desaturated, cold. **Earbuds in from shot 4 on**: outside sound muffled (low-pass), only a dull tick is clear.
 | # | Time | Source | Shot | Text | Audio |
 |---|---|---|---|---|---|
-| 3 | 0:04-0:05 | REAL | Match cut: seed blur → hand taking the **earbuds out of the case** (no close-up of them going in) | *You used to ask why.* | Case click; sound drops to muffled on the cut to shot 4 |
-| 4 | 0:05-0:07 | REAL | IceFrost on grass outside, earbuds in, head down, scrolling (shot A) | *Then you stopped.* | Muffled wind, tick |
+| 4 | 0:04-0:07 | REAL | Match cut: seed blur → IceFrost on grass outside, earbuds in, head down, scrolling | *You used to ask why.* → *Then you stopped.* | Sound drops to muffled, wind, tick |
 | 5 | 0:07-0:09 | REAL | Walking through the hackathon crowd, zoned out | (stays) | Crowd as a muffled wall |
 
 ## Act 3: the reveal (0:09-0:20) — earbuds
@@ -115,7 +115,6 @@ Third person films; IceFrost wears one pair, friend sits next to him.
 All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index: `raw/INDEX.md`, made by [video/ingest.sh](video/ingest.sh)). Pixel clips: 4K HEVC 60 fps portrait. iPhone clips (MrNetwork, `friend-next` → `DemoVideos/` and `DemoVideos/New/`, split parts re-joined): 4K HEVC portrait; `A001_*` are 24 fps.
 | Shot | Clip | What it shows | Status |
 |---|---|---|---|
-| 3 earbuds from case | `icefrost-trims/PXL_20261114_145509708~3.mp4` (phone trim), raw `icefrost/PXL_20261114_145509708.mp4` | taking the earbuds out of the case | ok (decided: no close-up of them going in) |
 | 4 grass, scrolling | `mrnetwork/A001_11141516_C098_2.MOV` (26 s, 24 fps) | lying on grass, phone, earbuds in | ok |
 | 24 grass ending / B1 | `mrnetwork/A001_11141518_C099_2.MOV` (21 s), `A001_11141519_C100.MOV` (21 s) | on the grass with the glasses, arms up, touching grass | ok |
 | 5 crowd walk | `mrnetwork/IMG_5554.MOV` (3.5 s, from behind, 30 fps), `IMG_5556.MOV` (2 s, from behind), `IMG_5545.MOV` (19 s), `IMG_5546.MOV` (7 s) | walking the hall | ok, but glasses already on in 5545/5546: a back-view crowd walk **without glasses** is missing |
