@@ -1,0 +1,64 @@
+{
+  "objectId": "bicycle",
+  "lenses": {
+    "bicycle.motion": {
+      "kind": "motion",
+      "title": "Gear ratio",
+      "stills": [
+        "motion/s1.png",
+        "motion/s2.png",
+        "motion/s3.png"
+      ],
+      "clip": "motion/clip.mp4",
+      "captions": [
+        "The chain links two gears. Gear ratio = front teeth / rear teeth.",
+        "Each pedal turn pulls the chain by the front teeth count, so the wheel turns by the ratio.",
+        "Energy is conserved: a higher ratio gives more speed per pedal turn but less push at the wheel."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "bicycle.flow": {
+      "kind": "flow",
+      "title": "Follow the force",
+      "stills": [
+        "flow/s1.png",
+        "flow/s2.png",
+        "flow/s3.png",
+        "flow/s4.png"
+      ],
+      "clip": "flow/clip.mp4",
+      "captions": [
+        "Your leg pushes the pedal down. The crank is a lever that turns the push into a twist on the front gear.",
+        "The front gear pulls the top of the chain tight. A clean chain loses only about 3 percent to friction.",
+        "The chain turns the rear gear. A small rear gear spins the wheel several times for every pedal turn.",
+        "The tyre pushes back on the road and the road pushes the bike forward. That push is what moves you."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "bicycle.number": {
+      "kind": "number",
+      "title": "The number",
+      "stills": [
+        "number/s1.png",
+        "number/s2.png",
+        "number/s3.png"
+      ],
+      "clip": "number/clip.mp4",
+      "captions": [
+        "48 teeth divided by 16 is a ratio of 3. The wheel turns three times per pedal turn: 3 times 2.1 metres.",
+        "At 80 pedal turns a minute that is 30 km/h. The price: only 17 percent of your push reaches the tyre.",
+        "A low gear swaps it round. Three times the push for climbing, but only 2.1 metres per turn."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    }
+  }
+}

@@ -90,3 +90,180 @@ export function parseExplodedSpec(x: unknown): ExplodedSpec | null {
     steps,
   };
 }
+
+export type FlowKind = 'energy' | 'water' | 'signal' | 'force';
+
+export interface FlowNode {
+  id: string;
+  label: string;
+  sub?: string;
+}
+
+export interface FlowLoss {
+  at: string;
+  label: string;
+  share: number;
+}
+
+export interface FlowSpec {
+  kind: FlowKind;
+  nodes: FlowNode[];
+  losses: FlowLoss[];
+  steps: Array<{upTo: number; focus: string[]; losses: boolean}>;
+}
+
+export interface NumberValue {
+  value: number;
+  unit: string;
+  label: string;
+  decimals?: number;
+}
+
+export interface NumberRow extends NumberValue {
+  scales?: boolean;
+  of?: number;
+}
+
+export interface NumberKnob {
+  label: string;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+}
+
+export interface NumberSpec {
+  headline: NumberValue;
+  rows: NumberRow[];
+  compare?: NumberValue;
+  knob?: NumberKnob;
+  steps: Array<{show: 'headline' | 'rows' | 'compare'}>;
+}
+
+const FLOW_KINDS: readonly string[] = ['energy', 'water', 'signal', 'force'];
+const NUMBER_SHOWS: readonly string[] = ['headline', 'rows', 'compare'];
+const MAX_VALUE = 1_000_000_000;
+const shortText = (x: unknown): string | null => {
+  if (!text(x)) return null;
+  return x.trim().slice(0, 48);
+};
+const safeValue = (x: number): number => bounded(x, -MAX_VALUE, MAX_VALUE);
+const decimals = (x: unknown): number | null => {
+  if (x === undefined) return null;
+  return number(x) ? Math.round(bounded(x, 0, 6)) : NaN;
+};
+
+/** Validate a serialised left-to-right flow diagram. */
+export function parseFlowSpec(x: unknown): FlowSpec | null {
+  if (!record(x) || typeof x.kind !== 'string' || !FLOW_KINDS.includes(x.kind)) return null;
+  if (!Array.isArray(x.nodes) || x.nodes.length < 2 || !Array.isArray(x.losses) || !Array.isArray(x.steps) || !x.steps.length) return null;
+
+  const nodes: FlowNode[] = [];
+  const ids = new Set<string>();
+  for (const item of x.nodes.slice(0, 6)) {
+    if (!record(item)) return null;
+    const id = shortText(item.id);
+    const label = shortText(item.label);
+    const sub = item.sub === undefined ? null : shortText(item.sub);
+    if (!id || !label || (item.sub !== undefined && !sub) || ids.has(id)) return null;
+    ids.add(id);
+    nodes.push({id, label, ...(sub === null ? {} : {sub})});
+  }
+  if (nodes.length < 2) return null;
+
+  const losses: FlowLoss[] = [];
+  for (const item of x.losses.slice(0, 3)) {
+    if (!record(item) || !number(item.share)) return null;
+    const at = shortText(item.at);
+    const label = shortText(item.label);
+    if (!at || !label) return null;
+    if (ids.has(at)) losses.push({at, label, share: bounded(item.share, 0, 1)});
+  }
+
+  const steps: FlowSpec['steps'] = [];
+  for (const item of x.steps) {
+    if (!record(item) || !number(item.upTo) || !Array.isArray(item.focus) || typeof item.losses !== 'boolean') return null;
+    const focus: string[] = [];
+    for (const raw of item.focus) {
+      const id = shortText(raw);
+      if (!id) return null;
+      if (ids.has(id) && !focus.includes(id)) focus.push(id);
+    }
+    steps.push({
+      upTo: Math.round(bounded(item.upTo, 1, nodes.length)),
+      focus,
+      losses: item.losses,
+    });
+  }
+  return {kind: x.kind as FlowKind, nodes, losses, steps};
+}
+
+function parseNumberValue(x: unknown): NumberValue | null {
+  if (!record(x) || !number(x.value)) return null;
+  const unit = shortText(x.unit);
+  const label = shortText(x.label);
+  const places = decimals(x.decimals);
+  if (!unit || !label || Number.isNaN(places)) return null;
+  return {
+    value: safeValue(x.value),
+    unit,
+    label,
+    ...(places === null ? {} : {decimals: places}),
+  };
+}
+
+/** Validate a serialised headline/rows/comparison number card. */
+export function parseNumberSpec(x: unknown): NumberSpec | null {
+  if (!record(x) || !Array.isArray(x.rows) || !Array.isArray(x.steps) || !x.steps.length) return null;
+  const headline = parseNumberValue(x.headline);
+  if (!headline) return null;
+
+  const rows: NumberRow[] = [];
+  for (const item of x.rows.slice(0, 4)) {
+    const row = parseNumberValue(item);
+    if (!row || !record(item)) return null;
+    if (item.scales !== undefined && typeof item.scales !== 'boolean') return null;
+    if (item.of !== undefined && (!number(item.of) || item.of <= 0)) return null;
+    rows.push({
+      ...row,
+      ...(item.scales === undefined ? {} : {scales: item.scales}),
+      ...(item.of === undefined ? {} : {of: bounded(item.of, 0.000001, MAX_VALUE)}),
+    });
+  }
+
+  let compare: NumberValue | undefined;
+  if (x.compare !== undefined) {
+    compare = parseNumberValue(x.compare) ?? undefined;
+    if (!compare) return null;
+  }
+
+  let knob: NumberKnob | undefined;
+  if (x.knob !== undefined) {
+    if (!record(x.knob)) return null;
+    const k = x.knob;
+    const label = shortText(k.label);
+    const unit = shortText(k.unit);
+    if (!label || !unit || !number(k.min) || !number(k.max) || !number(k.step) || !number(k.value)) return null;
+    const min = safeValue(k.min);
+    const max = safeValue(k.max);
+    if (min >= max || k.step <= 0) return null;
+    knob = {
+      label,
+      unit,
+      min,
+      max,
+      step: bounded(k.step, 0.000001, max - min),
+      value: bounded(k.value, min, max),
+    };
+    if (knob.value === 0) return null;
+  }
+
+  const steps: NumberSpec['steps'] = [];
+  for (const item of x.steps) {
+    if (!record(item) || typeof item.show !== 'string' || !NUMBER_SHOWS.includes(item.show)) return null;
+    if (item.show === 'compare' && !compare) return null;
+    steps.push({show: item.show as NumberSpec['steps'][number]['show']});
+  }
+  return {headline, rows, steps, ...(compare ? {compare} : {}), ...(knob ? {knob} : {})};
+}

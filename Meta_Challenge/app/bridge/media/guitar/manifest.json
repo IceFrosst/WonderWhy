@@ -1,0 +1,64 @@
+{
+  "objectId": "guitar",
+  "lenses": {
+    "guitar.motion": {
+      "kind": "motion",
+      "title": "Standing waves",
+      "stills": [
+        "motion/s1.png",
+        "motion/s2.png",
+        "motion/s3.png"
+      ],
+      "clip": "motion/clip.mp4",
+      "captions": [
+        "Pressing a fret shortens the string. Half the length gives double the frequency: f = v / 2L.",
+        "A string also vibrates in whole-number patterns: harmonics n = 1, 2, 3 at f, 2f, 3f.",
+        "Wave speed depends on tension T and mass per length: f = (1/2L) sqrt(T/mu). Tighter = higher."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "guitar.flow": {
+      "kind": "flow",
+      "title": "Follow the sound",
+      "stills": [
+        "flow/s1.png",
+        "flow/s2.png",
+        "flow/s3.png",
+        "flow/s4.png"
+      ],
+      "clip": "flow/clip.mp4",
+      "captions": [
+        "A pluck pulls the string aside and lets go. The string swings back and forth at its own frequency.",
+        "The string is too thin to push much air by itself. It shakes the bridge it is tied to instead.",
+        "The bridge shakes the thin soundboard. Its large area moves a lot of air, which makes the note loud.",
+        "Pressure waves travel through the air at 343 metres per second to your ear."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "guitar.number": {
+      "kind": "number",
+      "title": "The number",
+      "stills": [
+        "number/s1.png",
+        "number/s2.png",
+        "number/s3.png"
+      ],
+      "clip": "number/clip.mp4",
+      "captions": [
+        "Frequency counts swings per second. The open low A string of a guitar makes 110 of them: 110 hertz.",
+        "Fret 12 halves the string, so the note doubles to 220 Hz. The wave runs along the string at 143 m/s.",
+        "Each doubling is one octave. Two octaves above this string is the 440 Hz that orchestras tune to."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "objectId": "kettle",
+  "lenses": {
+    "kettle.motion": {
+      "kind": "motion",
+      "title": "Convection and boiling",
+      "stills": [
+        "motion/s1.png",
+        "motion/s2.png",
+        "motion/s3.png"
+      ],
+      "clip": "motion/clip.mp4",
+      "captions": [
+        "Heated water expands and gets lighter, so it rises in the middle and sinks at the sides.",
+        "Hot spots at the bottom let vapour bubbles form (nucleation), then they rise and burst.",
+        "At 100 C extra energy goes into turning water to vapour, not heating it. That is latent heat."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "kettle.flow": {
+      "kind": "flow",
+      "title": "Follow the energy",
+      "stills": [
+        "flow/s1.png",
+        "flow/s2.png",
+        "flow/s3.png",
+        "flow/s4.png"
+      ],
+      "clip": "flow/clip.mp4",
+      "captions": [
+        "Electricity flows from the socket into a coil of wire in the base: the heating element.",
+        "The element resists the current, so all of the electrical energy turns into heat, which passes into the water.",
+        "About 88 percent ends up in the water. The rest warms the jug and the air around it.",
+        "At 100 C the water turns to steam. The steam heats a metal strip that bends and clicks the kettle off."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "kettle.number": {
+      "kind": "number",
+      "title": "The number",
+      "stills": [
+        "number/s1.png",
+        "number/s2.png",
+        "number/s3.png"
+      ],
+      "clip": "number/clip.mp4",
+      "captions": [
+        "Heating one litre of water by 80 degrees takes 335 kilojoules. From the socket that is about 0.11 kWh.",
+        "A 2 kW kettle needs about three minutes for it, and it costs about two cents.",
+        "The same energy would light a 10 watt LED lamp for more than ten hours. Boil only what you need."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    }
+  }
+}

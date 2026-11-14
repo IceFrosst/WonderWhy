@@ -1,0 +1,70 @@
+{
+  "objectId": "phone",
+  "lenses": {
+    "phone.inside": {
+      "kind": "inside",
+      "title": "Layers",
+      "stills": [
+        "inside/s1.png",
+        "inside/s2.png",
+        "inside/s3.png",
+        "inside/s4.png",
+        "inside/s5.png",
+        "inside/s6.png"
+      ],
+      "clip": "inside/clip.mp4",
+      "captions": [
+        "A phone is a sandwich of about nine thin layers, all packed into less than a centimetre.",
+        "The touch sensor is a grid of electrodes. Your finger changes the electric field, or capacitance, where you touch.",
+        "Millions of OLED pixels each make their own light. A black pixel is simply off, which saves power on dark screens.",
+        "The logic board holds processor, memory and radio chips. The processor does billions of simple steps per second.",
+        "Lithium ions move between two electrode layers as you charge and use the phone. The battery is the largest part inside.",
+        "The coil charges without a cable by magnetic induction. The camera stacks several lenses onto a tiny sensor."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "phone.flow": {
+      "kind": "flow",
+      "title": "Follow the energy",
+      "stills": [
+        "flow/s1.png",
+        "flow/s2.png",
+        "flow/s3.png",
+        "flow/s4.png"
+      ],
+      "clip": "flow/clip.mp4",
+      "captions": [
+        "The socket gives 230 volts that swing back and forth. The charger turns it into a low, steady voltage.",
+        "In the battery, lithium ions are pushed from one electrode layer to the other. That stores the energy.",
+        "Using the phone lets the ions flow back. The current drives the processor, the radio and the screen.",
+        "In the end all of it leaves as light, radio waves and heat. That is why a busy phone feels warm."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "phone.number": {
+      "kind": "number",
+      "title": "The number",
+      "stills": [
+        "number/s1.png",
+        "number/s2.png",
+        "number/s3.png"
+      ],
+      "clip": "number/clip.mp4",
+      "captions": [
+        "4000 milliamp-hours at 3.85 volts is about 15 watt-hours: the energy of one full battery.",
+        "Charging it costs under half a cent. A whole year of daily charging is a little over one euro.",
+        "A kettle burns through the same energy in 28 seconds. Heating water costs far more than computing."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    }
+  }
+}

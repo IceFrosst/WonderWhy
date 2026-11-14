@@ -205,8 +205,8 @@ export default function App() {
   }, [reqId]);
   const objectId = view.k === 'explain' ? view.objectId : undefined;
   const onState = useCallback(
-    (step: number, param: number | undefined) => {
-      if (objectId) bridgeRef.current?.send({type: 'state', objectId, step, param});
+    (step: number, param: number | undefined, lens: string | undefined, lensIndex: number, steps: number) => {
+      if (objectId) bridgeRef.current?.send({type: 'state', objectId, step, param, lens, lensIndex, steps});
     },
     [objectId],
   );

@@ -1,5 +1,5 @@
 {
-  "_note": "Prerendered library. The bridge sends one of these ids; the glasses app holds the full content and scenes. 'unknown' = not in the library.",
+  "_note": "Prerendered library and the single source of truth for explanation text. The bridge sends an id plus summary/steps/lenses built from this file; the glasses app reads it directly. A chapter is one lens. 'knobs' has one entry per step: what up/down changes on that step (axis x or y of the scene, or null). 'spec' is the drawing data for data-driven scenes (flow, number). 'unknown' = not in the library.",
   "objects": [
     {
       "id": "guitar",
@@ -13,12 +13,175 @@
           "scene": "guitar",
           "lens": "motion",
           "title": "Standing waves",
-          "hint": "Left/right: fret. Up/down: tension.",
+          "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "Pressing a fret shortens the string. Half the length gives double the frequency: f = v / 2L.",
             "A string also vibrates in whole-number patterns: harmonics n = 1, 2, 3 at f, 2f, 3f.",
             "Wave speed depends on tension T and mass per length: f = (1/2L) sqrt(T/mu). Tighter = higher."
+          ],
+          "knobs": [
+            {
+              "axis": "x",
+              "label": "fret"
+            },
+            {
+              "axis": "x",
+              "label": "fret"
+            },
+            {
+              "axis": "y",
+              "label": "tension"
+            }
           ]
+        },
+        {
+          "scene": "flow",
+          "lens": "flow",
+          "title": "Follow the sound",
+          "lead": "A tiny string cannot move much air. The wooden body can.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "A pluck pulls the string aside and lets go. The string swings back and forth at its own frequency.",
+            "The string is too thin to push much air by itself. It shakes the bridge it is tied to instead.",
+            "The bridge shakes the thin soundboard. Its large area moves a lot of air, which makes the note loud.",
+            "Pressure waves travel through the air at 343 metres per second to your ear."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "kind": "signal",
+            "nodes": [
+              {
+                "id": "finger",
+                "label": "Finger",
+                "sub": "plucks"
+              },
+              {
+                "id": "string",
+                "label": "String",
+                "sub": "vibrates"
+              },
+              {
+                "id": "bridge",
+                "label": "Bridge",
+                "sub": "passes it on"
+              },
+              {
+                "id": "body",
+                "label": "Soundboard",
+                "sub": "pushes the air"
+              },
+              {
+                "id": "ear",
+                "label": "Your ear",
+                "sub": "hears a note"
+              }
+            ],
+            "losses": [
+              {
+                "at": "body",
+                "label": "Most becomes heat in the wood",
+                "share": 0.5
+              }
+            ],
+            "steps": [
+              {
+                "upTo": 2,
+                "focus": [
+                  "finger",
+                  "string"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "bridge"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 4,
+                "focus": [
+                  "body"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 5,
+                "focus": [
+                  "ear"
+                ],
+                "losses": true
+              }
+            ]
+          }
+        },
+        {
+          "scene": "number",
+          "lens": "number",
+          "title": "The number",
+          "lead": "An open A string swings 110 times every second.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Frequency counts swings per second. The open low A string of a guitar makes 110 of them: 110 hertz.",
+            "Fret 12 halves the string, so the note doubles to 220 Hz. The wave runs along the string at 143 m/s.",
+            "Each doubling is one octave. Two octaves above this string is the 440 Hz that orchestras tune to."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "value": 110,
+              "unit": "Hz",
+              "label": "an open low A string, swings per second",
+              "decimals": 0
+            },
+            "rows": [
+              {
+                "label": "Same string at fret 12",
+                "value": 220,
+                "unit": "Hz",
+                "decimals": 0
+              },
+              {
+                "label": "Wave speed along the string",
+                "value": 143,
+                "unit": "m/s",
+                "decimals": 0
+              },
+              {
+                "label": "Length of the sound wave in air",
+                "value": 3.1,
+                "unit": "m",
+                "decimals": 1
+              }
+            ],
+            "compare": {
+              "label": "Concert pitch A, two octaves up",
+              "value": 440,
+              "unit": "Hz",
+              "decimals": 0
+            },
+            "steps": [
+              {
+                "show": "headline"
+              },
+              {
+                "show": "rows"
+              },
+              {
+                "show": "compare"
+              }
+            ]
+          }
         }
       ]
     },
@@ -35,11 +198,25 @@
           "scene": "ball",
           "lens": "motion",
           "title": "Projectile motion",
-          "hint": "Left/right: angle. Up/down: speed.",
+          "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "Gravity pulls the ball down all the time, so its path curves into a parabola.",
             "Sideways speed never changes. Only the up-and-down speed does, because gravity acts down.",
             "Air drag slows the ball, so the best angle drops below 45 degrees. Grey = no air."
+          ],
+          "knobs": [
+            {
+              "axis": "x",
+              "label": "angle"
+            },
+            {
+              "axis": "y",
+              "label": "speed"
+            },
+            {
+              "axis": "x",
+              "label": "angle"
+            }
           ]
         },
         {
@@ -47,12 +224,175 @@
           "lens": "compare",
           "title": "Bounce",
           "lead": "Each bounce keeps only part of the energy.",
-          "hint": "Left/right: ball type. Up/down: drop height.",
+          "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "Each bounce is lower because the ball keeps only part of its energy: the height ratio is e squared.",
             "Falling turns height energy into movement; the squash stores it like a spring; some is lost as heat and sound every bounce.",
             "Bounciness depends on the material: a super ball springs back almost fully, clay absorbs the energy as heat and barely bounces."
+          ],
+          "knobs": [
+            {
+              "axis": "y",
+              "label": "drop height"
+            },
+            {
+              "axis": "y",
+              "label": "drop height"
+            },
+            {
+              "axis": "x",
+              "label": "ball type"
+            }
           ]
+        },
+        {
+          "scene": "flow",
+          "lens": "flow",
+          "title": "Follow the energy",
+          "lead": "The energy changes form but never disappears.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Your arm does work on the ball. A tennis ball thrown at 10 metres per second carries about 2.9 joules.",
+            "Going up, motion energy turns into height energy. At the top of a 45 degree throw it is half and half.",
+            "Coming down, height energy turns back into motion. A little is lost to air drag on the way.",
+            "On landing the motion energy becomes heat, sound and the next bounce. None of it is destroyed."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "kind": "energy",
+            "nodes": [
+              {
+                "id": "arm",
+                "label": "Your arm",
+                "sub": "gives 2.9 J"
+              },
+              {
+                "id": "move",
+                "label": "Motion energy",
+                "sub": "at release"
+              },
+              {
+                "id": "top",
+                "label": "Height energy",
+                "sub": "half at the top"
+              },
+              {
+                "id": "down",
+                "label": "Motion energy",
+                "sub": "coming down"
+              },
+              {
+                "id": "land",
+                "label": "Heat and sound",
+                "sub": "on landing"
+              }
+            ],
+            "losses": [
+              {
+                "at": "down",
+                "label": "Air drag",
+                "share": 0.05
+              }
+            ],
+            "steps": [
+              {
+                "upTo": 2,
+                "focus": [
+                  "arm",
+                  "move"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "top"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 4,
+                "focus": [
+                  "down"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 5,
+                "focus": [
+                  "land"
+                ],
+                "losses": true
+              }
+            ]
+          }
+        },
+        {
+          "scene": "number",
+          "lens": "number",
+          "title": "The number",
+          "lead": "A 10 m/s throw at 45 degrees lands about 10 metres away.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Range is speed squared divided by g at 45 degrees: 100 divided by 9.81 is about 10 metres. Air is ignored.",
+            "The ball stays up for 1.4 seconds and peaks at 2.5 metres. Ten metres per second is 36 km/h.",
+            "The Moon pulls six times more weakly, so the same throw flies six times as far: about 62 metres."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "value": 10.2,
+              "unit": "m",
+              "label": "how far a 10 m/s throw at 45 degrees flies",
+              "decimals": 1
+            },
+            "rows": [
+              {
+                "label": "Time in the air",
+                "value": 1.4,
+                "unit": "s",
+                "decimals": 1
+              },
+              {
+                "label": "Highest point",
+                "value": 2.5,
+                "unit": "m",
+                "decimals": 1
+              },
+              {
+                "label": "Throw speed",
+                "value": 36,
+                "unit": "km/h",
+                "decimals": 0
+              }
+            ],
+            "compare": {
+              "label": "The same throw on the Moon flies",
+              "value": 62,
+              "unit": "m",
+              "decimals": 0
+            },
+            "steps": [
+              {
+                "show": "headline"
+              },
+              {
+                "show": "rows"
+              },
+              {
+                "show": "compare"
+              }
+            ]
+          }
         }
       ]
     },
@@ -68,12 +408,176 @@
           "scene": "bicycle",
           "lens": "motion",
           "title": "Gear ratio",
-          "hint": "Left/right: rear gear teeth.",
+          "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "The chain links two gears. Gear ratio = front teeth / rear teeth.",
             "Each pedal turn pulls the chain by the front teeth count, so the wheel turns by the ratio.",
             "Energy is conserved: a higher ratio gives more speed per pedal turn but less push at the wheel."
+          ],
+          "knobs": [
+            {
+              "axis": "x",
+              "label": "rear gear"
+            },
+            {
+              "axis": "x",
+              "label": "rear gear"
+            },
+            {
+              "axis": "x",
+              "label": "rear gear"
+            }
           ]
+        },
+        {
+          "scene": "flow",
+          "lens": "flow",
+          "title": "Follow the force",
+          "lead": "Your push travels through the chain to the road.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Your leg pushes the pedal down. The crank is a lever that turns the push into a twist on the front gear.",
+            "The front gear pulls the top of the chain tight. A clean chain loses only about 3 percent to friction.",
+            "The chain turns the rear gear. A small rear gear spins the wheel several times for every pedal turn.",
+            "The tyre pushes back on the road and the road pushes the bike forward. That push is what moves you."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "kind": "force",
+            "nodes": [
+              {
+                "id": "leg",
+                "label": "Your leg",
+                "sub": "pushes down"
+              },
+              {
+                "id": "crank",
+                "label": "Pedal and crank",
+                "sub": "a lever"
+              },
+              {
+                "id": "chain",
+                "label": "Chain",
+                "sub": "pulled tight"
+              },
+              {
+                "id": "gear",
+                "label": "Rear gear",
+                "sub": "turns the wheel"
+              },
+              {
+                "id": "road",
+                "label": "Tyre on road",
+                "sub": "pushes you forward"
+              }
+            ],
+            "losses": [
+              {
+                "at": "chain",
+                "label": "Chain friction",
+                "share": 0.03
+              }
+            ],
+            "steps": [
+              {
+                "upTo": 2,
+                "focus": [
+                  "leg",
+                  "crank"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "chain"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 4,
+                "focus": [
+                  "gear"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 5,
+                "focus": [
+                  "road"
+                ],
+                "losses": true
+              }
+            ]
+          }
+        },
+        {
+          "scene": "number",
+          "lens": "number",
+          "title": "The number",
+          "lead": "One pedal turn in a high gear carries you over 6 metres.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "48 teeth divided by 16 is a ratio of 3. The wheel turns three times per pedal turn: 3 times 2.1 metres.",
+            "At 80 pedal turns a minute that is 30 km/h. The price: only 17 percent of your push reaches the tyre.",
+            "A low gear swaps it round. Three times the push for climbing, but only 2.1 metres per turn."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "value": 6.3,
+              "unit": "m",
+              "label": "forward per pedal turn, 48 teeth front, 16 rear",
+              "decimals": 1
+            },
+            "rows": [
+              {
+                "label": "Gear ratio",
+                "value": 3.0,
+                "unit": "to 1",
+                "decimals": 1
+              },
+              {
+                "label": "Speed at 80 turns a minute",
+                "value": 30,
+                "unit": "km/h",
+                "decimals": 0
+              },
+              {
+                "label": "Share of your push at the tyre",
+                "value": 17,
+                "unit": "%",
+                "decimals": 0,
+                "of": 100
+              }
+            ],
+            "compare": {
+              "label": "Low gear, 34 and 34: three times the push, but only",
+              "value": 2.1,
+              "unit": "m per turn",
+              "decimals": 1
+            },
+            "steps": [
+              {
+                "show": "headline"
+              },
+              {
+                "show": "rows"
+              },
+              {
+                "show": "compare"
+              }
+            ]
+          }
         }
       ]
     },
@@ -89,12 +593,189 @@
           "scene": "kettle",
           "lens": "motion",
           "title": "Convection and boiling",
-          "hint": "Left/right: heat.",
+          "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "Heated water expands and gets lighter, so it rises in the middle and sinks at the sides.",
             "Hot spots at the bottom let vapour bubbles form (nucleation), then they rise and burst.",
             "At 100 C extra energy goes into turning water to vapour, not heating it. That is latent heat."
+          ],
+          "knobs": [
+            {
+              "axis": "x",
+              "label": "heat"
+            },
+            {
+              "axis": "x",
+              "label": "heat"
+            },
+            {
+              "axis": "x",
+              "label": "heat"
+            }
           ]
+        },
+        {
+          "scene": "flow",
+          "lens": "flow",
+          "title": "Follow the energy",
+          "lead": "Electricity in, hot water and a little wasted heat out.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Electricity flows from the socket into a coil of wire in the base: the heating element.",
+            "The element resists the current, so all of the electrical energy turns into heat, which passes into the water.",
+            "About 88 percent ends up in the water. The rest warms the jug and the air around it.",
+            "At 100 C the water turns to steam. The steam heats a metal strip that bends and clicks the kettle off."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "kind": "energy",
+            "nodes": [
+              {
+                "id": "socket",
+                "label": "Socket",
+                "sub": "230 V"
+              },
+              {
+                "id": "element",
+                "label": "Heating element",
+                "sub": "2000 W"
+              },
+              {
+                "id": "water",
+                "label": "Water",
+                "sub": "20 to 100 C"
+              },
+              {
+                "id": "steam",
+                "label": "Steam",
+                "sub": "trips the switch"
+              }
+            ],
+            "losses": [
+              {
+                "at": "water",
+                "label": "Heat to jug and air",
+                "share": 0.12
+              }
+            ],
+            "steps": [
+              {
+                "upTo": 2,
+                "focus": [
+                  "socket",
+                  "element"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "water"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "water"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 4,
+                "focus": [
+                  "steam"
+                ],
+                "losses": true
+              }
+            ]
+          }
+        },
+        {
+          "scene": "number",
+          "lens": "number",
+          "title": "The number",
+          "lead": "Boiling a litre takes about a tenth of a kilowatt-hour.",
+          "hint": "Up/down: litres. Left/right: next lens.",
+          "captions": [
+            "Heating one litre of water by 80 degrees takes 335 kilojoules. From the socket that is about 0.11 kWh.",
+            "A 2 kW kettle needs about three minutes for it, and it costs about two cents.",
+            "The same energy would light a 10 watt LED lamp for more than ten hours. Boil only what you need."
+          ],
+          "knobs": [
+            {
+              "axis": "x",
+              "label": "litres"
+            },
+            {
+              "axis": "x",
+              "label": "litres"
+            },
+            {
+              "axis": "x",
+              "label": "litres"
+            }
+          ],
+          "spec": {
+            "headline": {
+              "value": 0.11,
+              "unit": "kWh",
+              "label": "to boil this much water from 20 C",
+              "decimals": 2
+            },
+            "rows": [
+              {
+                "label": "Time in a 2 kW kettle",
+                "value": 3.2,
+                "unit": "min",
+                "decimals": 1
+              },
+              {
+                "label": "Cost at 20 c per kWh",
+                "value": 2.1,
+                "unit": "cents",
+                "decimals": 1
+              },
+              {
+                "label": "Share that reaches the water",
+                "value": 88,
+                "unit": "%",
+                "decimals": 0,
+                "scales": false,
+                "of": 100
+              }
+            ],
+            "compare": {
+              "label": "Same energy runs a 10 W LED lamp for",
+              "value": 10.6,
+              "unit": "hours",
+              "decimals": 1
+            },
+            "steps": [
+              {
+                "show": "headline"
+              },
+              {
+                "show": "rows"
+              },
+              {
+                "show": "compare"
+              }
+            ],
+            "knob": {
+              "label": "litres",
+              "unit": "L",
+              "min": 0.3,
+              "max": 1.7,
+              "step": 0.1,
+              "value": 1.0
+            }
+          }
         }
       ]
     },
@@ -110,12 +791,169 @@
           "scene": "pendulum",
           "lens": "motion",
           "title": "Swing time",
-          "hint": "Left/right: length.",
+          "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "One swing takes T = 2 pi sqrt(L/g). A longer string swings more slowly.",
             "The angle follows a smooth sine wave. Four times the length gives double the period.",
             "Mass cancels out: two bobs of different mass on equal strings swing together."
+          ],
+          "knobs": [
+            {
+              "axis": "x",
+              "label": "length"
+            },
+            {
+              "axis": "x",
+              "label": "length"
+            },
+            {
+              "axis": "x",
+              "label": "length"
+            }
           ]
+        },
+        {
+          "scene": "flow",
+          "lens": "flow",
+          "title": "Follow the energy",
+          "lead": "Height energy and motion energy swap back and forth.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Lifting the keys to one side stores height energy. Nothing moves yet.",
+            "Let go: height energy turns into motion. At the bottom it is all motion, about half a metre per second.",
+            "On the far side the keys climb again and motion turns back into height. Then it all runs in reverse.",
+            "Each swing the air takes a little energy away as heat, so the swings shrink. The swing time stays the same."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "kind": "energy",
+            "nodes": [
+              {
+                "id": "lift",
+                "label": "You lift it",
+                "sub": "height energy"
+              },
+              {
+                "id": "bottom",
+                "label": "Bottom of the swing",
+                "sub": "all motion"
+              },
+              {
+                "id": "far",
+                "label": "Far side",
+                "sub": "height again"
+              },
+              {
+                "id": "air",
+                "label": "The air",
+                "sub": "slowly takes it"
+              }
+            ],
+            "losses": [
+              {
+                "at": "far",
+                "label": "Air drag, a little each swing",
+                "share": 0.04
+              }
+            ],
+            "steps": [
+              {
+                "upTo": 1,
+                "focus": [
+                  "lift"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 2,
+                "focus": [
+                  "bottom"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "far"
+                ],
+                "losses": false
+              },
+              {
+                "upTo": 4,
+                "focus": [
+                  "air"
+                ],
+                "losses": true
+              }
+            ]
+          }
+        },
+        {
+          "scene": "number",
+          "lens": "number",
+          "title": "The number",
+          "lead": "Keys on a 25 cm lanyard take one second per swing.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "Swing time is 2 pi times the square root of length over g. For 25 centimetres that is one second.",
+            "Four times the length doubles the time: two seconds for one metre. The weight of the keys changes nothing.",
+            "Weaker gravity pulls back more gently. On the Moon the same lanyard needs two and a half seconds."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "value": 1.0,
+              "unit": "s",
+              "label": "one full swing on a 25 cm string",
+              "decimals": 1
+            },
+            "rows": [
+              {
+                "label": "On a 1 m string",
+                "value": 2.0,
+                "unit": "s",
+                "decimals": 1
+              },
+              {
+                "label": "With keys twice as heavy",
+                "value": 1.0,
+                "unit": "s",
+                "decimals": 1
+              },
+              {
+                "label": "Speed at the bottom",
+                "value": 0.5,
+                "unit": "m/s",
+                "decimals": 1
+              }
+            ],
+            "compare": {
+              "label": "The same keys on the Moon swing in",
+              "value": 2.5,
+              "unit": "s",
+              "decimals": 1
+            },
+            "steps": [
+              {
+                "show": "headline"
+              },
+              {
+                "show": "rows"
+              },
+              {
+                "show": "compare"
+              }
+            ]
+          }
         }
       ]
     },
@@ -131,7 +969,7 @@
           "scene": "phone-exploded",
           "lens": "inside",
           "title": "Layers",
-          "hint": "Left/right: rotate. Up/down: tilt.",
+          "hint": "Up/down: change it. Left/right: next lens.",
           "captions": [
             "A phone is a sandwich of about nine thin layers, all packed into less than a centimetre.",
             "The touch sensor is a grid of electrodes. Your finger changes the electric field, or capacitance, where you touch.",
@@ -139,7 +977,182 @@
             "The logic board holds processor, memory and radio chips. The processor does billions of simple steps per second.",
             "Lithium ions move between two electrode layers as you charge and use the phone. The battery is the largest part inside.",
             "The coil charges without a cable by magnetic induction. The camera stacks several lenses onto a tiny sensor."
+          ],
+          "knobs": [
+            {
+              "axis": "x",
+              "label": "rotate"
+            },
+            {
+              "axis": "x",
+              "label": "rotate"
+            },
+            {
+              "axis": "x",
+              "label": "rotate"
+            },
+            {
+              "axis": "x",
+              "label": "rotate"
+            },
+            {
+              "axis": "x",
+              "label": "rotate"
+            },
+            {
+              "axis": "x",
+              "label": "rotate"
+            }
           ]
+        },
+        {
+          "scene": "flow",
+          "lens": "flow",
+          "title": "Follow the energy",
+          "lead": "From the wall socket to the light of the screen.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "The socket gives 230 volts that swing back and forth. The charger turns it into a low, steady voltage.",
+            "In the battery, lithium ions are pushed from one electrode layer to the other. That stores the energy.",
+            "Using the phone lets the ions flow back. The current drives the processor, the radio and the screen.",
+            "In the end all of it leaves as light, radio waves and heat. That is why a busy phone feels warm."
+          ],
+          "knobs": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "kind": "energy",
+            "nodes": [
+              {
+                "id": "socket",
+                "label": "Socket",
+                "sub": "230 V AC"
+              },
+              {
+                "id": "charger",
+                "label": "Charger",
+                "sub": "makes 5 to 20 V DC"
+              },
+              {
+                "id": "battery",
+                "label": "Battery",
+                "sub": "stores 15 Wh"
+              },
+              {
+                "id": "chips",
+                "label": "Chips and screen",
+                "sub": "use it"
+              },
+              {
+                "id": "out",
+                "label": "Light, radio, heat",
+                "sub": "leaves the phone"
+              }
+            ],
+            "losses": [
+              {
+                "at": "charger",
+                "label": "Charger heat",
+                "share": 0.15
+              }
+            ],
+            "steps": [
+              {
+                "upTo": 2,
+                "focus": [
+                  "socket",
+                  "charger"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 3,
+                "focus": [
+                  "battery"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 4,
+                "focus": [
+                  "chips"
+                ],
+                "losses": true
+              },
+              {
+                "upTo": 5,
+                "focus": [
+                  "out"
+                ],
+                "losses": true
+              }
+            ]
+          }
+        },
+        {
+          "scene": "number",
+          "lens": "number",
+          "title": "The number",
+          "lead": "A full phone battery holds about 15 watt-hours.",
+          "hint": "Pinch: next step. Left/right: next lens.",
+          "captions": [
+            "4000 milliamp-hours at 3.85 volts is about 15 watt-hours: the energy of one full battery.",
+            "Charging it costs under half a cent. A whole year of daily charging is a little over one euro.",
+            "A kettle burns through the same energy in 28 seconds. Heating water costs far more than computing."
+          ],
+          "knobs": [
+            null,
+            null,
+            null
+          ],
+          "spec": {
+            "headline": {
+              "value": 15,
+              "unit": "Wh",
+              "label": "energy in a full phone battery",
+              "decimals": 0
+            },
+            "rows": [
+              {
+                "label": "Cost of one full charge",
+                "value": 0.4,
+                "unit": "cents",
+                "decimals": 1
+              },
+              {
+                "label": "A year of daily charging",
+                "value": 1.3,
+                "unit": "euro",
+                "decimals": 1
+              },
+              {
+                "label": "Pixels on the screen",
+                "value": 2.5,
+                "unit": "million",
+                "decimals": 1
+              }
+            ],
+            "compare": {
+              "label": "A kettle uses the same energy in",
+              "value": 28,
+              "unit": "seconds",
+              "decimals": 0
+            },
+            "steps": [
+              {
+                "show": "headline"
+              },
+              {
+                "show": "rows"
+              },
+              {
+                "show": "compare"
+              }
+            ]
+          }
         }
       ]
     }

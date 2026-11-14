@@ -1,0 +1,83 @@
+{
+  "objectId": "ball",
+  "lenses": {
+    "ball.motion": {
+      "kind": "motion",
+      "title": "Projectile motion",
+      "stills": [
+        "motion/s1.png",
+        "motion/s2.png",
+        "motion/s3.png"
+      ],
+      "clip": "motion/clip.mp4",
+      "captions": [
+        "Gravity pulls the ball down all the time, so its path curves into a parabola.",
+        "Sideways speed never changes. Only the up-and-down speed does, because gravity acts down.",
+        "Air drag slows the ball, so the best angle drops below 45 degrees. Grey = no air."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "ball.compare": {
+      "kind": "compare",
+      "title": "Bounce",
+      "stills": [
+        "compare/s1.png",
+        "compare/s2.png",
+        "compare/s3.png"
+      ],
+      "clip": "compare/clip.mp4",
+      "captions": [
+        "Each bounce is lower because the ball keeps only part of its energy: the height ratio is e squared.",
+        "Falling turns height energy into movement; the squash stores it like a spring; some is lost as heat and sound every bounce.",
+        "Bounciness depends on the material: a super ball springs back almost fully, clay absorbs the energy as heat and barely bounces."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "ball.flow": {
+      "kind": "flow",
+      "title": "Follow the energy",
+      "stills": [
+        "flow/s1.png",
+        "flow/s2.png",
+        "flow/s3.png",
+        "flow/s4.png"
+      ],
+      "clip": "flow/clip.mp4",
+      "captions": [
+        "Your arm does work on the ball. A tennis ball thrown at 10 metres per second carries about 2.9 joules.",
+        "Going up, motion energy turns into height energy. At the top of a 45 degree throw it is half and half.",
+        "Coming down, height energy turns back into motion. A little is lost to air drag on the way.",
+        "On landing the motion energy becomes heat, sound and the next bounce. None of it is destroyed."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "ball.number": {
+      "kind": "number",
+      "title": "The number",
+      "stills": [
+        "number/s1.png",
+        "number/s2.png",
+        "number/s3.png"
+      ],
+      "clip": "number/clip.mp4",
+      "captions": [
+        "Range is speed squared divided by g at 45 degrees: 100 divided by 9.81 is about 10 metres. Air is ignored.",
+        "The ball stays up for 1.4 seconds and peaks at 2.5 metres. Ten metres per second is 36 km/h.",
+        "The Moon pulls six times more weakly, so the same throw flies six times as far: about 62 metres."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    }
+  }
+}

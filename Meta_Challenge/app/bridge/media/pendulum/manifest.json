@@ -1,0 +1,64 @@
+{
+  "objectId": "pendulum",
+  "lenses": {
+    "pendulum.motion": {
+      "kind": "motion",
+      "title": "Swing time",
+      "stills": [
+        "motion/s1.png",
+        "motion/s2.png",
+        "motion/s3.png"
+      ],
+      "clip": "motion/clip.mp4",
+      "captions": [
+        "One swing takes T = 2 pi sqrt(L/g). A longer string swings more slowly.",
+        "The angle follows a smooth sine wave. Four times the length gives double the period.",
+        "Mass cancels out: two bobs of different mass on equal strings swing together."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "pendulum.flow": {
+      "kind": "flow",
+      "title": "Follow the energy",
+      "stills": [
+        "flow/s1.png",
+        "flow/s2.png",
+        "flow/s3.png",
+        "flow/s4.png"
+      ],
+      "clip": "flow/clip.mp4",
+      "captions": [
+        "Lifting the keys to one side stores height energy. Nothing moves yet.",
+        "Let go: height energy turns into motion. At the bottom it is all motion, about half a metre per second.",
+        "On the far side the keys climb again and motion turns back into height. Then it all runs in reverse.",
+        "Each swing the air takes a little energy away as heat, so the swings shrink. The swing time stays the same."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    },
+    "pendulum.number": {
+      "kind": "number",
+      "title": "The number",
+      "stills": [
+        "number/s1.png",
+        "number/s2.png",
+        "number/s3.png"
+      ],
+      "clip": "number/clip.mp4",
+      "captions": [
+        "Swing time is 2 pi times the square root of length over g. For 25 centimetres that is one second.",
+        "Four times the length doubles the time: two seconds for one metre. The weight of the keys changes nothing.",
+        "Weaker gravity pulls back more gently. On the Moon the same lanyard needs two and a half seconds."
+      ],
+      "size": 600,
+      "clipSize": 264,
+      "fps": 15,
+      "secondsPerStep": 3
+    }
+  }
+}

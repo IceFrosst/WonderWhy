@@ -29,7 +29,7 @@ export type BridgeMsg =
   | {type: 'detecting'; reqId: string; t_sent?: number; timeoutMs?: number}
   | ShowMsg
   | {type: 'ping'; t_sent?: number}
-  | {type: 'nav'; action: 'next' | 'prev' | 'deeper' | 'done' | 'left' | 'right'}
+  | {type: 'nav'; action: 'next' | 'prev' | 'deeper' | 'done' | 'left' | 'right' | 'up' | 'down'}
   | {type: 'clear'}
   | {
       type: 'device';
