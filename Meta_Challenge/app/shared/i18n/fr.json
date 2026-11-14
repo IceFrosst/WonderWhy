@@ -30,7 +30,7 @@
           "lead": "Chaque case monte la note du même rapport.",
           "captions": [
             "Chaque case raccourcit la corde et monte la note d'environ 6 pour cent. Douze cases doublent la fréquence : une octave.",
-            "Une corde deux fois plus longue sonne une octave plus grave à chaque case. C'est pourquoi les instruments graves sont grands."
+            "Une corde deux fois plus longue sonne une octave plus grave à chaque case. C'est en partie pourquoi les instruments graves sont grands."
           ]
         },
         "flow": {
@@ -47,7 +47,7 @@
           "title": "Le chiffre",
           "lead": "Une corde de La à vide vibre 110 fois par seconde.",
           "captions": [
-            "La fréquence compte les oscillations par seconde. La corde de La grave à vide de la guitare en fait 110 : 110 hertz.",
+            "La fréquence compte les oscillations par seconde. La corde de La à vide de la guitare en fait 110 : 110 hertz.",
             "La case 12 divise la corde par deux, donc la note double à 220 Hz. L'onde parcourt la corde à 143 m/s.",
             "Chaque doublement est une octave. Deux octaves plus haut : les 440 Hz de l'accord des orchestres."
           ]
@@ -62,7 +62,7 @@
           "title": "Mouvement de projectile",
           "captions": [
             "La gravité tire la balle vers le bas en permanence, donc sa trajectoire se courbe en parabole.",
-            "La vitesse horizontale ne change jamais. Seule la vitesse verticale change, car la gravité agit vers le bas.",
+            "Sans air, la vitesse horizontale ne change jamais. Seule la vitesse verticale change, car la gravité agit vers le bas.",
             "La résistance de l'air freine la balle, donc le meilleur angle passe sous 45 degrés. Gris = sans air."
           ]
         },
@@ -79,7 +79,7 @@
           "title": "Et si",
           "lead": "Change l'angle, puis change de planète.",
           "captions": [
-            "Change l'angle. Un lancer plat et un lancer très haut tombent tous deux trop court. 45 degrés va le plus loin.",
+            "Change l'angle. Un lancer plat et un lancer très haut tombent tous deux trop court. Sans air, 45 degrés va le plus loin.",
             "Sur la Lune la gravité est six fois plus faible, donc chaque lancer va six fois plus loin. Le meilleur angle reste 45."
           ]
         },
@@ -89,7 +89,7 @@
           "captions": [
             "Ton bras fournit un travail à la balle. Une balle de tennis lancée à 10 mètres par seconde porte environ 2.9 joules.",
             "En montant, l'énergie cinétique devient énergie potentielle. Au sommet d'un lancer à 45 degrés, c'est moitié-moitié.",
-            "En descendant, l'énergie potentielle redevient mouvement. Un peu se perd par résistance de l'air en chemin.",
+            "En descendant, l'énergie potentielle redevient mouvement. L'air en prend environ un dixième pour une balle de tennis.",
             "À l'arrivée, l'énergie cinétique devient chaleur, son et prochain rebond. Rien n'en est détruit."
           ]
         },
@@ -121,7 +121,7 @@
           "lead": "Moins de dents derrière, plus de vitesse par tour de pédale.",
           "captions": [
             "Moins de dents derrière donnent plus de vitesse pour le même pédalage : 44 km/h sur le plus petit pignon, 14 sur le plus grand.",
-            "Le petit plateau baisse chaque vitesse d'environ un tiers. Tu vas moins vite, mais chaque coup de pédale pousse plus fort."
+            "Le petit plateau baisse chaque vitesse d'environ 30 pour cent. Tu vas moins vite, mais chaque coup de pédale pousse plus fort."
           ]
         },
         "flow": {
@@ -139,7 +139,7 @@
           "lead": "Un tour de pédale en grand braquet te fait avancer de plus de 6 mètres.",
           "captions": [
             "48 dents divisées par 16 donnent un rapport de 3. La roue tourne trois fois par tour de pédale : 3 fois 2.1 mètres.",
-            "À 80 tours de pédale par minute, cela fait 30 km/h. Le prix : seuls 17 pour cent de ta poussée atteignent le pneu.",
+            "À 80 tours de pédale par minute, cela fait 30 km/h. Le prix : le pneu pousse avec seulement 17 pour cent de ta force sur la pédale.",
             "Un petit braquet inverse cela. Trois fois la poussée pour grimper, mais seulement 2.1 mètres par tour."
           ]
         }
@@ -154,7 +154,7 @@
           "captions": [
             "L'eau chauffée se dilate et devient plus légère, donc elle monte au milieu et descend sur les côtés.",
             "Des points chauds au fond laissent se former des bulles de vapeur (nucléation), puis elles montent et éclatent.",
-            "À 100 C, l'énergie en plus sert à transformer l'eau en vapeur, pas à la chauffer. C'est la chaleur latente."
+            "À 100 °C, l'énergie en plus sert à transformer l'eau en vapeur, pas à la chauffer. C'est la chaleur latente."
           ]
         },
         "cutaway": {
@@ -168,10 +168,10 @@
         },
         "whatif": {
           "title": "Et si",
-          "lead": "Deux fois plus d'eau prend deux fois plus de temps.",
+          "lead": "Deux fois plus d'eau prend environ le double de temps.",
           "captions": [
-            "Le temps d'ébullition croît en ligne droite avec l'eau. Deux fois plus d'eau demande deux fois plus de temps et d'énergie.",
-            "Une eau qui part de 60 C n'a besoin que de la moitié du chauffage, donc elle bout en moitié moins de temps."
+            "Le temps d'ébullition croît presque en ligne droite avec l'eau. Deux fois plus d'eau demande environ deux fois plus de temps et d'énergie.",
+            "Une eau qui part de 60 °C n'a besoin que de la moitié du chauffage, donc elle bout en moitié moins de temps."
           ]
         },
         "flow": {
@@ -181,7 +181,7 @@
             "L'électricité passe de la prise à une spirale de fil dans le socle : la résistance chauffante.",
             "La résistance s'oppose au courant, donc toute l'énergie électrique devient chaleur, qui passe dans l'eau.",
             "Environ 88 pour cent finissent dans l'eau. Le reste chauffe la bouilloire et l'air autour.",
-            "À 100 C l'eau devient vapeur. La vapeur chauffe une lame métallique qui se plie et éteint la bouilloire d'un clic."
+            "À 100 °C l'eau devient vapeur. La vapeur chauffe une lame métallique qui se plie et éteint la bouilloire d'un clic."
           ]
         },
         "number": {
@@ -202,7 +202,7 @@
         "motion": {
           "title": "Durée d'oscillation",
           "captions": [
-            "Une oscillation dure T = 2 pi sqrt(L/g). Un fil plus long oscille plus lentement.",
+            "Pour de petites oscillations, une oscillation dure T = 2 pi sqrt(L/g). Un fil plus long oscille plus lentement.",
             "L'angle suit une sinusoïde régulière. Quatre fois la longueur donne le double de période.",
             "La masse s'annule : deux masses différentes au bout de fils égaux oscillent ensemble."
           ]
@@ -220,14 +220,14 @@
           "lead": "L'énergie potentielle et l'énergie cinétique s'échangent sans cesse.",
           "captions": [
             "Soulever les clés sur le côté stocke de l'énergie potentielle. Rien ne bouge encore.",
-            "Lâche : l'énergie potentielle devient mouvement. En bas, tout est mouvement, environ un demi-mètre par seconde.",
+            "Lâche : l'énergie potentielle devient mouvement. En bas, tout est mouvement : un demi-mètre par seconde pour une oscillation de 20 degrés.",
             "De l'autre côté, les clés remontent et le mouvement redevient hauteur. Puis tout se déroule à l'envers.",
             "À chaque oscillation l'air prend un peu d'énergie en chaleur, donc l'amplitude diminue. La durée reste la même."
           ]
         },
         "number": {
           "title": "Le chiffre",
-          "lead": "Clés sur un cordon de 25 cm : une seconde par oscillation.",
+          "lead": "Des clés sur un cordon de 25 cm font un aller-retour chaque seconde.",
           "captions": [
             "La durée d'oscillation est 2 pi fois la racine carrée de la longueur sur g. Pour 25 centimètres, cela fait une seconde.",
             "Quatre fois la longueur double le temps : deux secondes pour un mètre. Le poids des clés ne change rien.",
@@ -275,7 +275,7 @@
           "captions": [
             "4000 milliampères-heures à 3.85 volts font environ 15 wattheures : l'énergie d'une batterie pleine.",
             "La recharger coûte moins d'un demi-centime. Une année entière de charges quotidiennes coûte un peu plus d'un euro.",
-            "Une bouilloire consomme la même énergie en 28 secondes. Chauffer de l'eau coûte bien plus que calculer."
+            "Une bouilloire de 2 kW consomme une charge de téléphone en 28 secondes. Le téléphone la dépense en une journée entière."
           ]
         }
       }
@@ -290,7 +290,7 @@
           "captions": [
             "Une cuillère en acier paraît lisse et pleine. Ses secrets sont bien trop petits pour être vus.",
             "Trois cents fois plus près, l'acier est une mosaïque de minuscules grains cristallins, chacun large de quelques centièmes de millimètre.",
-            "Un million de fois plus près, chaque grain est un réseau ordonné d'atomes. Des électrons libres circulent entre eux et transportent vite la chaleur."
+            "Cent mille fois plus près encore, chaque grain est un réseau ordonné d'atomes. Des électrons libres circulent entre eux et aident à transporter la chaleur."
           ]
         },
         "flow": {
@@ -299,16 +299,16 @@
           "captions": [
             "Le thé chaud fait vibrer les atomes de la cuillère. Cette vibration est de la chaleur.",
             "La vibration se transmet dans le métal, aidée par les électrons libres. En une minute le manche est tiède.",
-            "Tes doigts prennent la chaleur du manche. Un peu s'échappe aussi dans l'air en chemin."
+            "Tes doigts prennent la chaleur du manche. Une partie s'échappe aussi dans l'air en chemin."
           ]
         },
         "number": {
           "title": "Le chiffre",
           "lead": "L'acier conduit la chaleur environ cent fois mieux que le bois.",
           "captions": [
-            "L'acier conduit la chaleur environ 100 fois mieux que le bois. C'est pourquoi une cuillère en métal paraît froide et une en bois non.",
+            "L'acier conduit la chaleur environ 100 fois mieux que le bois et prend la chaleur de ta peau bien plus vite. C'est pourquoi il paraît froid.",
             "Les deux cuillères sont à température ambiante. Celle en acier retire seulement plus vite la chaleur de ta peau.",
-            "L'argent conduit encore 27 fois mieux. Une cuillère en argent dans du thé chaud devient trop chaude en quelques secondes."
+            "L'argent conduit 27 fois mieux que l'acier. Une cuillère en argent dans du thé chaud peut devenir trop chaude à tenir en moins d'une minute."
           ]
         }
       }

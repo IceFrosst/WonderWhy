@@ -30,7 +30,7 @@
           "lead": "Jokainen nauha nostaa ääntä samalla suhteella.",
           "captions": [
             "Jokainen nauha lyhentää kieltä ja nostaa ääntä noin 6 prosenttia. Kaksitoista nauhaa kaksinkertaistaa taajuuden: yksi oktaavi.",
-            "Kaksi kertaa pidempi kieli soi oktaavin matalammalta jokaisella nauhalla. Siksi bassosoittimet ovat isoja."
+            "Kaksi kertaa pidempi kieli soi oktaavin matalammalta jokaisella nauhalla. Se on osittain syy siihen, miksi bassosoittimet ovat isoja."
           ]
         },
         "flow": {
@@ -47,7 +47,7 @@
           "title": "Luku",
           "lead": "Avoin A-kieli heilahtaa 110 kertaa sekunnissa.",
           "captions": [
-            "Taajuus kertoo heilahdukset sekunnissa. Kitaran avoin matala A-kieli tekee niitä 110: 110 hertsiä.",
+            "Taajuus kertoo heilahdukset sekunnissa. Kitaran avoin A-kieli tekee niitä 110: 110 hertsiä.",
             "Nauha 12 puolittaa kielen, joten ääni kaksinkertaistuu 220 Hz:iin. Aalto etenee kielessä nopeudella 143 m/s.",
             "Jokainen kaksinkertaistuminen on yksi oktaavi. Kaksi oktaavia tämän kielen yläpuolella on 440 Hz, johon orkesterit virittävät."
           ]
@@ -62,7 +62,7 @@
           "title": "Heittoliike",
           "captions": [
             "Painovoima vetää palloa koko ajan alas, joten sen rata kaartuu paraabeliksi.",
-            "Sivuttaisnopeus ei muutu koskaan. Vain pystynopeus muuttuu, koska painovoima vaikuttaa alaspäin.",
+            "Ilman ilmaa sivuttaisnopeus ei muutu koskaan. Vain pystynopeus muuttuu, koska painovoima vaikuttaa alaspäin.",
             "Ilmanvastus hidastaa palloa, joten paras kulma jää alle 45 asteen. Harmaa = ei ilmaa."
           ]
         },
@@ -79,7 +79,7 @@
           "title": "Entä jos",
           "lead": "Muuta kulmaa, sitten planeettaa.",
           "captions": [
-            "Muuta kulmaa. Matala ja jyrkkä heitto jäävät molemmat lyhyiksi. 45 astetta menee pisimmälle.",
+            "Muuta kulmaa. Matala ja jyrkkä heitto jäävät molemmat lyhyiksi. Ilman ilmaa 45 astetta menee pisimmälle.",
             "Kuussa painovoima on kuusi kertaa heikompi, joten jokainen heitto lentää kuusi kertaa pidemmälle. Paras kulma on yhä 45."
           ]
         },
@@ -89,7 +89,7 @@
           "captions": [
             "Käsivartesi tekee työtä pallolle. Tennispallo, jota heitetään nopeudella 10 metriä sekunnissa, kantaa noin 2.9 joulea.",
             "Noustessa liike-energia muuttuu potentiaalienergiaksi. 45 asteen heiton huipulla se on puoliksi kumpaakin.",
-            "Laskeutuessa potentiaalienergia muuttuu takaisin liikkeeksi. Pieni osa menee ilmanvastukseen matkalla.",
+            "Laskeutuessa potentiaalienergia muuttuu takaisin liikkeeksi. Ilmanvastus vie osan, tennispallolla noin kymmenesosan.",
             "Maahan osuessa liike-energia muuttuu lämmöksi, ääneksi ja seuraavaksi pompuksi. Mitään siitä ei tuhoudu."
           ]
         },
@@ -121,7 +121,7 @@
           "lead": "Vähemmän hampaita takana, enemmän nopeutta kierrosta kohti.",
           "captions": [
             "Vähemmän hampaita takana antaa enemmän nopeutta samalla polkemisella: 44 km/h pienimmällä vaihteella, 14 suurimmalla.",
-            "Pieni etuhammaspyörä laskee jokaista vaihdetta noin kolmanneksella. Menet hitaammin, mutta jokainen poljinpotku on vahvempi."
+            "Pieni etuhammaspyörä laskee jokaista vaihdetta noin 30 prosenttia. Menet hitaammin, mutta jokainen poljinpotku on vahvempi."
           ]
         },
         "flow": {
@@ -139,7 +139,7 @@
           "lead": "Yksi poljinkierros isolla vaihteella vie yli 6 metriä.",
           "captions": [
             "48 hammasta jaettuna 16:lla on välityssuhde 3. Pyörä kääntyy kolme kertaa poljinkierroksella: 3 kertaa 2.1 metriä.",
-            "80 poljinkierroksella minuutissa se on 30 km/h. Hinta: vain 17 prosenttia työnnöstäsi pääsee renkaalle.",
+            "80 poljinkierroksella minuutissa se on 30 km/h. Hinta: rengas työntää vain 17 prosentilla poljinvoimastasi.",
             "Pieni vaihde kääntää asian toisin päin. Kolminkertainen työntö ylämäkeen, mutta vain 2.1 metriä kierrosta kohti."
           ]
         }
@@ -154,7 +154,7 @@
           "captions": [
             "Lämmitetty vesi laajenee ja kevenee, joten se nousee keskeltä ja laskeutuu reunoilla.",
             "Pohjan kuumat kohdat antavat höyrykuplien muodostua (ydintyminen), sitten ne nousevat ja puhkeavat.",
-            "100 C:ssa lisäenergia menee veden höyrystämiseen, ei lämmittämiseen. Se on piilevä lämpö."
+            "100 °C:ssa lisäenergia menee veden höyrystämiseen, ei lämmittämiseen. Se on piilevä lämpö."
           ]
         },
         "cutaway": {
@@ -168,10 +168,10 @@
         },
         "whatif": {
           "title": "Entä jos",
-          "lead": "Kaksinkertainen vesimäärä vie kaksinkertaisen ajan.",
+          "lead": "Kaksinkertainen vesi vie noin kaksinkertaisen ajan.",
           "captions": [
-            "Kiehumisaika kasvaa suoraan veden määrän mukana. Kaksinkertainen vesi tarvitsee kaksinkertaisen ajan ja energian.",
-            "60 C:sta alkava vesi tarvitsee vain puolet lämmityksestä, joten se kiehuu puolessa ajassa."
+            "Kiehumisaika kasvaa lähes suoraan veden määrän mukana. Kaksinkertainen vesi tarvitsee noin kaksinkertaisen ajan ja energian.",
+            "60 °C:sta alkava vesi tarvitsee vain puolet lämmityksestä, joten se kiehuu puolessa ajassa."
           ]
         },
         "flow": {
@@ -181,7 +181,7 @@
             "Sähkö virtaa pistorasiasta pohjan lankakelaan: lämpövastukseen.",
             "Vastus vastustaa virtaa, joten kaikki sähköenergia muuttuu lämmöksi, joka siirtyy veteen.",
             "Noin 88 prosenttia päätyy veteen. Loput lämmittävät kannua ja ympäröivää ilmaa.",
-            "100 C:ssa vesi muuttuu höyryksi. Höyry lämmittää metallinauhaa, joka taipuu ja napsauttaa keittimen pois päältä."
+            "100 °C:ssa vesi muuttuu höyryksi. Höyry lämmittää metallinauhaa, joka taipuu ja napsauttaa keittimen pois päältä."
           ]
         },
         "number": {
@@ -202,7 +202,7 @@
         "motion": {
           "title": "Heilahdusaika",
           "captions": [
-            "Yksi heilahdus kestää T = 2 pi sqrt(L/g). Pidempi naru heiluu hitaammin.",
+            "Pienillä heilahduksilla yksi heilahdus kestää T = 2 pi sqrt(L/g). Pidempi naru heiluu hitaammin.",
             "Kulma seuraa pehmeää sinikäyrää. Nelinkertainen pituus kaksinkertaistaa jaksonajan.",
             "Massa supistuu pois: kaksi eri painoista kappaletta yhtä pitkissä naruissa heiluvat yhdessä."
           ]
@@ -220,14 +220,14 @@
           "lead": "Potentiaalienergia ja liike-energia vaihtuvat edestakaisin.",
           "captions": [
             "Avainten nostaminen sivulle varastoi potentiaalienergiaa. Mikään ei vielä liiku.",
-            "Päästä irti: potentiaalienergia muuttuu liikkeeksi. Alimmassa kohdassa kaikki on liikettä, noin puoli metriä sekunnissa.",
+            "Päästä irti: potentiaalienergia muuttuu liikkeeksi. Alimmassa kohdassa kaikki on liikettä: puoli metriä sekunnissa 20 asteen heilahduksella.",
             "Toisella puolella avaimet nousevat taas ja liike muuttuu takaisin korkeudeksi. Sitten kaikki toistuu käänteisesti.",
             "Joka heilahduksella ilma ottaa hieman energiaa lämmöksi, joten heilahdukset pienenevät. Heilahdusaika pysyy samana."
           ]
         },
         "number": {
           "title": "Luku",
-          "lead": "25 cm:n avainnauhassa yksi heilahdus kestää sekunnin.",
+          "lead": "25 cm:n avainnauhassa avaimet heilahtavat edestakaisin sekunnin välein.",
           "captions": [
             "Heilahdusaika on 2 pi kertaa pituuden ja g:n suhteen neliöjuuri. 25 sentillä se on yksi sekunti.",
             "Nelinkertainen pituus kaksinkertaistaa ajan: kaksi sekuntia metrillä. Avainten paino ei muuta mitään.",
@@ -275,7 +275,7 @@
           "captions": [
             "4000 milliampeerituntia 3.85 voltilla on noin 15 wattituntia: yhden täyden akun energia.",
             "Lataaminen maksaa alle puoli senttiä. Kokonainen vuosi päivittäistä latausta on vähän yli euron.",
-            "Vedenkeitin kuluttaa saman energian 28 sekunnissa. Veden lämmitys maksaa paljon enemmän kuin laskenta."
+            "2 kW:n vedenkeitin kuluttaa puhelimen koko akullisen 28 sekunnissa. Puhelin kuluttaa saman energian koko päivän aikana."
           ]
         }
       }
@@ -290,7 +290,7 @@
           "captions": [
             "Teräslusikka näyttää sileältä ja umpinaiselta. Sen salaisuudet ovat liian pieniä nähtäviksi.",
             "Kolme sataa kertaa lähempää teräs on laikkutäkki pieniä kiteitä, kukin muutaman sadasosamillimetrin levyinen.",
-            "Miljoona kertaa lähempää jokainen kide on siisti atomihila. Vapaat elektronit kulkevat atomien välissä ja kuljettavat lämpöä nopeasti."
+            "Vielä satatuhatta kertaa lähempänä jokainen kide on siisti atomihila. Vapaat elektronit liikkuvat atomien välissä ja auttavat kuljettamaan lämpöä."
           ]
         },
         "flow": {
@@ -299,16 +299,16 @@
           "captions": [
             "Kuuma tee saa lusikan kupin atomit värähtelemään. Tämä värinä on lämpöä.",
             "Värinä etenee metallissa, ja vapaat elektronit auttavat. Minuutissa varsi on lämmin.",
-            "Sormesi ottavat lämmön varresta. Hieman lämpöä karkaa matkalla myös ilmaan."
+            "Sormesi ottavat lämmön varresta. Osa karkaa matkalla myös ilmaan."
           ]
         },
         "number": {
           "title": "Luku",
           "lead": "Teräs johtaa lämpöä noin sata kertaa paremmin kuin puu.",
           "captions": [
-            "Teräs johtaa lämpöä noin 100 kertaa paremmin kuin puu. Siksi metallilusikka tuntuu kylmältä ja puinen ei.",
+            "Teräs johtaa lämpöä noin 100 kertaa paremmin kuin puu ja vie lämmön ihostasi paljon nopeammin. Siksi se tuntuu kylmältä.",
             "Molemmat lusikat ovat huoneenlämpöisiä. Teräslusikka vain vie lämmön ihostasi nopeammin.",
-            "Hopea johtaa vielä 27 kertaa paremmin. Hopealusikka kuumassa teessä kuumenee liian kuumaksi sekunneissa."
+            "Hopea johtaa 27 kertaa paremmin kuin teräs. Hopealusikka kuumassa teessä voi kuumentua liian kuumaksi pitää minuutissa."
           ]
         }
       }

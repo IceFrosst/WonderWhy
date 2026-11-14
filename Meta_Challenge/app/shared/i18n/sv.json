@@ -30,7 +30,7 @@
           "lead": "Varje band höjer tonen med samma förhållande.",
           "captions": [
             "Varje band kortar strängen och höjer tonen med cirka 6 procent. Tolv band dubblar frekvensen: en oktav.",
-            "En sträng som är dubbelt så lång låter en oktav lägre vid varje band. Därför är basinstrument stora."
+            "En sträng som är dubbelt så lång låter en oktav lägre vid varje band. Det är delvis därför basinstrument är stora."
           ]
         },
         "flow": {
@@ -47,7 +47,7 @@
           "title": "Talet",
           "lead": "En öppen A-sträng svänger 110 gånger varje sekund.",
           "captions": [
-            "Frekvens räknar svängningar per sekund. Gitarrens öppna djupa A-sträng gör 110 av dem: 110 hertz.",
+            "Frekvens räknar svängningar per sekund. Gitarrens öppna A-sträng gör 110 av dem: 110 hertz.",
             "Band 12 halverar strängen, så tonen dubblas till 220 Hz. Vågen går längs strängen med 143 m/s.",
             "Varje fördubbling är en oktav. Två oktaver över denna sträng är 440 Hz, som orkestrar stämmer efter."
           ]
@@ -62,7 +62,7 @@
           "title": "Kaströrelse",
           "captions": [
             "Tyngdkraften drar bollen nedåt hela tiden, så banan böjs till en parabel.",
-            "Hastigheten i sidled ändras aldrig. Bara hastigheten uppåt och nedåt ändras, eftersom tyngdkraften verkar nedåt.",
+            "Utan luft ändras hastigheten i sidled aldrig. Bara hastigheten uppåt och nedåt ändras, eftersom tyngdkraften verkar nedåt.",
             "Luftmotståndet bromsar bollen, så den bästa vinkeln hamnar under 45 grader. Grå = ingen luft."
           ]
         },
@@ -79,7 +79,7 @@
           "title": "Tänk om",
           "lead": "Ändra vinkeln, och ändra sedan planet.",
           "captions": [
-            "Ändra vinkeln. Ett flackt och ett brant kast når båda för kort. 45 grader går längst.",
+            "Ändra vinkeln. Ett flackt och ett brant kast når båda för kort. Utan luft går 45 grader längst.",
             "På månen är tyngdkraften sex gånger svagare, så varje kast flyger sex gånger längre. Bästa vinkeln är fortfarande 45."
           ]
         },
@@ -89,7 +89,7 @@
           "captions": [
             "Din arm utför arbete på bollen. En tennisboll som kastas med 10 meter per sekund bär cirka 2.9 joule.",
             "På väg upp blir rörelseenergi till lägesenergi. På toppen av ett kast i 45 grader är den hälften var.",
-            "På väg ner blir lägesenergin till rörelse igen. Lite går förlorat till luftmotstånd på vägen.",
+            "På väg ner blir lägesenergin till rörelse igen. Luftmotståndet tar en del, ungefär en tiondel för en tennisboll.",
             "Vid landningen blir rörelseenergin värme, ljud och nästa studs. Ingenting av den förstörs."
           ]
         },
@@ -121,7 +121,7 @@
           "lead": "Färre tänder bak, mer fart per pedalvarv.",
           "captions": [
             "Färre tänder bak ger mer fart för samma trampande: 44 km/h på minsta växeln, 14 på största.",
-            "Det lilla främre kugghjulet sänker varje växel med ungefär en tredjedel. Du kör långsammare, men varje tramp är starkare."
+            "Det lilla främre kugghjulet sänker varje växel med ungefär 30 procent. Du kör långsammare, men varje tramp är starkare."
           ]
         },
         "flow": {
@@ -139,7 +139,7 @@
           "lead": "Ett pedalvarv i hög växel tar dig över 6 meter.",
           "captions": [
             "48 tänder delat med 16 är utväxlingen 3. Hjulet vrids tre varv per pedalvarv: 3 gånger 2.1 meter.",
-            "Vid 80 pedalvarv per minut blir det 30 km/h. Priset: bara 17 procent av din kraft når däcket.",
+            "Vid 80 pedalvarv per minut blir det 30 km/h. Priset: däcket trycker med bara 17 procent av din pedalkraft.",
             "En låg växel vänder på det. Tre gånger kraften för uppförsbackar, men bara 2.1 meter per varv."
           ]
         }
@@ -154,7 +154,7 @@
           "captions": [
             "Uppvärmt vatten utvidgas och blir lättare, så det stiger i mitten och sjunker vid sidorna.",
             "Heta punkter på botten låter ångbubblor bildas (kärnbildning), sedan stiger de och spricker.",
-            "Vid 100 C går extra energi åt till att göra vatten till ånga, inte till att värma. Det är latent värme."
+            "Vid 100 °C går extra energi åt till att göra vatten till ånga, inte till att värma. Det är latent värme."
           ]
         },
         "cutaway": {
@@ -168,10 +168,10 @@
         },
         "whatif": {
           "title": "Tänk om",
-          "lead": "Dubbelt så mycket vatten tar dubbelt så lång tid.",
+          "lead": "Dubbelt vatten tar ungefär dubbelt så lång tid.",
           "captions": [
-            "Koktiden växer rakt proportionellt med vattnet. Dubbelt så mycket vatten kräver dubbelt så lång tid och dubbelt så mycket energi.",
-            "Vatten som börjar på 60 C behöver bara hälften av uppvärmningen, så det kokar på halva tiden."
+            "Koktiden växer nästan rakt proportionellt med vattnet. Dubbelt så mycket vatten kräver ungefär dubbelt så lång tid och energi.",
+            "Vatten som börjar på 60 °C behöver bara hälften av uppvärmningen, så det kokar på halva tiden."
           ]
         },
         "flow": {
@@ -181,7 +181,7 @@
             "Elektricitet flödar från vägguttaget in i en trådspiral i botten: värmeelementet.",
             "Elementet motstår strömmen, så all elektrisk energi blir värme, som går över till vattnet.",
             "Cirka 88 procent hamnar i vattnet. Resten värmer kannan och luften runt omkring.",
-            "Vid 100 C blir vattnet till ånga. Ångan värmer en metallremsa som böjs och klickar av kokaren."
+            "Vid 100 °C blir vattnet till ånga. Ångan värmer en metallremsa som böjs och klickar av kokaren."
           ]
         },
         "number": {
@@ -202,7 +202,7 @@
         "motion": {
           "title": "Svängtid",
           "captions": [
-            "En svängning tar T = 2 pi sqrt(L/g). En längre snodd svänger långsammare.",
+            "Vid små svängningar tar en svängning T = 2 pi sqrt(L/g). En längre snodd svänger långsammare.",
             "Vinkeln följer en mjuk sinusvåg. Fyra gånger längden ger dubbel periodtid.",
             "Massan förkortas bort: två vikter med olika massa på lika långa snören svänger i takt."
           ]
@@ -220,14 +220,14 @@
           "lead": "Lägesenergi och rörelseenergi byts fram och tillbaka.",
           "captions": [
             "Att lyfta nycklarna åt sidan lagrar lägesenergi. Ingenting rör sig än.",
-            "Släpp: lägesenergin blir rörelse. Längst ner är allt rörelse, cirka en halv meter per sekund.",
+            "Släpp: lägesenergin blir rörelse. Längst ner är allt rörelse: en halv meter per sekund vid en svängning på 20 grader.",
             "På andra sidan stiger nycklarna igen och rörelsen blir höjd igen. Sedan går allt baklänges.",
             "Vid varje svängning tar luften lite energi som värme, så svängarna blir mindre. Svängtiden förblir densamma."
           ]
         },
         "number": {
           "title": "Talet",
-          "lead": "Nycklar i ett 25 cm långt nyckelband tar en sekund per svängning.",
+          "lead": "Nycklar i ett 25 cm nyckelband svänger fram och tillbaka varje sekund.",
           "captions": [
             "Svängtiden är 2 pi gånger roten ur längd genom g. För 25 centimeter blir det en sekund.",
             "Fyra gånger längden fördubblar tiden: två sekunder för en meter. Nycklarnas vikt ändrar ingenting.",
@@ -275,7 +275,7 @@
           "captions": [
             "4000 milliamperetimmar vid 3.85 volt är ungefär 15 wattimmar: energin i ett fullt batteri.",
             "Att ladda det kostar under en halv cent. Ett helt år av daglig laddning är drygt en euro.",
-            "En vattenkokare förbrukar samma energi på 28 sekunder. Att värma vatten kostar mycket mer än att räkna."
+            "En 2 kW vattenkokare förbrukar en hel telefonladdning på 28 sekunder. Telefonen använder samma energi under ett helt dygn."
           ]
         }
       }
@@ -290,7 +290,7 @@
           "captions": [
             "En stålsked ser slät och massiv ut. Dess hemligheter är alldeles för små för att synas.",
             "Trehundra gånger närmare är stålet ett lapptäcke av små kristallkorn, vart och ett några hundradels millimeter brett.",
-            "En miljon gånger närmare är varje korn ett prydligt gitter av atomer. Fria elektroner rör sig mellan dem och för värmen vidare snabbt."
+            "Ytterligare hundra tusen gånger närmare är varje korn ett prydligt gitter av atomer. Fria elektroner rör sig mellan dem och hjälper till att föra värmen vidare."
           ]
         },
         "flow": {
@@ -299,16 +299,16 @@
           "captions": [
             "Hett te får atomerna i skedens skål att vibrera. Den vibrationen är värme.",
             "Vibrationen förs vidare i metallen, med hjälp av fria elektroner. Efter en minut är skaftet varmt.",
-            "Dina fingrar tar värmen från skaftet. Lite värme går också ut i luften på vägen."
+            "Dina fingrar tar värmen från skaftet. En del går också ut i luften på vägen."
           ]
         },
         "number": {
           "title": "Talet",
           "lead": "Stål leder värme ungefär hundra gånger bättre än trä.",
           "captions": [
-            "Stål leder värme ungefär 100 gånger bättre än trä. Därför känns en metallsked kall och en träsked inte.",
+            "Stål leder värme ungefär 100 gånger bättre än trä och drar värme från din hud mycket snabbare. Därför känns det kallt.",
             "Båda skedarna har rumstemperatur. Stålskeden tar bara värmen från din hud snabbare.",
-            "Silver leder 27 gånger bättre än så. En silversked i hett te blir för het att hålla i på några sekunder."
+            "Silver leder 27 gånger bättre än stål. En silversked i hett te kan bli för het att hålla i inom en minut."
           ]
         }
       }
