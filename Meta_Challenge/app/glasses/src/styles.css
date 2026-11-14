@@ -40,7 +40,8 @@ body {
   align-items: center;
   padding: var(--uit-spacing-large);
   z-index: 10;
-  background: var(--uit-color-background-shade);
+  /* Solid black: the screen behind must not show through (black is see-through on the glasses anyway). */
+  background: #000;
 }
 
 .card {
@@ -659,4 +660,38 @@ body:has(.xp-inspect) {
 .ask-actions {
   display: flex;
   gap: 12px;
+}
+
+/* Every screen has a visible exit: Cancel while waiting, OK on pop-up cards. */
+.wait {
+  align-content: center;
+  gap: var(--uit-spacing-large);
+}
+
+.wait-cancel,
+.card-ok {
+  justify-self: center;
+  align-self: start;
+  min-width: 120px;
+  padding: 8px 24px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: inherit;
+  font-size: 18px;
+}
+
+.card-ok {
+  align-self: flex-start;
+  margin-top: var(--uit-spacing-small);
+}
+
+.wait-cancel:focus-visible,
+.wait-cancel:focus,
+.card-ok:focus-visible,
+.card-ok:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  background: rgba(255, 255, 255, 0.24);
 }

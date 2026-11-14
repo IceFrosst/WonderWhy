@@ -365,12 +365,7 @@ export default function Explainer({
       const active = document.activeElement;
       const inFilmControls = active?.closest('.xp-actions');
       if (isExplore && !inFilmControls && !demo && (e.key === 'ArrowRight' || e.key === 'ArrowDown')) {
-        if (e.key === 'ArrowRight' && objectId === 'kettle') {
-          e.preventDefault();
-          e.stopImmediatePropagation();
-          onInspect();
-          return;
-        }
+        // Right always means Home, on every film (kettle included). Inspect sits in the controls row: Down, then Right.
         const control = document.querySelector<HTMLButtonElement>(
           e.key === 'ArrowRight' ? '.xp-actions [data-film-home]' : '.xp-actions button',
         );

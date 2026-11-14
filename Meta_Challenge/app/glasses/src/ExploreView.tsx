@@ -941,7 +941,7 @@ export default function ExploreView({
         <p className="xp-caption" ref={captionRef} key={`c${step}`}>
           {caption}
         </p>
-        {!demo && !inspecting && (
+        {!inspecting && (
           <div className="xp-actions" aria-label="Film controls" onFocus={() => {
             lastInputRef.current = performance.now();
           }}>

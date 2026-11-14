@@ -13,7 +13,7 @@ import {
 import type {ButtonHandle} from '@wearables-ui-toolkit/mrbd';
 import {BridgeClient, bridgeUrl} from './bridge';
 import type {BridgeMsg, ShowMsg} from './bridge';
-import {emitNav, onNav} from './bus';
+import {emitNav, onNav, setKeyGate} from './bus';
 import {OBJECTS, findObject, mergeSpecText, sketchToObject} from './content';
 import type {ObjectInfo} from './content';
 import Explainer from './Explainer';
@@ -311,9 +311,40 @@ function AskScreen({onAsk, onBack, voiceStatus}: {
 }) {
   const [text, setText] = useState('');
   const [invalid, setInvalid] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Arrows must never get stuck in the text field: Down or Right (at the end of the text) leave it,
+  // Left/Right move between the buttons, Up returns to the field. Swipe Right twice always reaches Back.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      const form = formRef.current;
+      if (!form || !event.key.startsWith('Arrow')) return;
+      const input = form.querySelector<HTMLInputElement>('input');
+      const buttons = Array.from(form.querySelectorAll<HTMLButtonElement>('.ask-actions button'));
+      const active = document.activeElement;
+      const index = buttons.findIndex(button => button === active);
+      let target: HTMLElement | undefined;
+      if (active === input) {
+        const atEnd = !input || input.selectionStart === input.value.length;
+        if (event.key === 'ArrowDown' || (event.key === 'ArrowRight' && atEnd)) target = buttons[event.key === 'ArrowRight' ? buttons.length - 1 : 0];
+        else return; // Left/Right inside the text move the caret
+      } else if (index >= 0) {
+        if (event.key === 'ArrowUp') target = input ?? undefined;
+        else if (event.key === 'ArrowLeft') target = buttons[Math.max(0, index - 1)];
+        else if (event.key === 'ArrowRight') target = buttons[Math.min(buttons.length - 1, index + 1)];
+        else return;
+      } else {
+        target = buttons[buttons.length - 1];
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      target?.focus();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
   return (
     <Page headerText="Ask Physics Lens" enableSystemBarInset={false}>
-      <form className="ask-form" onSubmit={event => {
+      <form className="ask-form" ref={formRef} onSubmit={event => {
         event.preventDefault();
         setInvalid(!onAsk(text));
       }}>
@@ -331,6 +362,46 @@ function AskScreen({onAsk, onBack, voiceStatus}: {
         <small role="status">{voiceStatus}</small>
       </form>
     </Page>
+  );
+}
+
+function WaitScreen({text, onCancel}: {text: string; onCancel: () => void}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const cancel = useRef(onCancel);
+  cancel.current = onCancel;
+  // Focus Cancel only after a moment, so the pinch that took the photo (or a double pinch) does not cancel it.
+  const armed = useRef(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      armed.current = true;
+      cancelRef.current?.focus();
+    }, 1200);
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') return; // Back is handled by the app: home
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (armed.current && !event.repeat) cancel.current();
+      } else if (event.key.startsWith('Arrow')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        armed.current = true;
+        cancelRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, []);
+  return (
+    <div className="center wait" role="status" aria-live="polite">
+      <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED}>
+        {text}
+      </TextView>
+      <button type="button" ref={cancelRef} className="wait-cancel" onClick={() => cancel.current()}>Cancel</button>
+    </div>
   );
 }
 
@@ -418,6 +489,8 @@ export default function App() {
   const cardTimer = useRef<number | undefined>(undefined);
   const detectTimer = useRef<number | undefined>(undefined);
   const captureTimer = useRef<number | undefined>(undefined);
+  // After the wearer cancels a photo, a late `detecting` / `show` for it must not pop up. New photos reset it.
+  const ignoreResultsUntil = useRef(0);
   const paintFrame = useRef<number | undefined>(undefined);
   const sketchTimer = useRef<number | undefined>(undefined);
   const earlySketch = useRef<{message: Extract<BridgeMsg, {type: 'sketch'}>; received: number} | null>(null);
@@ -465,6 +538,7 @@ export default function App() {
   const takePhoto = useCallback(() => {
     if (!connectedRef.current || viewRef.current.k === 'capturing' || viewRef.current.k === 'detecting') return;
     flashCard(null);
+    ignoreResultsUntil.current = 0;
     setViewNow({k: 'capturing'});
     bridgeRef.current?.send({type: 'capture', t_sent: Date.now()});
     captureTimer.current = window.setTimeout(() => {
@@ -722,6 +796,7 @@ export default function App() {
         if (m.objectId === 'unknown' && current.info.id === 'unknown') return;
         if (m.objectId === 'unknown' && current.info.provenance === 'sketch' && current.sourceReq === m.reqId) return;
       }
+      if ((m.type === 'detecting' || (m.type === 'show' && !m.replay)) && Date.now() < ignoreResultsUntil.current) return;
       if (m.type === 'show' || m.type === 'detecting') {
         stopDemo();
         if (consentRef.current) {
@@ -974,6 +1049,20 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [stopDemo]);
 
+  // A pop-up card is modal for pinch and Back: they close it and do nothing else. Arrows pass through.
+  useEffect(() => {
+    if (!card || doffed) {
+      setKeyGate(null);
+      return;
+    }
+    setKeyGate(event => {
+      if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Escape') return false;
+      if (!event.repeat) flashCard(null);
+      return true;
+    });
+    return () => setKeyGate(null);
+  }, [card, doffed, flashCard]);
+
   useBackNavigation(() => {
     if (consentRequired) return true;
     if (card) {
@@ -1026,11 +1115,15 @@ export default function App() {
     body = <div className="blank" aria-hidden="true" />;
   } else if (view.k === 'detecting' || view.k === 'capturing') {
     body = (
-      <div className="center" role="status" aria-live="polite">
-        <TextView as="p" textStyle={TextStyle.BODY2_EMPHASIZED}>
-          {view.k === 'capturing' ? 'Taking the photo…' : 'Looking…'}
-        </TextView>
-      </div>
+      <WaitScreen
+        text={view.k === 'capturing' ? 'Taking the photo…' : 'Looking…'}
+        onCancel={() => {
+          window.clearTimeout(captureTimer.current);
+          clearDetectTimer();
+          ignoreResultsUntil.current = Date.now() + 30000;
+          setViewNow({k: 'home'});
+        }}
+      />
     );
   } else if (view.k === 'explain') {
     body = (
@@ -1098,6 +1191,7 @@ export default function App() {
               <TextView as="p" textStyle={TextStyle.META1}>
                 {card.body}
               </TextView>
+              <button type="button" className="card-ok" onClick={() => flashCard(null)}>OK</button>
             </div>
           </Panel>
         </div>
