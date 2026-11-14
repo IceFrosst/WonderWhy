@@ -34,6 +34,12 @@ import com.meta.wearable.dat.inputs.removeInputs
 import com.meta.wearable.dat.inputs.types.InputEvent
 import com.meta.wearable.dat.inputs.types.InputsConfiguration
 import com.meta.wearable.dat.inputs.types.NavDirection
+import com.meta.wearable.dat.speech.Speech
+import com.meta.wearable.dat.speech.SpeechConfiguration
+import com.meta.wearable.dat.speech.addSpeech
+import com.meta.wearable.dat.speech.removeSpeech
+import com.meta.wearable.dat.speech.types.SpeechState
+import com.meta.wearable.dat.speech.types.TranscriptionResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +55,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Failure of one capture/detect run, with text for the glasses card. */
@@ -62,8 +69,8 @@ class GlassesController(
     private val scope: CoroutineScope,
     private val bridge: BridgeClient,
     private val log: (String) -> Unit,
-    /** Shows the Meta AI camera-permission screen (needs an Activity result launcher). */
-    private val requestCameraPermission: suspend () -> DatResult<PermissionStatus, PermissionError>,
+    /** Shows the Meta AI permission screen for camera or microphone (needs an Activity result launcher). */
+    private val requestPermission: suspend (Permission) -> DatResult<PermissionStatus, PermissionError>,
     private val onUpdateRequired: () -> Unit,
     /** The exact JPEG sent to the bridge, for an on-phone thumbnail. Never stored. */
     private val onPhoto: (ByteArray) -> Unit = {},
@@ -74,6 +81,9 @@ class GlassesController(
     private val _battery = MutableStateFlow("-")
     private val _device = MutableStateFlow("Worn: -")
     private val _alert = MutableStateFlow<DeviceAlert?>(null)
+    private val _speech = MutableStateFlow("-")
+    /** The glasses' speech capability (`Speech.state`), one word for the phone. */
+    val speechStatus: StateFlow<String> = _speech
     val registration: StateFlow<String> = _registration
     val sessionStatus: StateFlow<String> = _session
     val displayStatus: StateFlow<String> = _display
@@ -109,6 +119,9 @@ class GlassesController(
      * from `assets/fixture/` (ball, guitar, low confidence) and stills come from `assets/fixture/media/`.
      */
     @Volatile var useFixture = false
+
+    /** Dev only, not saved: sent as PROTOCOL `forceObjectId` so a keyless bridge answers with that object. */
+    @Volatile var forceObjectId: String? = null
     private var fixtureIndex = 0
 
     // Screen state. Touched only on the main thread (inside [scope]).
@@ -120,6 +133,18 @@ class GlassesController(
     private var picker: OfflinePicker? = null
     private var pickerIndex = 0
     private var library: Map<String, OfflineObject>? = null
+    /** Answer card of a follow-up question, while it is on screen. */
+    private var answerDet: Detection? = null
+    private var answerPos: Pair<Int, Int>? = null
+    /** Spoken questions (`session.addSpeech()`); listens only while a library result is on screen. */
+    private var speech: Speech? = null
+
+    /**
+     * Language for the bridge (`lang` on `/detect` and `/ask`, `/objects?lang=`) and the fixed card strings:
+     * the phone screen's picker, else the phone language. Change it with [setLanguage].
+     */
+    @Volatile var lang: String = Cards.lang
+        private set
     /** Last non-transient card, re-sent after a notice or when the glasses come back. */
     private var lastContent: (ContentScope.() -> Unit)? = null
     /** Auto-dismissing state card on screen (battery, heat), if any. */
@@ -171,8 +196,7 @@ class GlassesController(
                 if (ok == null) { log("Registration did not finish"); return }
             }
             watchDevice()
-            concepts = bridge.objects()
-            log("Bridge objects: ${concepts.size}")
+            refreshLibrary()
             if (!startSession(tries = 6)) _session.value = "no session"
         } finally {
             connecting = false
@@ -240,6 +264,8 @@ class GlassesController(
     /** Capabilities first, then the session: removing them from a stopped session does not free them. */
     private fun stopSession(s: DeviceSession) {
         inputsJob?.cancel()
+        runCatching { speech?.stop() }
+        runCatching { s.removeSpeech() }
         runCatching { s.removeInputs() }
         runCatching { s.removeDisplay() }
         runCatching { s.stop() }
@@ -253,11 +279,16 @@ class GlassesController(
         sessionJobs.forEach { it.cancel() }
         sessionJobs.clear()
         session?.let {
+            runCatching { speech?.stop() }
+            runCatching { it.removeSpeech() }
             runCatching { it.removeInputs() }
             runCatching { it.removeDisplay() }
         }
         session = null
         display = null
+        speech = null
+        _speech.value = "-"
+        answerDet = null
         attached = false
         explainer = null
         current = null
@@ -367,6 +398,46 @@ class GlassesController(
             // Real glasses may refuse inputs; Display buttons and the phone buttons still work.
             onFailure = { e, _ -> log("Inputs unavailable: ${e.description}") },
         )
+        attachSpeech(sess)
+    }
+
+    /**
+     * Spoken follow-up questions: `DeviceSession.addSpeech()` (mwdat-speech 1.0.1). A final transcription goes
+     * through the same `/ask` path as the phone's Ask button. Optional: without it the phone field still works.
+     */
+    private suspend fun attachSpeech(sess: DeviceSession) {
+        var status = Wearables.checkPermissionStatus(Permission.MICROPHONE).getOrNull()
+        if (status !is PermissionStatus.Granted) status = requestPermission(Permission.MICROPHONE).getOrNull()
+        if (status !is PermissionStatus.Granted) { log("Microphone not allowed: spoken questions off"); return }
+        sess.addSpeech(SpeechConfiguration()).fold(
+            onSuccess = { sp ->
+                speech = sp
+                sessionJobs += scope.launch { sp.state.collect { _speech.value = it.name } }
+                sessionJobs += scope.launch { sp.transcriptions.collect { r -> if (r != null) onHeard(r) } }
+                sessionJobs += scope.launch {
+                    sp.errors.collect { e -> if (e != null) log("Speech error: ${e.description} ${sp.errorDetails.value}") }
+                }
+                log("Speech ready (listens while a result is on screen)")
+                setListening(AskFlow.target(current) is AskTarget.Object && (explainer != null || answerDet != null))
+            },
+            onFailure = { e, _ -> log("Speech unavailable: ${e.description}") },
+        )
+    }
+
+    private fun onHeard(r: TranscriptionResult) {
+        if (!r.isFinal || r.text.isBlank()) return
+        log("Heard: \"${r.text}\" (${"%.2f".format(r.confidence)})")
+        ask(r.text)
+    }
+
+    /** Microphone on only while a question makes sense (a library result or an answer is on screen). */
+    private fun setListening(want: Boolean) {
+        val sp = speech ?: return
+        when (sp.state.value) {
+            SpeechState.STOPPED -> if (want) sp.start().onFailure { e, _ -> log("Speech did not start: ${e.description}") }
+            SpeechState.STARTED, SpeechState.STARTING -> if (!want) sp.stop()
+            SpeechState.STOPPING -> Unit
+        }
     }
 
     private fun onDeviceInfo(d: com.meta.wearable.dat.core.types.Device) {
@@ -496,7 +567,10 @@ class GlassesController(
 
     private suspend fun restore() = show(lastContent ?: Cards.idle(), record = false)
 
-    suspend fun showIdle() = show(Cards.idle())
+    suspend fun showIdle() {
+        setListening(false)
+        show(Cards.idle())
+    }
 
     // ---- the capture loop ----
 
@@ -509,6 +583,8 @@ class GlassesController(
             try {
                 explainer = null
                 picker = null
+                answerDet = null
+                setListening(false)
                 lower(DeviceAlert.CAMERA_DENIED)
                 runCapture()
             } finally {
@@ -528,11 +604,14 @@ class GlassesController(
                 val (jpeg, focus) = withTimeout(30_000) { takePhotoJpeg() }
                 log("Photo ${jpeg.size / 1024} KB + aim crop ${focus.size / 1024} KB, sending")
                 onPhoto(jpeg)
-                bridge.detect(jpeg, focus, tCapture)
+                bridge.detect(jpeg, focus, tCapture, lang, forceObjectId?.ifBlank { null })
             }
             log("Detected ${det.objectId} '${det.label}' conf=${det.confidence}" +
                 (if (det.lowConfidence) " lowConfidence" else "") +
-                (if (det.lenses.isNotEmpty() || det.steps.isNotEmpty()) " lenses=${det.lenses.size} steps=${det.steps.size}" else ""))
+                (if (det.lenses.isNotEmpty() || det.steps.isNotEmpty()) " lenses=${det.lenses.size} steps=${det.steps.size}" else "") +
+                (det.lang?.let { " lang=$it" } ?: "") + (if (det.media != null) " media" else "") +
+                (det.sketch?.let { " sketch='${it.label}' chapters=${it.chapters.size}" } ?: "") +
+                (det.sketchError?.let { " sketchError=$it" } ?: ""))
             present(det)
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
             showError("Camera timed out", "The glasses did not deliver a photo")
@@ -567,6 +646,7 @@ class GlassesController(
         scope.launch {
             explainer = null
             picker = null
+            answerDet = null
             lower(DeviceAlert.CAMERA_DENIED)
             showIdle()
         }
@@ -576,13 +656,70 @@ class GlassesController(
 
     private suspend fun library(): Map<String, OfflineObject> {
         library?.let { return it }
-        val lib = withContext(Dispatchers.IO) {
-            runCatching { OfflineCards.load(ctx.assets.open(OfflineCards.ASSET_NAME)) }
-                .onFailure { log("Saved cards unavailable: $it") }
-                .getOrDefault(emptyMap())
+        return loadLibrary(fetched = null) // offline: the saved copy for this language, else bundled English
+    }
+
+    /** Asks the bridge for the library in [lang] (not in demo-data mode), then picks what to use. */
+    suspend fun refreshLibrary() {
+        val fetched = if (useFixture) null else bridge.objectsText(lang)
+        loadLibrary(fetched)
+    }
+
+    /**
+     * [LibraryChoice]: the bridge's text in this language (saved to an app-private file for a later offline
+     * start; library text, not user data), else the saved copy, else the bridge's English, else the bundled
+     * English `objects.json`.
+     */
+    private suspend fun loadLibrary(fetched: String?): Map<String, OfflineObject> {
+        val want = lang
+        val (pick, lib) = withContext(Dispatchers.IO) {
+            val file = LibraryChoice.cacheName(want)?.let { File(File(ctx.filesDir, "library"), it) }
+            val cached = file?.takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() }
+            val bundled = runCatching { ctx.assets.open(OfflineCards.ASSET_NAME).use { it.readBytes().toString(Charsets.UTF_8) } }
+                .getOrDefault("{}")
+            val pick = LibraryChoice.choose(want, fetched, cached, bundled)
+            if (pick.save && file != null) runCatching {
+                file.parentFile?.mkdirs()
+                val tmp = File(file.parentFile, file.name + ".tmp")
+                tmp.writeText(pick.text)
+                if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
+            }.onFailure { log("Could not save the library: $it") }
+            pick to runCatching { OfflineCards.parse(pick.text) }.getOrDefault(emptyMap())
         }
+        if (want != lang) return lib // the language changed meanwhile; that refresh wins
         library = lib
+        concepts = conceptsOf(pick.text)
+        log("Library: ${pick.source.name.lowercase()}, ${pick.lang}, ${lib.size} objects" + if (pick.save) ", saved" else "")
         return lib
+    }
+
+    /** objectId -> `concept` line of the library text (optional, for the old single result card). */
+    private fun conceptsOf(text: String): Map<String, String> = runCatching {
+        val arr = org.json.JSONObject(text).getJSONArray("objects")
+        buildMap {
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val c = o.optString("concept")
+                if (c.isNotBlank()) put(o.getString("id"), c)
+            }
+        }
+    }.getOrDefault(emptyMap())
+
+    /**
+     * The phone's language picker (or the phone language). Fixed card strings follow at once; the library is
+     * fetched again in that language. An idle card is redrawn; a result on screen keeps its language.
+     */
+    fun setLanguage(tag: String) {
+        if (tag == lang) return
+        lang = tag
+        Cards.lang = tag
+        log("Language: $tag")
+        scope.launch {
+            library = null
+            if (session != null) refreshLibrary()
+            val idle = current == null && explainer == null && picker == null && answerDet == null && !busy.get()
+            if (idle && session != null && display != null) showIdle()
+        }
     }
 
     /** Offline card: pick a saved library object with left/right, open with pinch. */
@@ -593,6 +730,7 @@ class GlassesController(
         picker = p
         pickerIndex = p.index
         explainer = null
+        answerDet = null
         current = null
         val o = lib.getValue(p.current)
         show(Cards.offlinePicker(
@@ -619,11 +757,13 @@ class GlassesController(
         current = det
         currentSaved = saved
         explainer = null
+        answerDet = null
         when (val v = DetectionParser.verdict(det)) {
-            is Verdict.NotSure -> show(Cards.notSure(v.guess, ::trigger, ::done))
-            is Verdict.Unrecognised -> show(Cards.result(Cards.t(Lang.NOT_SURE), null, v.answer, ::trigger, ::done))
-            is Verdict.Plain -> show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, ::done))
+            is Verdict.NotSure -> { setListening(false); show(Cards.notSure(v.guess, ::trigger, ::done)) }
+            is Verdict.Unrecognised -> { setListening(false); show(Cards.result(Cards.t(Lang.NOT_SURE), null, v.answer, ::trigger, ::done)) }
+            is Verdict.Plain -> { setListening(true); show(Cards.result(det.label, concepts[det.objectId], det.answer, ::trigger, ::done)) }
             is Verdict.Explainer -> showExplainer(ExplainerState(v.tracks))
+            is Verdict.Sketched -> showExplainer(ExplainerState(v.tracks))
         }
     }
 
@@ -636,31 +776,149 @@ class GlassesController(
     private suspend fun showExplainer(s: ExplainerState) {
         val det = current ?: return
         explainer = s
+        answerDet = null
+        setListening(AskFlow.target(det) is AskTarget.Object)
         val paths = stillPaths(det, s.track)
         media.prefetch(paths.filterNotNull())
         val path = if (s.isOverview) null else paths.getOrNull(s.step)
-        val cached = path?.let { media.cached(it) }
+        val cached = path?.let { cardStill(it, s) }
         show(explainerCard(det, s, cached))
         if (path != null && cached == null && !media.hasFailed(path)) {
             scope.launch {
                 val bmp = runCatching { media.get(path) }.getOrNull()
                 // Only if the wearer is still on this card; a failed still keeps the text card.
-                if (bmp != null && explainer === s && current === det) show(explainerCard(det, s, bmp))
+                if (bmp != null && explainer === s && current === det) show(explainerCard(det, s, cardStill(path, s)))
                 else if (bmp == null) log("Still unavailable: $path")
             }
         }
     }
 
-    private fun explainerCard(det: Detection, s: ExplainerState, still: Bitmap?) = Cards.explainer(
-        s = s,
-        label = det.label,
-        summary = det.summary ?: concepts[det.objectId],
-        answer = det.answer,
-        still = still,
-        onPrimary = { scope.launch { explainerPrimary() } },
-        onSecondary = { scope.launch { explainerSecondary() } },
-        saved = currentSaved,
-    )
+    /** The still sized for this step card: the longer the caption, the lower the picture ([StillFrame]). */
+    private fun cardStill(path: String, s: ExplainerState): Bitmap? {
+        val caption = "${Cards.t(Lang.STEP)} ${s.counter}. ${s.track.steps[s.step]}"
+        val metaLines = (if (s.tracks.size > 1) 1 else 0) + (if (currentSaved) 1 else 0)
+        return media.forCard(path, caption.length, metaLines)
+    }
+
+    private fun explainerCard(det: Detection, s: ExplainerState, still: Bitmap?): ContentScope.() -> Unit {
+        val sk = det.sketch?.takeIf { det.objectId == "unknown" }
+        return Cards.explainer(
+            s = s,
+            // A sketch: its own label and one-line answer (the model's photo answer is not about the sketch).
+            label = sk?.label ?: det.label,
+            summary = if (sk != null) sk.answer else det.summary ?: concepts[det.objectId],
+            answer = if (sk != null) null else det.answer,
+            still = still,
+            onPrimary = { scope.launch { explainerPrimary() } },
+            onSecondary = { scope.launch { explainerSecondary() } },
+            saved = currentSaved,
+            sketch = sk != null,
+        )
+    }
+
+    // ---- follow-up question (PROTOCOL POST /ask) ----
+
+    /**
+     * A question about the object on screen, typed on the phone or spoken on the glasses. "Looking..." then
+     * the answer card; its primary action opens the lens and step the bridge's `lensHint` points at.
+     */
+    fun ask(raw: String) {
+        val q = BridgeRequests.cleanQuestion(raw) ?: run { log("Empty question"); return }
+        if (session == null || display == null) { log("Not connected"); return }
+        if (DeviceStates.suppressesDisplay(active)) { log("Glasses not available: ${DeviceStates.top(active)}"); return }
+        if (!busy.compareAndSet(false, true)) { log("Busy: ignoring question"); return }
+        captureJob = scope.launch {
+            try {
+                runAsk(q)
+            } finally {
+                busy.set(false)
+            }
+        }
+    }
+
+    private suspend fun runAsk(q: String) {
+        val base = current
+        when (val target = AskFlow.target(base)) {
+            AskTarget.NoResult -> show(Cards.decide(
+                "No object yet", "Explain something first, then ask.",
+                Cards.t(Lang.AGAIN), ::trigger, Cards.t(Lang.DONE), ::done,
+            ))
+            AskTarget.Unknown -> show(Cards.decide(
+                "Can't ask yet", "Questions work for library objects only.",
+                Cards.t(Lang.AGAIN), ::trigger, Cards.t(Lang.DONE), ::done,
+            ))
+            is AskTarget.Object -> {
+                val det = base ?: return
+                log("Asking about ${target.id}: \"$q\"")
+                setListening(false)
+                explainer = null
+                picker = null
+                answerDet = null
+                show(Cards.looking())
+                // Demo data and saved cards have no bridge behind them: the phone answers from the same text.
+                if (useFixture || currentSaved) { showAnswer(det, AskFlow.localAnswer(det, q), q, local = true); return }
+                try {
+                    showAnswer(det, bridge.ask(q, target.id, lang), q, local = false)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: BridgeException) {
+                    log("Ask failed: ${e.message} (HTTP ${e.status}${if (e.code.isNotEmpty()) ", ${e.code}" else ""})")
+                    when {
+                        // No /ask on this bridge (404), or no bridge: PROTOCOL's word-overlap rule on the phone.
+                        e.status == 404 || e.offline -> showAnswer(det, AskFlow.localAnswer(det, q), q, local = true)
+                        e.unauthorized -> askError(q, "Bridge token", Cards.t(Lang.TOKEN))
+                        e.code == "bad_request" -> askError(q, "Can't ask that", "Ask about the object on screen.")
+                        e.code == "detect_timeout" -> askError(q, "Took too long", "Ask again in a moment.")
+                        else -> askError(q, "Couldn't answer", e.userMessage)
+                    }
+                }
+            }
+        }
+    }
+
+    /** Error card for a question: Try again asks the same question again. */
+    private suspend fun askError(q: String, title: String, detail: String) = show(Cards.decide(
+        title, detail, Cards.t(Lang.TRY_AGAIN), { if (navAllowed()) ask(q) },
+        Cards.t(Lang.DONE), ::done,
+    ))
+
+    private suspend fun showAnswer(base: Detection, ans: Detection, q: String, local: Boolean) {
+        // The answer is a normal show for the object; keep the old lenses and media if it came without them.
+        val det = if (DetectionParser.tracks(ans).isEmpty()) {
+            base.copy(question = ans.question ?: q, answer = ans.answer, lensHint = ans.lensHint)
+        } else {
+            ans.copy(media = ans.media ?: base.media, question = ans.question ?: q)
+        }
+        if (det.media != base.media) media.clear()
+        current = det
+        explainer = null
+        val tracks = DetectionParser.tracks(det)
+        val pos = AskFlow.position(tracks, det.lensHint)
+        answerDet = det
+        answerPos = pos
+        val text = AskFlow.answerText(det.label, det.question ?: q, det.answer ?: det.summary.orEmpty())
+        log("Answer${if (local) " (phone, saved cards)" else ""}: ${text.answer}" +
+            (det.lensHint?.let { " -> ${it.id} step ${it.step}" } ?: " (no lens hint)"))
+        show(Cards.answer(
+            text,
+            openLabel = pos?.let { (l, s) -> AskFlow.openLabel(tracks[l], s) },
+            onPrimary = { scope.launch { answerPrimary() } },
+            onDone = { if (navAllowed()) done() },
+            local = local,
+        ))
+        setListening(true)
+    }
+
+    /** Pinch on the answer card: the hinted lens and step, else step 1. */
+    private suspend fun answerPrimary() {
+        val det = answerDet ?: return
+        if (!navAllowed()) return
+        answerDet = null
+        val tracks = DetectionParser.tracks(det)
+        if (tracks.isEmpty()) { showIdle(); return }
+        val pos = answerPos
+        showExplainer(if (pos != null) ExplainerState(tracks, pos.first, pos.second) else ExplainerState(tracks).next())
+    }
 
     /** True once per pinch: a pinch may arrive both as a Select event and as a click on the focused button. */
     private fun navAllowed(): Boolean {
@@ -675,6 +933,7 @@ class GlassesController(
         scope.launch {
             when {
                 notice != null -> if (navAllowed()) dismissNotice()
+                answerDet != null -> answerPrimary()
                 picker != null -> pickerOpen()
                 explainer != null -> explainerPrimary()
                 // Twin of a button click that just closed a card: ignore it.
@@ -707,7 +966,7 @@ class GlassesController(
      */
     fun onNav(dir: NavDirection) {
         scope.launch {
-            if (notice != null) return@launch
+            if (notice != null || answerDet != null) return@launch
             picker?.let { p ->
                 val n = when (dir) {
                     NavDirection.LEFT -> p.move(-1)
@@ -737,6 +996,13 @@ class GlassesController(
         scope.launch {
             if (notice != null) { dismissNotice(); return@launch }
             if (picker != null) { picker = null; showIdle(); return@launch }
+            answerDet?.let { a ->
+                // Back from an answer: the object's overview.
+                answerDet = null
+                val tracks = DetectionParser.tracks(a)
+                if (tracks.isEmpty()) showIdle() else showExplainer(ExplainerState(tracks))
+                return@launch
+            }
             val s = explainer
             if (s == null) {
                 if (busy.get()) return@launch // "Looking..." leaves by itself
@@ -770,7 +1036,7 @@ class GlassesController(
 
         var status = Wearables.checkPermissionStatus(Permission.CAMERA).getOrNull()
         if (status !is PermissionStatus.Granted) {
-            status = requestCameraPermission().getOrNull()
+            status = requestPermission(Permission.CAMERA).getOrNull()
         }
         if (status !is PermissionStatus.Granted) throw CameraDenied()
 

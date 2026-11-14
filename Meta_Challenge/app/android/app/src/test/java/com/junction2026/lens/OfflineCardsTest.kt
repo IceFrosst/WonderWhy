@@ -29,7 +29,8 @@ class OfflineCardsTest {
             assertTrue(o.id, o.lenses.isNotEmpty())
             assertTrue(o.id, o.lenses.first().steps.isNotEmpty())
         }
-        assertEquals(listOf("ball.motion", "ball.compare"), objs.getValue("ball").lenses.map { it.id })
+        // 14 Nov: the ball has 5 lenses in shared/objects.json now (was 2 when this test was written).
+        assertEquals(listOf("ball.motion", "ball.compare", "ball.whatif", "ball.flow", "ball.number"), objs.getValue("ball").lenses.map { it.id })
         assertEquals("Each bounce keeps only part of the energy.", objs.getValue("ball").lenses[1].lead)
     }
 
@@ -52,7 +53,7 @@ class OfflineCardsTest {
         val d = OfflineCards.toDetect(assertNotNull(OfflineCards.lookup(objs, "ball")).let { objs.getValue("ball") })
         assertEquals("Gravity bends the path into a curve.", d.summary)
         assertEquals(3, d.steps.size)
-        assertEquals(2, d.lenses.size)
+        assertEquals(5, d.lenses.size) // 5 ball lenses in shared/objects.json since 14 Nov
         assertTrue(d.offline)
     }
 

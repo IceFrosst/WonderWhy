@@ -13,8 +13,14 @@ import java.util.Locale
 
 /** Glasses Display content. Each builder is one root flexBox, as the SDK requires. */
 object Cards {
-    /** Fixed card strings in the phone's language where [Lang] has them (English otherwise). */
-    fun t(key: String): String = Lang.ui(Lang.tagFor(Locale.getDefault()), key)
+    /**
+     * Language of the fixed card strings: the phone screen's picker choice, else the phone language
+     * ([Lang.effective]). Set by the activity; read on the main thread.
+     */
+    @Volatile var lang: String = Lang.tagFor(Locale.getDefault())
+
+    /** Fixed card strings in [lang] where [Lang] has them (English otherwise). */
+    fun t(key: String): String = Lang.ui(lang, key)
 
     private fun card(body: FlexBoxScope.() -> Unit): ContentScope.() -> Unit = {
         flexBox(gap = 12, padding = 24, background = FlexBoxBackground.CARD) { body() }
@@ -71,10 +77,12 @@ object Cards {
         onSecondary: () -> Unit,
         /** Offline: the explanation comes from the bundled library, not from this photo. */
         saved: Boolean = false,
+        /** A generated sketch: every card carries the "Sketch · unverified" tag (text, not colour). */
+        sketch: Boolean = false,
     ): ContentScope.() -> Unit {
         val primary = when {
-            s.isOverview -> "Show steps"
-            !s.isLastStep -> "Next"
+            s.isOverview -> t(Lang.SHOW_STEPS)
+            !s.isLastStep -> t(Lang.NEXT)
             s.hasNextLens -> "Next: ${s.nextLensTitle}"
             else -> t(Lang.AGAIN)
         }
@@ -83,6 +91,7 @@ object Cards {
         return card {
             if (s.isOverview) {
                 text(label, style = TextStyle.HEADING)
+                if (sketch) text(t(Lang.SKETCH), style = TextStyle.META)
                 if (saved) text(t(Lang.OFFLINE), style = TextStyle.META, color = TextColor.SECONDARY)
                 if (!summary.isNullOrBlank()) text(summary, style = TextStyle.BODY)
                 if (!answer.isNullOrBlank() && answer != summary) text(answer, style = TextStyle.BODY, color = TextColor.SECONDARY)
@@ -91,6 +100,8 @@ object Cards {
                 text(hint, style = TextStyle.META, color = TextColor.SECONDARY)
             } else {
                 text(s.track.title, style = TextStyle.HEADING)
+                // Sketch: the tag is text on every step (the glasses have no "hot" text colour anyway).
+                if (sketch) text(t(Lang.SKETCH), style = TextStyle.META)
                 if (saved) text(t(Lang.OFFLINE), style = TextStyle.META, color = TextColor.SECONDARY)
                 if (still != null) {
                     image(bitmap = still, sizePreset = ImageSize.FILL, flexShrink = 1f)
@@ -99,7 +110,7 @@ object Cards {
                     if (s.step == 0 && !lead.isNullOrBlank()) text(lead, style = TextStyle.BODY, color = TextColor.SECONDARY)
                 }
                 // The counter is text, never colour alone.
-                text("Step ${s.counter}. ${s.track.steps[s.step]}", style = TextStyle.BODY)
+                text("${t(Lang.STEP)} ${s.counter}. ${s.track.steps[s.step]}", style = TextStyle.BODY)
                 if (many) text(lensBar(s), style = TextStyle.META, color = TextColor.SECONDARY)
             }
             actions(primary, onPrimary, secondary, onSecondary)
@@ -109,6 +120,32 @@ object Cards {
     /** "Lens 1/2: Motion. Left/right: lens" (hint cap 8 words). */
     fun lensBar(s: ExplainerState): String =
         "Lens ${s.lens + 1}/${s.tracks.size}: ${s.track.title}. Left/right: lens"
+
+    /**
+     * `/ask` answer: the object, the question, the answer (already within the word caps, see [AskFlow]).
+     * Primary = what pinch does: open the lens and step the bridge pointed at ([openLabel]), else the steps.
+     */
+    fun answer(
+        a: AnswerText,
+        openLabel: String?,
+        onPrimary: () -> Unit,
+        onDone: () -> Unit,
+        /** The phone answered by itself from the saved cards (bridge has no `/ask` or is offline). */
+        local: Boolean = false,
+    ): ContentScope.() -> Unit = card {
+        text(a.title, style = TextStyle.HEADING)
+        text("Q: ${a.question}", style = TextStyle.META, color = TextColor.SECONDARY)
+        if (local) text(t(Lang.PHONE_ANSWER), style = TextStyle.META, color = TextColor.SECONDARY)
+        text(a.answer, style = TextStyle.BODY)
+        actions(openLabel ?: t(Lang.SHOW_STEPS), onPrimary, t(Lang.DONE), onDone)
+    }
+
+    /** A card with a decision: title, one line, two actions (DESIGN.md card anatomy). */
+    fun decide(title: String, detail: String, primary: String, onPrimary: () -> Unit, secondary: String, onSecondary: () -> Unit): ContentScope.() -> Unit = card {
+        text(title, style = TextStyle.HEADING)
+        text(detail, style = TextStyle.BODY, color = TextColor.SECONDARY)
+        actions(primary, onPrimary, secondary, onSecondary)
+    }
 
     fun error(title: String, detail: String, onRetry: () -> Unit, onDone: () -> Unit): ContentScope.() -> Unit = card {
         text(title, style = TextStyle.HEADING)

@@ -16,6 +16,22 @@ object Lang {
         return if (l in SUPPORTED) l else "en"
     }
 
+    /**
+     * The language the app uses: the phone screen's picker choice when it is one of [SUPPORTED], else the
+     * phone language ([tagFor]). A blank choice is "Phone language".
+     */
+    fun effective(choice: String?, locale: Locale): String {
+        val c = choice?.trim()?.lowercase(Locale.ROOT).orEmpty()
+        return if (c in SUPPORTED) c else tagFor(locale)
+    }
+
+    /** Own name of each language, for the phone's picker ("Suomi"). */
+    fun nativeName(tag: String): String = when (tag) {
+        "en" -> "English"; "fi" -> "Suomi"; "sv" -> "Svenska"
+        "de" -> "Deutsch"; "es" -> "Español"; "fr" -> "Français"
+        else -> name(tag)
+    }
+
     /** English name of the language, for a prompt ("Answer in Finnish"). Unknown tags give English. */
     fun name(tag: String): String =
         NAMES[tag.lowercase(Locale.ROOT).substringBefore('-').substringBefore('_')] ?: "English"
@@ -28,6 +44,11 @@ object Lang {
     const val DONE = "done"
     const val OFFLINE = "offline"
     const val TOKEN = "token"
+    const val SHOW_STEPS = "show_steps"
+    const val NEXT = "next"
+    const val STEP = "step"
+    const val SKETCH = "sketch"
+    const val PHONE_ANSWER = "phone_answer"
 
     private val EN = mapOf(
         IDLE to "Look at something and pinch",
@@ -38,6 +59,11 @@ object Lang {
         DONE to "Done",
         OFFLINE to "Offline: showing a saved card",
         TOKEN to "Wrong bridge token. Set it in the app.",
+        SHOW_STEPS to "Show steps",
+        NEXT to "Next",
+        STEP to "Step",
+        SKETCH to "Sketch · unverified",
+        PHONE_ANSWER to "Answer from saved cards",
     )
 
     private val FI = mapOf(
@@ -49,6 +75,11 @@ object Lang {
         DONE to "Valmis",
         OFFLINE to "Ei yhteyttä: tallennettu kortti",
         TOKEN to "Väärä avain. Aseta se sovelluksessa.",
+        SHOW_STEPS to "Näytä vaiheet",
+        NEXT to "Seuraava",
+        STEP to "Vaihe",
+        SKETCH to "Luonnos · tarkistamaton",
+        PHONE_ANSWER to "Vastaus tallennetuista korteista",
     )
 
     private val TABLES = mapOf("en" to EN, "fi" to FI)

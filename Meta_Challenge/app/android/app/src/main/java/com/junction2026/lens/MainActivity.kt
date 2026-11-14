@@ -13,10 +13,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.Button
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -46,6 +49,9 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var urlField: EditText
     private lateinit var tokenField: EditText
+    private lateinit var questionField: EditText
+    private lateinit var langSpinner: Spinner
+    private lateinit var speechView: TextView
     private lateinit var mockSwitch: Switch
     private lateinit var fixtureSwitch: Switch
     private lateinit var previewBox: FrameLayout
@@ -109,10 +115,10 @@ class MainActivity : ComponentActivity() {
                     photoLabel.text = "Last photo sent (${jpeg.size / 1024} KB, not saved). Box: what you aim at"
                 }
             },
-            requestCameraPermission = {
+            requestPermission = { perm ->
                 val d = CompletableDeferred<DatResult<PermissionStatus, PermissionError>>()
                 pendingGlassesPermission = d
-                glassesPerm.launch(Permission.CAMERA)
+                glassesPerm.launch(perm)
                 d.await()
             },
             onUpdateRequired = {
@@ -122,6 +128,8 @@ class MainActivity : ComponentActivity() {
         )
         controller.useFixture = Prefs.fixture(this)
         buildUi()
+        // After buildUi: setLanguage logs, and the log view must exist (a saved language crashed the start).
+        controller.setLanguage(Lang.effective(Prefs.lang(this), Locale.getDefault()))
         observe()
         requestRuntimePermissions()
         handleDeepLink(intent)
@@ -238,6 +246,7 @@ class MainActivity : ComponentActivity() {
             log(if (on) "Demo data: ball, guitar, not sure (no camera, no bridge)" else "Demo data off: camera + bridge")
         }
         root.addView(fixtureSwitch)
+        root.addView(languageRow())
 
         root.addView(row(
             button("Connect") { connect() },
@@ -246,6 +255,15 @@ class MainActivity : ComponentActivity() {
             },
             button("Disconnect") { disconnect() },
         ))
+
+        // Follow-up question about the object on screen (PROTOCOL POST /ask), same path as a spoken one.
+        questionField = field("", "Ask about it (after a result)", password = false).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+            setOnEditorActionListener { _, _, _ -> askFromField(); true }
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 3f)
+        }
+        root.addView(row(questionField, button("Ask") { askFromField() }))
 
         // The phone's state card (DESIGN.md states table, phone column). Hidden when all is well.
         stateTitle = label("", 20f, HOT, bold = true)
@@ -279,6 +297,8 @@ class MainActivity : ComponentActivity() {
             button("Pinch", primary = false) { rig.pinch() },
             button("Back") { controller.onBack() },
         ))
+        // Mock Device Kit speech: a final transcription, as if the wearer said it (kit API simulateTranscription).
+        mockSection.addView(row(button("Say: \"$SAY\"") { rig.say(SAY)?.let { log(it) } ?: log("Said: \"$SAY\"") }))
         mockSection.addView(row(
             button("Left") { controller.onNav(NavDirection.LEFT) },
             button("Up") { controller.onNav(NavDirection.UP) },
@@ -306,10 +326,19 @@ class MainActivity : ComponentActivity() {
         root.addView(urlField)
         tokenField = field(Prefs.bridgeToken(this), "Bridge token (blank = none)", password = true)
         root.addView(tokenField)
+        // Dev only, not saved: PROTOCOL forceObjectId, so a bridge without a model key answers with a library object.
+        root.addView(field("", "Force object id (dev test, not saved)", password = false).apply {
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun afterTextChanged(e: android.text.Editable?) { controller.forceObjectId = e?.toString()?.trim()?.ifEmpty { null } }
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            })
+        })
 
         root.addView(section("Status"))
         regView = label(""); sessionView = label(""); displayView = label(""); batteryView = label(""); deviceView = label("")
-        listOf(regView, sessionView, displayView, batteryView, deviceView).forEach { root.addView(it) }
+        speechView = label("")
+        listOf(regView, sessionView, displayView, speechView, batteryView, deviceView).forEach { root.addView(it) }
 
         photoLabel = label("Last photo sent: none yet", 14f).apply { setPadding(0, dp(8), 0, 0) }
         root.addView(photoLabel)
@@ -375,11 +404,66 @@ class MainActivity : ComponentActivity() {
                 launch { controller.registration.collect { regView.text = "Registration: $it" } }
                 launch { controller.sessionStatus.collect { sessionView.text = "Session: $it" } }
                 launch { controller.displayStatus.collect { displayView.text = "Display: $it" } }
+                launch { controller.speechStatus.collect { speechView.text = "Speech: $it" } }
                 launch { controller.battery.collect { batteryView.text = "Battery: $it" } }
                 launch { controller.device.collect { deviceView.text = it } }
                 launch { controller.alert.collect { showState(it); relabel() } }
             }
         }
+    }
+
+    /**
+     * "Language" picker: Phone language (default) or one of [Lang.SUPPORTED]. Saved in prefs; changes `lang`
+     * on the bridge calls, the library text and the fixed card strings without touching the system locale.
+     */
+    private fun languageRow(): View {
+        val tags = listOf("") + Lang.SUPPORTED
+        val phone = Lang.tagFor(Locale.getDefault())
+        val names = tags.map { if (it.isEmpty()) "Phone: ${Lang.nativeName(phone)}" else "${Lang.nativeName(it)} ($it)" }
+        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, names) {
+            private fun style(v: View, drop: Boolean) = (v as TextView).apply {
+                setTextColor(TEXT); textSize = 16f
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                if (drop) setBackgroundColor(CARD)
+            }
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup) =
+                style(super.getView(position, convertView, parent), false).apply { text = "${names[position]}  ▾" }
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup) =
+                style(super.getDropDownView(position, convertView, parent), true)
+        }
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        langSpinner = Spinner(this, Spinner.MODE_DROPDOWN).apply {
+            this.adapter = adapter
+            setPopupBackgroundDrawable(rounded(CARD, BORDER))
+            background = rounded(CARD, BORDER)
+            minimumHeight = dp(48)
+            setSelection(tags.indexOf(Prefs.lang(this@MainActivity)).coerceAtLeast(0), false)
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                    val choice = tags[pos]
+                    if (choice == Prefs.lang(this@MainActivity)) return
+                    Prefs.setLang(this@MainActivity, choice)
+                    controller.setLanguage(Lang.effective(choice, Locale.getDefault()))
+                }
+                override fun onNothingSelected(p: AdapterView<*>?) = Unit
+            }
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 3f).apply {
+                setMargins(dp(4), dp(4), dp(4), dp(4))
+            }
+        }
+        val title = label("Language", 16f, TEXT).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.2f)
+            setPadding(dp(4), 0, 0, 0)
+        }
+        return row(title, langSpinner).apply { gravity = Gravity.CENTER_VERTICAL }
+    }
+
+    private fun askFromField() {
+        val q = questionField.text.toString()
+        if (q.isBlank()) { log("Type a question first"); return }
+        controller.ask(q)
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(questionField.windowToken, 0)
     }
 
     private fun connect() {
@@ -414,6 +498,7 @@ class MainActivity : ComponentActivity() {
     private fun log(msg: String) {
         android.util.Log.i("PhysicsLens", msg)
         runOnUiThread {
+            if (!::logView.isInitialized) return@runOnUiThread
             logLines.addLast("${timeFmt.format(Date())} $msg")
             while (logLines.size > 40) logLines.removeFirst()
             logView.text = logLines.joinToString("\n")
@@ -430,5 +515,7 @@ class MainActivity : ComponentActivity() {
         const val MUTED = 0xFF9AA3AD.toInt()
         const val ACCENT = 0xFF4DF0FF.toInt()
         const val HOT = 0xFFFF8A4D.toInt()
+        /** The mock "Say" button's question (one of the demo questions). */
+        const val SAY = "why does it curve?"
     }
 }

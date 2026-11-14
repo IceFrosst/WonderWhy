@@ -65,11 +65,12 @@ class OfflinePickerTest {
         }
     }
 
+    // 14 Nov: shared/objects.json now has 5 lenses for the ball (What if, Flow, The number added upstream).
     @Test fun ballHasTwoLensesWithTitles() {
         val det = OfflineConvert.toDetection(OfflineCards.toDetect(objs.getValue("ball")))
         val tracks = DetectionParser.tracks(det)
-        assertEquals(listOf("Projectile motion", "Bounce"), tracks.map { it.title })
-        assertEquals(listOf("ball.motion", "ball.compare"), tracks.map { it.lensId })
+        assertEquals(listOf("Projectile motion", "Bounce", "What if", "Follow the energy", "The number"), tracks.map { it.title })
+        assertEquals(listOf("ball.motion", "ball.compare", "ball.whatif", "ball.flow", "ball.number"), tracks.map { it.lensId })
     }
 
     @Test fun blankLensTitleFallsBackToKindName() {
