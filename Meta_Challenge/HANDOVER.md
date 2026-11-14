@@ -26,6 +26,8 @@ updated: 2026-11-14
 |---|---|
 | B1, B3, A (grass), sauna, gym bike, earbuds in, earbuds in palm, band plate, all crowd scenes (walk, stop, glasses on, earbuds out, pinch), friend share scene, 3D printer (wide, focus, macro) | IceFrost's phone and the friend's uploads. **Nothing new is on `main` yet** (checked 18:20: last commits are Stoa). Agree one folder: suggested `~/Videos/wonderwhy/raw/` on the laptop, not git (large files) |
 
+**Collecting (18:30):** folder `~/Videos/wonderwhy/raw/{icefrost,mrnetwork,friend}/` on IceFrost's laptop. Script [video/ingest.sh](video/ingest.sh): `adb` (Pixel on USB), `sort <who>` (LocalSend drops in ~/Downloads), `index` (writes `raw/INDEX.md`: duration, res, fps, codec, HDR). iPhone footage: AirDrop to MrNetwork's Mac, then LocalSend to the laptop (keeps full quality; not WhatsApp).
+
 Plan: IceFrost does a rough edit on the phone first; then the code pipeline polishes (grade grey/gold, captions, composites, sound).
 
 ## Still to do (owner)
