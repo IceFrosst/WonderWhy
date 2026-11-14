@@ -3,7 +3,8 @@
 # build, install, grant permissions, launch, then walk the core demo path by finding controls by their text
 # in `uiautomator dump` (never by coordinates):
 #   open Developer -> Connect glasses (mock) -> consent card (first photo) -> Not now -> demo data on
-#   -> Pinch (overview) -> Pinch (step 1) -> Right (next lens) -> Back (overview) -> Back (idle) -> Disconnect.
+#   -> Pinch (overview) -> "Seen today" lists "Thrown ball" -> Pinch (step 1) -> Right (next lens) -> Back (overview)
+#   -> Back (idle) -> Disconnect.
 # What the glasses show is read from the glasses mirror's content description "Glasses show: ..." (a text
 # mirror of the glasses card).
 # Exits non-zero with a clear message when an expected text does not appear, or the app crashes (FATAL).
@@ -148,6 +149,40 @@ PY
     fail "glasses never showed: $* (last: ${line:-none})"
 }
 
+# Scrolls from the top until a node with text $1 is on screen, then (if given) one with text $2 below it.
+# Prints "x y" of the second (or first) node. Fails when it never shows up.
+find_below() {
+    local i
+    for i in 1 2 3 4 5 6 7 8; do
+        if [ "$i" = 1 ]; then scroll_top; else scroll_down; fi
+        check_alive
+        dump
+        local c
+        c=$(python3 - "$XML" "$1" "${2:-}" <<'PY'
+import re, sys, xml.etree.ElementTree as E
+root = E.parse(sys.argv[1]).getroot()
+head, want = sys.argv[2], sys.argv[3]
+def box(n): return list(map(int, re.findall(r'\d+', n.get('bounds'))))
+top = None
+for n in root.iter('node'):
+    if (n.get('text') or '') == head:
+        b = box(n)
+        if b[3] - b[1] > 10: top = b[1]; break
+if top is not None:
+    if not want:
+        print(0, top)
+    else:
+        for n in root.iter('node'):
+            b = box(n)
+            if (n.get('text') or '') == want and b[1] > top and b[3] - b[1] > 10:
+                print((b[0] + b[2]) // 2, (b[1] + b[3]) // 2); break
+PY
+)
+        if [ -n "$c" ]; then echo "$c"; return 0; fi
+    done
+    fail "\"$2\" never showed under \"$1\""
+}
+
 # Waits until a node with text $1 is on screen (no scrolling).
 wait_text() {
     local deadline=$((SECONDS + TIMEOUT))
@@ -211,6 +246,10 @@ dump
 step "pinch: ball overview"
 tap_text "Pinch"
 wait_glasses "Thrown ball" "[Show steps]"
+
+step "Seen today lists the ball"
+find_below "Seen today" "Thrown ball" >/dev/null
+echo "  ok: \"Thrown ball\" under \"Seen today\""
 
 step "pinch: step 1"
 tap_text "Pinch"

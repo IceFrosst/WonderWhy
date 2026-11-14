@@ -54,7 +54,8 @@ class DetectionParserTest {
         val text = """{"type":"show","reqId":"r1","objectId":"kettle","label":"Kettle","confidence":0.8,
             "timings":{"detectMs":1200,"model":"gemini"},"t_sent":1731500000000}"""
         val d = DetectionParser.parse(text)
-        assertEquals(Detection("kettle", "Kettle", 0.8, null, reqId = "r1"), d) // reqId kept for the /rendered ack
+        // reqId kept for the /rendered ack; timings.model for the phone's receipt line.
+        assertEquals(Detection("kettle", "Kettle", 0.8, null, reqId = "r1", model = "gemini"), d)
         assertEquals(Verdict.Plain(d), DetectionParser.verdict(d))
     }
 

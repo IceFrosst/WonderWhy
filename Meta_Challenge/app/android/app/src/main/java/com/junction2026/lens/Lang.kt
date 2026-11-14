@@ -77,6 +77,17 @@ object Lang {
     const val OFFLINE_EMPTY = "offline_empty"
     const val QUESTION_PREFIX = "q_prefix"
     const val STAND_IN = "stand_in"
+    // Phone screen only ("Seen today"), not on the glasses.
+    const val SEEN_TITLE = "seen_title"
+    const val SEEN_EMPTY = "seen_empty"
+    const val SEEN_HINT = "seen_hint"
+    const val SEEN_ALL = "seen_all"
+    const val SEEN_LESS = "seen_less"
+    const val SEEN_NO_REPLAY = "seen_no_replay"
+    const val FLAG_LIBRARY = "flag_library"
+    const val FLAG_SKETCH = "flag_sketch"
+    const val FLAG_SAVED = "flag_saved"
+    const val FLAG_DEMO = "flag_demo"
 
     private val EN = mapOf(
         IDLE to "Look at something and pinch",
@@ -120,6 +131,16 @@ object Lang {
         OFFLINE_EMPTY to "Can't reach the bridge. Try again later.",
         QUESTION_PREFIX to "Q:",
         STAND_IN to "Stand-in model",
+        SEEN_TITLE to "Seen today",
+        SEEN_EMPTY to "Nothing yet. Look at something and pinch.",
+        SEEN_HINT to "Connect the glasses to show it again.",
+        SEEN_ALL to "Show all",
+        SEEN_LESS to "Show less",
+        SEEN_NO_REPLAY to "Sketches can't be shown again.",
+        FLAG_LIBRARY to "Library",
+        FLAG_SKETCH to "Sketch",
+        FLAG_SAVED to "Saved card",
+        FLAG_DEMO to "Demo data",
     )
 
     private val FI = mapOf(
@@ -164,6 +185,16 @@ object Lang {
         OFFLINE_EMPTY to "Siltaan ei saada yhteyttä. Yritä myöhemmin.",
         QUESTION_PREFIX to "K:",
         STAND_IN to "Varamalli",
+        SEEN_TITLE to "Nähty tänään",
+        SEEN_EMPTY to "Ei vielä mitään. Katso jotain ja nipistä.",
+        SEEN_HINT to "Yhdistä lasit, niin se näytetään uudelleen.",
+        SEEN_ALL to "Näytä kaikki",
+        SEEN_LESS to "Näytä vähemmän",
+        SEEN_NO_REPLAY to "Luonnosta ei voi näyttää uudelleen.",
+        FLAG_LIBRARY to "Kirjasto",
+        FLAG_SKETCH to "Luonnos",
+        FLAG_SAVED to "Tallennettu kortti",
+        FLAG_DEMO to "Esittelydata",
     )
 
     private val TABLES = mapOf("en" to EN, "fi" to FI)
