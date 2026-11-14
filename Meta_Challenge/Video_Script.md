@@ -5,7 +5,7 @@ tags:
 updated: 2026-11-14
 ---
 
-# Video script: "Never stop asking why" (draft 12; intro R_B3_lines chosen)
+# Video script: "Never stop asking why" (draft 13; intro + kinetic drop + logo end card)
 
 > [!summary]
 > **Product: WonderWhy** (Meta Ray-Ban Display + Neural Band). **Max 1:30.** Every shot readable muted (phone viewer, first 3 s must hold).
@@ -13,6 +13,8 @@ updated: 2026-11-14
 > **Objects:** grass (child + ending), **noise-cancelling earbuds** (reveal, built and live), **3D printer** (one real run + answer; no second-printer comparison), **sauna** + **gym bike** (montage), **the glasses explaining themselves** (share scene).
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
+
+Changes 15 Nov ~00:30 (draft 13): **kinetic drop** between the gold intro and the grey grass, built with the Scenario *Kinetic Film* engine (code only; no Scenario music/AI used): gold slam *YOU USED TO / ASK WHY.* → cold flip *AND THEN / YOU* → **STOPPED.** in red on black → hard cut to IceFrost on the grass (2.73 s, local `edits/kinetic/bomb/`). Captions 3/4 removed from the grass shot (no double text). **End card** now the kinetic Logo block with the Orbit Star logo (`Meta_Challenge/brand/` on `claude/wizardly-franklin-515rin`), tagline + CTA line. Video: `cinematic_v7.mp4`, **1:33.67 — 3.67 s over the 1:30 cap; owner to choose cuts.** Silent kinetic pieces: hit SFX/music pending.
 
 Changes 14 Nov 23:55 (draft 12): **Act 1 is now the team's intro `R_B3_lines`** (planet → kid's eye → kid in golden grass, 6.0 s, one question: *How does it all really work?*). It replaces the 4 s kinetic-questions variant B; the two old child lines are folded into this one. Mostly done; polish continues on the animation branch. **Runtime:** +2 s makes the current cut about **1:30.93**, 0.93 s over the 1:30 cap; a trim still needs owner approval. **In the video:** `cinematic_v6.mp4` (local, `edits/cinematic/`) = v5 with this intro as item A; **1:30.93**, 2728 frames, full decode OK, hard cut to grey at 0:06.00. All other segments unchanged (+2 s offset). Intro is silent until VO/music are added.
 
@@ -25,8 +27,8 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 | # | Line | Style |
 |---|---|---|
 | 1 | *How does it all really work?* | child, soft, handwritten gold ("How" from 3.3 s, rest 4.2–5.15 s) |
-| 3 | *You used to ask why.* | grey, small |
-| 4 | *Then you stopped.* | grey, small |
+| 3 | **YOU USED TO ASK WHY.** | kinetic drop, gold slam |
+| 4 | **AND THEN YOU STOPPED.** (STOPPED in red) | kinetic drop, black, hard cut to grass |
 | 5 | **Look at anything.** | gold, big |
 | 6 | *An object or a concept.* | gold, small |
 | 7 | *Earbuds · Sauna steam · Wi-Fi · Why the sky is blue* | quick text list, not visualised |
