@@ -123,3 +123,89 @@ At most 32 parts, 6 beats, 4 fx per beat, 64 points per path or profile, 3 label
 
 ## Unknown objects (sketches)
 The sketch provider asks the model for an `explore` chapter in exactly this format from a short list of primitives, plus the existing 2D chapters. The bridge validates it with the limits above, and the glasses show it with the "Sketch · unverified" tag on every beat.
+
+---
+
+# v2: the realistic style (`spec.style: "real"`), 14 Nov afternoon
+
+Owner decision: the Explore film is **the** explanation. It is now a photo-real, coloured 3D model (real materials, studio light, on black) that comes apart piece by piece, with the glowing physics effects drawn on top. Everything above still holds unless a row here changes it. A spec without `style` renders in the old glowing-line look.
+
+## What changes
+| Topic | v2 |
+|---|---|
+| Look | Physically based materials (metal, glass, plastic, wood, stone, water), image-based studio lighting plus a key and a rim light, filmic tone mapping, black background. No part may render darker than a clearly visible mid-grey on its lit side: black is see-through on the glasses, so "black" plastic and rubber are drawn dark grey with a bright rim |
+| Detail | Up to **96 parts**. Model the real thing: screws, vents, seams, coils, buttons, cables. Small parts carry the realism |
+| Length | Up to **8 beats**, `dur` 3 to 16 s, `move` 0.5 to 4 s. A film runs 60 to 90 s |
+| Explode | Staged: parts leave one after another (`stagger`), not all at once |
+| Focus | Focus parts keep their real material at full light with a thin glowing outline in their role colour; other parts dim and lose colour; ghost parts become a faint glass shell |
+| Effects | The glowing additive effects (flow, arrows, heat, waves, sine, steam, beams) stay as they are: they are the physics, drawn in light on a real object |
+| Brightness budget | The old 15% rule does not apply to `style: "real"` |
+| Clip size | Up to 3 MB per beat (CRF from 18) |
+
+## New fields
+| Where | Field | Meaning |
+|---|---|---|
+| spec | `style` | `"real"` or `"lines"` (default) |
+| part | `material` | A preset name from the table below. Without it the role decides (`object` grey plastic, `actor` cyan-tinted, `energy` amber emissive, `loss` red emissive, `answer` green emissive) |
+| part | `color` | `"#rrggbb"`, overrides the preset's colour |
+| part | `roughness`, `metalness` | 0 to 1, override the preset |
+| part | `opacity` | 0.05 to 1 (glass-like when under 1) |
+| part | `emissive`, `glow` | `"#rrggbb"` and 0 to 3: the part gives off light (LED, hot element, lit pixel) |
+| part | `order` | Number: its turn in a staged explode (default: its index in `parts`) |
+| part | `anim` | May be a list. New kinds: `{"slide": {"axis": [0,1,0], "amp": 2, "hz": 0.5}}` (back and forth along a line: piston, weight stack, print head) and `{"pulse": {"scale": 1.08, "hz": 2}}` (breathing size: speaker cone) |
+| beat | `move` | Seconds of the transition from the previous beat (default 0.8) |
+| beat | `stagger` | 0 to 4 s: during the move, parts start travelling to their exploded place one after another in `order`. Use `move` >= `stagger` + 0.8 |
+| beat | `explodeOnly` | List of part ids: only these explode in this beat, the rest stay assembled |
+| beat | `cut` | `{"normal": [1,0,0], "offset": 0, "parts": ["body", "tank"]}`: slices the listed parts open with a plane (keeps the side the normal points away from), eased in during the move. A real cutaway |
+
+## Materials (`part.material`)
+| Group | Names |
+|---|---|
+| Metal | `steel` (brushed stainless), `chrome` (mirror), `aluminium`, `iron` (dark cast), `copper`, `brass`, `gold` |
+| Plastic and rubber | `plastic` (set `color`), `plastic_white`, `plastic_black`, `plastic_grey`, `rubber`, `silicone` |
+| See-through | `glass`, `glass_tint` (smoked), `screen` (black glossy display), `water`, `acrylic` |
+| Natural | `wood`, `wood_dark`, `stone`, `ceramic`, `fabric`, `foam`, `leather` |
+| Electronics | `pcb` (green board), `chip` (black package), `battery` (silver foil cell), `magnet`, `led` (set `color`) |
+| Light | `emissive` (set `color`): glowing wire, filament, lit pixel |
+
+## New primitive and effects
+| Kind | Fields | Shows |
+|---|---|---|
+| prim `capsule` | `r`, `h` (length of the straight part, along y) | Pills, earbud stems, rounded bars |
+| fx `sine` | `from` [x,y,z], `to` [x,y,z], `amp`, `waves` (number of cycles along the line), `speed` (cycles per second, towards `to`), `phase` (degrees), `up` [x,y,z] (direction of the swing, default y), `decay` (0 to 1: amplitude left at `to`, default 1), `role`, `label` | A travelling wave: sound, noise and anti-noise, light, a signal |
+| fx `steam` | `at` [x,y,z] or part id, `radius`, `rise` (height the puffs climb), `role` (default white) | Soft puffs rising and fading: steam, hot air, smoke |
+| fx `beam` | `path` [[x,y,z],...], `role`, `width` (1 to 6) | A steady ray of light with brightness travelling along it: projector light, a laser, a reflection path |
+| fx `glow` | `on` part id, `role`, `hz` | The part's own light breathes: a chip working, a pixel lit |
+
+## Limits v2 (renderer, bridge validator, glasses sanitizer and Android all use these)
+96 parts, 8 beats, 6 fx per beat, 4 labels per beat (24 characters each), 128 points per path or profile, `dur` 3 to 16, `move` 0.5 to 4, `stagger` 0 to 4. Everything else as v1.
+
+## Renderer additions
+| Command | What |
+|---|---|
+| `--strip` | With `--stills-only`: also writes `k<n>.png`, a 3x2 contact sheet (900x600) of six frames over beat n's clip (at 1/3, 2/3 and the end of the move, then 1/4, 1/2 and 3/4 of `dur`), so motion can be reviewed without the video |
+| `--max-kb` | Default 3072 for `style: "real"` |
+| Warnings | Unknown `material`, `prim` or `fx` names print `WARNING <id>: ...` (material falls back to the role default; prim and fx are skipped) |
+
+## As built (renderer, 14 Nov evening)
+| Topic | Behaviour |
+|---|---|
+| See-through | `glass`, `glass_tint`, `water`, `acrylic` and any `opacity` < 1 are drawn additively: reflections, rim and a faint lit tint are added to what is behind (no absorption). That is how glass reads on black and on the additive display |
+| Ghost vs focus | A part in `ghost` is a glass shell even on a focus beat (ghost wins over dim). In the line look focus still wins, as in v1 |
+| Outline | Focus outline = silhouette and open edges only (no inner creases), thinner on parts that already glow |
+| Cut | Inside faces of a cut part are a flat mid-dark grey, and a thin glowing line marks where the plane crosses the part. The cut slides out again on the next beat unless that beat has the same cut |
+| `stagger` | Equal `order` values leave together. Effective stagger is capped at `move - 0.4` so every part rests by `loopFrom` |
+| `explodeOnly` | Listed parts take the beat's `explode`, the rest 0 (children follow their parent) |
+| `anim` | An object keeps v1 behaviour (its first kind); a list runs every entry (up to 4). `pulse.scale` 0.5 to 2 |
+| Timing | `move` and `dur` are rounded to whole frames (1/30 s) so loops close exactly |
+| New fx in the line look | `sine`, `steam` and `beam` also draw in the line look; `glow` there brightens the part's edges |
+| Steam | Puffs are soft and not bloomed; `at` a part id starts at the top centre of the part |
+
+## Beat plan for a v2 film (7 or 8 beats)
+| Beat | Job | Typical `dur` |
+|---|---|---|
+| 1 Meet it | Whole object, hero light, slow turn | 6 |
+| 2 Take it apart | Staged explode (`stagger` 2 to 3, `move` 3 to 4), 3 or 4 labels | 9 |
+| 3 to 6 The mechanism | One idea per beat, on the part that does the work: focus, ghost or cut, effects | 8 to 10 |
+| 7 The number | One number, green | 7 |
+| 8 So what | Back together (explode 0), the everyday consequence | 7 |

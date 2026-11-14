@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export const CREASE_DEG = 30;
+export const MAX_POINTS = 128; // v2 limit per path or profile
 
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const num = (value, fallback) => (finite(value) ? value : fallback);
@@ -15,7 +16,7 @@ function vec3(value, fallback) {
 function pointList(value, dims, min) {
   if (!Array.isArray(value)) return null;
   const out = value
-    .slice(0, 64)
+    .slice(0, MAX_POINTS)
     .filter(point => Array.isArray(point) && point.length === dims && point.every(finite));
   return out.length >= min ? out : null;
 }
@@ -116,6 +117,11 @@ export function buildGeometry(part) {
       geometry.rotateX(-Math.PI / 2);
       geometry.translate(0, -h / 2, 0);
       return geometry;
+    }
+    case 'capsule': {
+      const r = Math.max(1e-3, num(part.r, 1));
+      const h = Math.max(0, num(part.h, 1));
+      return new THREE.CapsuleGeometry(r, h, 10, 32);
     }
     case 'helix': {
       const r = Math.max(1e-3, num(part.r, 1));
@@ -231,6 +237,8 @@ export function edgeData(geometry) {
   const cosCrease = Math.cos((CREASE_DEG * Math.PI) / 180);
   const fixed = [];
   const candidates = [];
+  const creases = []; // crease edges with their two faces (silhouette test for outlines)
+  const boundary = [];
   for (const entry of edges.values()) {
     const [lo, hi, f1, f2] = entry;
     const faces = entry.length - 2;
@@ -239,10 +247,13 @@ export function edgeData(geometry) {
         faceNormal[f1 * 3] * faceNormal[f2 * 3] +
         faceNormal[f1 * 3 + 1] * faceNormal[f2 * 3 + 1] +
         faceNormal[f1 * 3 + 2] * faceNormal[f2 * 3 + 2];
-      if (dot < cosCrease) fixed.push(lo, hi);
-      else if (dot < 0.99999 && !(faceSmooth[f1] && faceSmooth[f2])) candidates.push(lo, hi, f1, f2);
+      if (dot < cosCrease) {
+        fixed.push(lo, hi);
+        creases.push(lo, hi, f1, f2);
+      } else if (dot < 0.99999 && !(faceSmooth[f1] && faceSmooth[f2])) candidates.push(lo, hi, f1, f2);
     } else {
       fixed.push(lo, hi);
+      boundary.push(lo, hi);
     }
   }
   return {
@@ -252,6 +263,8 @@ export function edgeData(geometry) {
     faceNormal: new Float32Array(faceNormal),
     facePoint: new Float32Array(facePoint),
     smooth: new Float32Array(smooth),
+    creases: new Uint32Array(creases),
+    boundary: new Uint32Array(boundary),
   };
 }
 
@@ -272,6 +285,27 @@ export function visibleEdges(data, eye, out) {
     const s2 = n[f2] * (eye.x - p[f2]) + n[f2 + 1] * (eye.y - p[f2 + 1]) + n[f2 + 2] * (eye.z - p[f2 + 2]);
     if ((s1 > 0) !== (s2 > 0)) pushPair(candidates[i], candidates[i + 1]);
   }
+  smoothContour(smooth, eye, out);
+  return out;
+}
+
+/** Outline only (style "real"): open boundaries plus silhouette edges (crease, flat and smooth). */
+export function outlineEdges(data, eye, out) {
+  out.length = 0;
+  const {verts, creases, boundary, candidates, faceNormal: n, facePoint: p, smooth} = data;
+  const pushPair = (i, j) => out.push(verts[i * 3], verts[i * 3 + 1], verts[i * 3 + 2], verts[j * 3], verts[j * 3 + 1], verts[j * 3 + 2]);
+  const facing = f => n[f] * (eye.x - p[f]) + n[f + 1] * (eye.y - p[f + 1]) + n[f + 2] * (eye.z - p[f + 2]) > 0;
+  for (let i = 0; i < boundary.length; i += 2) pushPair(boundary[i], boundary[i + 1]);
+  for (const list of [creases, candidates]) {
+    for (let i = 0; i < list.length; i += 4) {
+      if (facing(list[i + 2] * 3) !== facing(list[i + 3] * 3)) pushPair(list[i], list[i + 1]);
+    }
+  }
+  smoothContour(smooth, eye, out);
+  return out;
+}
+
+function smoothContour(smooth, eye, out) {
   const g = [0, 0, 0];
   const cross = [];
   for (let t = 0; t < smooth.length; t += 18) {

@@ -7,6 +7,8 @@ const WHITE = '#ffffff';
 const SOFT = '#c9d4ff';
 const GREEN = '#6dff9c';
 const LABEL_GAP = 26;
+const MAX_LABELS = 4; // per beat (MODEL3D.md v2)
+const MAX_DOTS = 8; // beats per chapter (v2)
 
 function wrap(ctx, text, maxWidth) {
   const words = String(text).trim().split(/\s+/).filter(Boolean);
@@ -51,8 +53,9 @@ export function drawCard(source, meta) {
   ctx.fillStyle = SOFT;
   ctx.textAlign = 'left';
   ctx.fillText(meta.title, MARGIN, 20);
-  for (let i = 0; i < meta.beats; i++) {
-    const x = SIZE - MARGIN - 4 - (meta.beats - 1 - i) * 16;
+  const dots = Math.min(meta.beats, MAX_DOTS);
+  for (let i = 0; i < dots; i++) {
+    const x = SIZE - MARGIN - 4 - (dots - 1 - i) * 16;
     ctx.beginPath();
     ctx.arc(x, 20, 4, 0, Math.PI * 2);
     if (i <= meta.beat) {
@@ -94,7 +97,7 @@ export function drawCard(source, meta) {
   const top = 52;
   const bottom = captionTop - (meta.number ? 90 : 16);
   for (const side of ['l', 'r']) {
-    const items = (meta.labels ?? []).filter(label => label.side === side).map(label => ({...label}));
+    const items = (meta.labels ?? []).slice(0, MAX_LABELS).filter(label => label.side === side).map(label => ({...label}));
     spread(items, top, bottom);
     ctx.font = `400 18px ${FONT}`;
     ctx.textBaseline = 'middle';

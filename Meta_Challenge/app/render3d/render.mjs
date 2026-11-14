@@ -1,6 +1,7 @@
 // Render every Explore chapter (scene "model3d") to per-beat clips, stills and label tracks.
-// Usage: npm run render [-- --only <objectId>] [--beat <n>] [--stills-only] [--out <mediaDir>]
+// Usage: npm run render [-- --only <objectId>] [--beat <n>] [--stills-only [--strip]] [--out <mediaDir>]
 //        [--spec <chapter.json> --id <name>]   (render a chapter from a file, for testing)
+//        [--max-kb <kb>] [--crf <n>]           (defaults: 1024 KB per beat, 3072 for spec.style "real"; crf 18)
 import {spawn} from 'node:child_process';
 import {createServer} from 'node:http';
 import {mkdir, readFile, rm, stat, writeFile} from 'node:fs/promises';
@@ -13,14 +14,16 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const OBJECTS = path.resolve(ROOT, '../shared/objects.json');
 const DEFAULT_OUT = path.resolve(ROOT, '../bridge/media');
 const DEFAULT_MAX_KB = 1024; // per beat (was 400: bicycle beat 1 then had to drop to crf 26, visibly blocky); --max-kb overrides
+const DEFAULT_MAX_KB_REAL = 3072; // spec.style "real" (MODEL3D.md v2)
 const DEFAULT_CRF = 18;
 const MIME = {'.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json'};
 
 function parseArgs(argv) {
-  const options = {only: null, beat: null, stillsOnly: false, out: DEFAULT_OUT, spec: null, id: null, maxKb: DEFAULT_MAX_KB, crf: DEFAULT_CRF};
+  const options = {only: null, beat: null, stillsOnly: false, strip: false, out: DEFAULT_OUT, spec: null, id: null, maxKb: null, crf: DEFAULT_CRF};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--stills-only') options.stillsOnly = true;
+    else if (arg === '--strip') options.strip = true;
     else if (['--only', '--beat', '--out', '--spec', '--id', '--max-kb', '--crf'].includes(arg)) {
       const value = argv[++i];
       if (!value) throw new Error(`Missing value for ${arg}`);
@@ -130,10 +133,12 @@ async function mergeManifest(objectDir, objectId, entry) {
 async function renderChapter(page, job, options) {
   const {objectId, chapter} = job;
   const loaded = await page.evaluate(spec => window.R3D.load(spec), chapter.spec);
-  for (const warning of loaded.warnings) console.warn(`  warning: ${warning}`);
+  for (const warning of loaded.warnings) console.warn(`  WARNING ${objectId}: ${warning}`);
+  const real = chapter.spec?.style === 'real';
+  const maxKb = options.maxKb ?? (real ? DEFAULT_MAX_KB_REAL : DEFAULT_MAX_KB);
   const captions = chapter.captions ?? [];
   const beats = loaded.beats;
-  console.log(`${objectId}.explore: ${loaded.parts} parts, ${beats} beats, model radius ${loaded.radius.toFixed(2)}`);
+  console.log(`${objectId}.explore: ${loaded.parts} parts, ${beats} beats, model radius ${loaded.radius.toFixed(2)}, style ${real ? 'real' : 'lines'}`);
   const objectDir = path.join(options.out, objectId);
   const dir = path.join(objectDir, 'explore');
   if (options.beat === null && !options.stillsOnly) await rm(dir, {recursive: true, force: true});
@@ -175,6 +180,10 @@ async function renderChapter(page, job, options) {
     const clean = await page.evaluate(([i, t]) => window.R3D.frameAt(i, t), [b, plan.loopFrom]);
     await writeFile(path.join(dir, `c${n}.png`), fromDataUrl(clean));
     const light = await page.evaluate(i => window.R3D.brightness(i), b);
+    if (options.strip && options.stillsOnly) {
+      const sheet = await page.evaluate(i => window.R3D.strip(i), b);
+      await writeFile(path.join(dir, `k${n}.png`), fromDataUrl(sheet));
+    }
     if (options.stillsOnly) {
       console.log(`  beat ${n}: stills only (mean brightness ${(light.mean * 100).toFixed(1)}%, lit ${(light.lit * 100).toFixed(1)}%)`);
       continue;
@@ -193,10 +202,12 @@ async function renderChapter(page, job, options) {
     for (;;) {
       await encode(target, frames, crf, plan.loopFrom);
       bytes = (await stat(target)).size;
-      if (bytes <= options.maxKb * 1024 || crf >= 36) break;
+      if (bytes <= maxKb * 1024 || crf >= 36) break;
       crf += 2;
     }
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
+    if (bytes > maxKb * 1024) console.warn(`  WARNING ${objectId}: beat ${n} is ${Math.round(bytes / 1024)} KB, over ${maxKb} KB even at crf ${crf}`);
+    if (seam.max > 1) console.warn(`  WARNING ${objectId}: beat ${n} loop seam max diff ${seam.max} (should be 0 or 1)`);
     report.push({beat: n, kb: Math.round(bytes / 1024), crf, seam: seam.max, seconds});
     console.log(
       `  beat ${n}: ${plan.frames} frames, ${Math.round(bytes / 1024)} KB (crf ${crf}), loop seam max diff ${seam.max}, ` +
@@ -225,6 +236,7 @@ async function renderChapter(page, job, options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (options.strip && !options.stillsOnly) console.warn('--strip only works with --stills-only; ignored');
   const jobs = await chapters(options);
   if (!jobs.length) {
     console.log('No explore chapters to render.');

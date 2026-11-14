@@ -9,13 +9,14 @@ import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {ShaderPass} from 'three/addons/postprocessing/ShaderPass.js';
-import {buildGeometry, curveThrough, edgeData, visibleEdges} from './geometry.js';
+import {buildGeometry, curveThrough, edgeData, outlineEdges, visibleEdges} from './geometry.js';
+import {GLOW_LAYER, GlowPass, REAL, StudioLights, creasedGeometry, glowMaterial, makeMaterial, resolveMaterial, shellMaterial, studioEnvironment} from './real.js';
 import {drawCard} from './overlay.js';
 
 export const SIZE = 600;
 export const STAGE = {top: 36, bottom: 500};
 export const FPS = 30;
-export const MOVE = 0.8;
+export const MOVE = 0.8; // default beat.move
 const FOV = 26;
 const FILL_FRACTION = 0.7;
 
@@ -242,14 +243,17 @@ function prepassMaterial() {
   });
 }
 
+// Point sizes are in pixels; the half-size glow buffer halves them (POINT_SCALE).
+const POINT_SCALE = {value: 1};
 const POINT_VERTEX = /* glsl */ `
+  uniform float uPointScale;
   attribute float aSize;
   attribute vec3 aColor;
   varying vec3 vC;
   void main() {
     vC = aColor;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    gl_PointSize = aSize;
+    gl_PointSize = aSize * uPointScale;
   }
 `;
 const POINT_FRAGMENT = /* glsl */ `
@@ -262,8 +266,18 @@ const POINT_FRAGMENT = /* glsl */ `
   }
 `;
 
+// Soft gaussian puff (steam).
+const PUFF_FRAGMENT = /* glsl */ `
+  varying vec3 vC;
+  void main() {
+    float r = length(gl_PointCoord - 0.5) * 2.0;
+    float a = exp(-r * r * 3.2) * (1.0 - smoothstep(0.75, 1.0, r));
+    gl_FragColor = vec4(vC * a, 1.0);
+  }
+`;
+
 class PointBatch {
-  constructor(scene, capacity = 512) {
+  constructor(scene, capacity = 512, fragmentShader = POINT_FRAGMENT) {
     this.capacity = capacity;
     this.pos = new Float32Array(capacity * 3);
     this.col = new Float32Array(capacity * 3);
@@ -273,8 +287,9 @@ class PointBatch {
     this.geometry.setAttribute('aColor', new THREE.BufferAttribute(this.col, 3));
     this.geometry.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1));
     this.material = new THREE.ShaderMaterial({
+      uniforms: {uPointScale: POINT_SCALE},
       vertexShader: POINT_VERTEX,
-      fragmentShader: POINT_FRAGMENT,
+      fragmentShader,
       transparent: true,
       depthTest: false,
       depthWrite: false,
@@ -310,50 +325,73 @@ class PointBatch {
 // ---------------------------------------------------------------------------------------------
 // Spec normalisation (tolerant: unknown prims and fx are skipped, unknown ids ignored).
 
+// v2 limits (MODEL3D.md "Limits v2"); a v1 spec inside the v1 limits renders exactly as before.
+export const LIMITS = {parts: 96, beats: 8, fx: 6, labels: 4, points: 128, dur: [3, 16], move: [0.5, 4], stagger: [0, 4]};
+const FX_TYPES = ['arrow', 'flow', 'heat', 'waves', 'trail', 'dim', 'sine', 'steam', 'beam', 'glow'];
+const ANIM_KINDS = ['spin', 'swing', 'shake', 'slide', 'pulse'];
+const frames = seconds => Math.round(seconds * FPS) / FPS; // whole frames, so loops close exactly
+
 function normalise(spec) {
   const warnings = [];
   const parts = [];
   const ids = new Set();
-  const sourceParts = Array.isArray(spec?.parts) ? spec.parts.slice(0, 32) : [];
-  for (const raw of sourceParts) {
-    if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || ids.has(raw.id)) continue;
+  const real = spec?.style === 'real';
+  if (spec?.style !== undefined && spec.style !== 'real' && spec.style !== 'lines') warnings.push(`unknown style "${spec.style}", using "lines"`);
+  const sourceParts = Array.isArray(spec?.parts) ? spec.parts.slice(0, LIMITS.parts) : [];
+  if (Array.isArray(spec?.parts) && spec.parts.length > LIMITS.parts) warnings.push(`${spec.parts.length} parts: only the first ${LIMITS.parts} are drawn`);
+  sourceParts.forEach((raw, index) => {
+    if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || ids.has(raw.id)) return;
     const geometry = buildGeometry(raw);
     if (!geometry) {
-      warnings.push(`part ${raw.id}: unknown or invalid prim ${raw.prim}`);
-      continue;
+      warnings.push(`part ${raw.id}: unknown or invalid prim "${raw.prim}" (part skipped)`);
+      return;
     }
     const scale = Array.isArray(raw.scale) ? vec3(raw.scale, [1, 1, 1]) : Array(3).fill(num(raw.scale, 1));
-    const anim = raw.anim && typeof raw.anim === 'object' ? raw.anim : null;
+    const role = ROLE[raw.role] ? raw.role : 'object';
+    const anims = normaliseAnims(raw.anim);
     parts.push({
       id: raw.id,
+      index,
       label: typeof raw.label === 'string' ? raw.label : raw.id,
       prim: raw.prim,
-      role: ROLE[raw.role] ? raw.role : 'object',
+      role,
       pos: new THREE.Vector3(...vec3(raw.pos)),
       quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(...vec3(raw.rot).map(v => v * DEG), 'XYZ')),
       scale: new THREE.Vector3(...scale),
       explode: new THREE.Vector3(...vec3(raw.explode)),
       parent: typeof raw.parent === 'string' ? raw.parent : null,
-      anim: normaliseAnim(anim),
+      anims,
+      anim: anims[0] ?? null,
+      order: num(raw.order, index),
+      mat: real ? resolveMaterial(raw, role, warnings) : null,
       geometry,
       edges: edgeData(geometry),
     });
     ids.add(raw.id);
-  }
+  });
   for (const part of parts) if (part.parent && !ids.has(part.parent)) part.parent = null;
 
-  const idList = (value, max = 32) =>
+  const idList = (value, max = LIMITS.parts) =>
     Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && ids.has(id)))].slice(0, max) : [];
-  const beats = (Array.isArray(spec?.beats) ? spec.beats.slice(0, 6) : []).map((raw, index) => {
+  if (Array.isArray(spec?.beats) && spec.beats.length > LIMITS.beats) warnings.push(`${spec.beats.length} beats: only the first ${LIMITS.beats} are drawn`);
+  const beats = (Array.isArray(spec?.beats) ? spec.beats.slice(0, LIMITS.beats) : []).map((raw, index) => {
     const camera = raw?.camera ?? {};
     let target = null;
     if (typeof camera.target === 'string' && ids.has(camera.target)) target = camera.target;
     else if (Array.isArray(camera.target)) target = vec3(camera.target, null);
-    const fx = (Array.isArray(raw?.fx) ? raw.fx.slice(0, 4) : []).filter(item => {
-      const known = item && ['arrow', 'flow', 'heat', 'waves', 'trail', 'dim'].includes(item.type);
-      if (!known) warnings.push(`beat ${index + 1}: unknown fx ${item?.type}`);
+    const fx = (Array.isArray(raw?.fx) ? raw.fx.slice(0, LIMITS.fx) : []).filter(item => {
+      const known = item && FX_TYPES.includes(item.type);
+      if (!known) warnings.push(`beat ${index + 1}: unknown fx "${item?.type}" (skipped)`);
       return known;
     });
+    const move = frames(clamp(num(raw?.move, 0.8), ...LIMITS.move));
+    let cut = null;
+    if (raw?.cut && typeof raw.cut === 'object') {
+      const normal = new THREE.Vector3(...vec3(raw.cut.normal, [1, 0, 0]));
+      const cutParts = new Set(idList(raw.cut.parts));
+      if (normal.lengthSq() > 1e-12 && cutParts.size) cut = {normal: normal.normalize(), offset: num(raw.cut.offset, 0), parts: cutParts};
+      else warnings.push(`beat ${index + 1}: cut needs a normal and known parts (ignored)`);
+    }
     return {
       index,
       yaw: num(camera.yaw, 30),
@@ -362,28 +400,45 @@ function normalise(spec) {
       target,
       turn: clamp(num(raw?.turn, 0), 0, 20),
       explode: clamp(num(raw?.explode, 0), 0, 1),
+      explodeOnly: Array.isArray(raw?.explodeOnly) ? new Set(idList(raw.explodeOnly)) : null,
+      stagger: clamp(num(raw?.stagger, 0), ...LIMITS.stagger),
+      move,
+      cut,
       focus: new Set(idList(raw?.focus)),
       ghost: new Set(idList(raw?.ghost)),
-      labels: idList(raw?.labels, 3),
+      labels: idList(raw?.labels, LIMITS.labels),
       play: new Set(idList(raw?.play)),
       fx,
       number: raw?.number && typeof raw.number === 'object' ? raw.number : null,
-      dur: clamp(num(raw?.dur, 6), 3, 12),
+      dur: frames(clamp(num(raw?.dur, 6), ...LIMITS.dur)),
     };
   });
-  return {parts, beats, warnings};
+  return {parts, beats, warnings, real};
+}
+
+/** `anim` is one object (v1: its first known kind) or a list of them (v2). */
+function normaliseAnims(anim) {
+  const list = Array.isArray(anim) ? anim : anim && typeof anim === 'object' ? [anim] : [];
+  const out = [];
+  for (const item of list.slice(0, 4)) {
+    const one = normaliseAnim(item && typeof item === 'object' ? item : null);
+    if (one) out.push(one);
+  }
+  return out;
 }
 
 function normaliseAnim(anim) {
   if (!anim) return null;
-  for (const kind of ['spin', 'swing', 'shake']) {
+  for (const kind of ANIM_KINDS) {
     const source = anim[kind];
     if (!source || typeof source !== 'object') continue;
+    if (kind === 'pulse') return {kind, axis: new THREE.Vector3(0, 1, 0), scale: clamp(num(source.scale, 1.08), 0.5, 2), hz: Math.max(0.05, num(source.hz, 1))};
     const axis = new THREE.Vector3(...vec3(source.axis, [0, 1, 0]));
     if (axis.lengthSq() < 1e-12) continue;
     axis.normalize();
     if (kind === 'spin') return {kind, axis, rpm: num(source.rpm, 30)};
     if (kind === 'swing') return {kind, axis, deg: num(source.deg, 20), hz: Math.max(0.05, num(source.hz, 0.5))};
+    if (kind === 'slide') return {kind, axis, amp: num(source.amp, 1), hz: Math.max(0.05, num(source.hz, 0.5))};
     return {kind, axis, amp: num(source.amp, 0.3), hz: Math.max(0.05, num(source.hz, 4))};
   }
   return null;
@@ -425,6 +480,54 @@ class Explore {
     this.composer.addPass(this.bloom);
     this.composer.addPass(new ShaderPass(BAND_MASK));
     this.composer.addPass(new OutputPass());
+    this.linesComposer = this.composer;
+  }
+
+  /** style "real": its own composer (render, selective glow, band mask, ACES output), built once. */
+  realComposer() {
+    if (this.realPipeline) return this.realPipeline;
+    const target = new THREE.WebGLRenderTarget(SIZE, SIZE, {type: THREE.HalfFloatType, samples: 4, stencilBuffer: false, depthBuffer: true});
+    const composer = new EffectComposer(this.renderer, target);
+    composer.setPixelRatio(1);
+    composer.setSize(SIZE, SIZE);
+    composer.addPass(new RenderPass(this.scene, this.camera));
+    const glow = new GlowPass(this.scene, this.camera, SIZE);
+    glow.onBefore = () => (POINT_SCALE.value = 0.5);
+    glow.onAfter = () => (POINT_SCALE.value = 1);
+    composer.addPass(glow);
+    composer.addPass(new ShaderPass(BAND_MASK));
+    composer.addPass(new OutputPass());
+    this.realPipeline = composer;
+    return composer;
+  }
+
+  setStyle(real) {
+    this.real = real;
+    const r = this.renderer;
+    if (real) {
+      r.toneMapping = THREE.ACESFilmicToneMapping;
+      r.toneMappingExposure = REAL.exposure;
+      r.localClippingEnabled = true;
+      this.envMap ??= studioEnvironment(r);
+      this.scene.environment = this.envMap;
+      this.scene.environmentIntensity = REAL.envIntensity;
+      this.composer = this.realComposer();
+      this.lights = new StudioLights();
+      this.lights.addTo(this.scene);
+    } else {
+      r.toneMapping = THREE.NoToneMapping;
+      r.toneMappingExposure = 1;
+      r.localClippingEnabled = false;
+      this.scene.environment = null;
+      this.composer = this.linesComposer;
+      this.lights = null;
+    }
+  }
+
+  /** fx objects: style "real" also draws them into the glow buffer (they bloom). */
+  fxLayer(object) {
+    if (this.real) object.layers.enable(GLOW_LAYER);
+    return object;
   }
 
   info() {
@@ -438,12 +541,17 @@ class Explore {
 
   load(spec) {
     this.clear();
-    const {parts, beats, warnings} = normalise(spec);
+    const {parts, beats, warnings, real} = normalise(spec);
+    this.setStyle(real);
     this.parts = parts;
     this.byId = new Map(parts.map(part => [part.id, part]));
     this.beats = beats;
     this.fxCache = new Map();
     for (const part of parts) {
+      if (real) {
+        this.buildRealPart(part);
+        continue;
+      }
       part.prepass = new THREE.Mesh(part.geometry, prepassMaterial());
       part.fills = [fillMaterial(), ...[1, 2, 3].map(ref => fillMaterial({depthFunc: THREE.GreaterDepth, stencilRef: ref}))].map(
         material => {
@@ -468,12 +576,15 @@ class Explore {
       part.scratchEdges = [];
     }
     this.fxThin = new LineBatch(this.scene, 512);
-    this.fxThin.addMaterial(lineMaterial(1.3, {depthTest: false}), 3);
+    this.fxLayer(this.fxThin.addMaterial(lineMaterial(1.3, {depthTest: false}), 3));
     this.fxMid = new LineBatch(this.scene, 512);
-    this.fxMid.addMaterial(lineMaterial(2.4, {depthTest: false}), 3);
+    this.fxLayer(this.fxMid.addMaterial(lineMaterial(2.4, {depthTest: false}), 3));
     this.fxWide = new LineBatch(this.scene, 512);
-    this.fxWide.addMaterial(lineMaterial(7, {depthTest: false}), 3);
+    this.fxLayer(this.fxWide.addMaterial(lineMaterial(7, {depthTest: false}), 3));
     this.points = new PointBatch(this.scene, 1024);
+    this.fxLayer(this.points.object);
+    this.puffs = null; // steam (created on first use)
+    this.beamBatches = new Map(); // beam core and halo batches by width
     this.arrowMeshes = [];
 
     // Bounding sphere of the assembled model.
@@ -491,8 +602,37 @@ class Explore {
     for (const point of points) radius = Math.max(radius, point.distanceTo(center));
     this.sphere = new THREE.Sphere(center, radius || 1);
 
+    this.staggerCache = new Map();
     this.rest = beats.map(beat => this.restState(beat));
     return {parts: parts.length, beats: beats.length, warnings, radius: this.sphere.radius};
+  }
+
+  /** style "real": PBR mesh, glow-buffer twin, ghost shell, faint edge and focus outline batches. */
+  buildRealPart(part) {
+    part.realGeometry = creasedGeometry(part.geometry);
+    part.material = makeMaterial(part.mat);
+    part.material.envMap = this.envMap;
+    part.mesh = new THREE.Mesh(part.realGeometry, part.material);
+    part.glowMesh = new THREE.Mesh(part.realGeometry, glowMaterial());
+    part.glowMesh.layers.set(GLOW_LAYER);
+    part.shell = new THREE.Mesh(part.realGeometry, shellMaterial(part.mat.color));
+    part.shell.renderOrder = 2;
+    for (const mesh of [part.mesh, part.glowMesh, part.shell]) {
+      mesh.matrixAutoUpdate = false;
+      mesh.frustumCulled = false;
+      this.scene.add(mesh);
+    }
+    part.batch = new LineBatch(this.scene, 256);
+    part.lineMaterials = [lineMaterial(1.2)];
+    part.batch.addMaterial(part.lineMaterials[0], 2);
+    part.outline = new LineBatch(this.scene, 128);
+    part.outlineMaterial = lineMaterial(REAL.outline.width);
+    part.outline.addMaterial(part.outlineMaterial, 2).layers.enable(GLOW_LAYER);
+    part.restMatrix = new THREE.Matrix4().compose(part.pos, part.quat, part.scale);
+    part.restInverse = part.restMatrix.clone().invert();
+    part.scratchEdges = [];
+    part.clip = new THREE.Plane();
+    part.clipping = false;
   }
 
   clear() {
@@ -501,13 +641,20 @@ class Explore {
       child.geometry?.dispose?.();
       child.material?.dispose?.();
     }
-    for (const part of this.parts ?? []) part.geometry.dispose();
+    for (const part of this.parts ?? []) {
+      part.geometry.dispose();
+      part.realGeometry?.dispose();
+    }
   }
 
   // ----- transforms
 
-  /** World matrices of every part for an explode amount and an anim function (part -> {angle, offset} | null). */
+  /**
+   * World matrices of every part for an explode amount (a number, or part -> number for staged and
+   * partial explodes) and an anim function (part -> [{i, angle, offset, scale}] | null).
+   */
   partWorlds(animOf, explode) {
+    const explodeOf = typeof explode === 'function' ? explode : () => explode;
     const out = new Map();
     const visiting = new Set();
     const tmpQ = new THREE.Quaternion();
@@ -515,14 +662,19 @@ class Explore {
       if (out.has(part.id)) return out.get(part.id);
       if (visiting.has(part.id)) return part.restMatrix;
       visiting.add(part.id);
-      const position = part.pos.clone().addScaledVector(part.explode, explode);
+      const position = part.pos.clone().addScaledVector(part.explode, explodeOf(part));
       const quat = part.quat.clone();
-      const anim = part.anim ? animOf(part) : null;
+      let scale = part.scale;
+      const anim = part.anims.length ? animOf(part) : null;
       if (anim) {
-        if (anim.angle) quat.premultiply(tmpQ.setFromAxisAngle(part.anim.axis, anim.angle));
-        if (anim.offset) position.addScaledVector(part.anim.axis, anim.offset);
+        for (const a of anim) {
+          const source = part.anims[a.i];
+          if (a.angle) quat.premultiply(tmpQ.setFromAxisAngle(source.axis, a.angle));
+          if (a.offset) position.addScaledVector(source.axis, a.offset);
+          if (a.scale !== undefined && a.scale !== 1) scale = scale.clone().multiplyScalar(a.scale);
+        }
       }
-      let matrix = new THREE.Matrix4().compose(position, quat, part.scale);
+      let matrix = new THREE.Matrix4().compose(position, quat, scale);
       if (part.parent && this.byId.has(part.parent)) {
         const parent = this.byId.get(part.parent);
         const delta = resolve(parent).clone().multiply(parent.restInverse);
@@ -552,8 +704,22 @@ class Explore {
     return {kind, color: color.clone(), edge: base.edge, width: base.width, fill: base.fill, rim: base.rim, occluder: kind === 'solid'};
   }
 
+  /** Real style: ghost, dim and outline amounts of a part in a beat's rest state. */
+  realLookOf(beat, part) {
+    const ghost = beat.ghost.has(part.id) ? 1 : 0;
+    const focus = beat.focus.has(part.id);
+    const dim = beat.focus.size && !focus && !ghost ? 1 : 0;
+    const color = (beat.number ? ROLE_LINEAR.answer : roleColor(part.role)).clone();
+    return {ghost, dim, outline: focus ? 1 : 0, color};
+  }
+
+  /** Explode amount of a part at a beat's rest (explodeOnly keeps the others assembled). */
+  explodeAt(beat, part) {
+    return beat.explodeOnly && !beat.explodeOnly.has(part.id) ? 0 : beat.explode;
+  }
+
   restState(beat) {
-    const worlds = this.partWorlds(() => null, beat.explode);
+    const worlds = this.partWorlds(() => null, beat.explodeOnly ? part => this.explodeAt(beat, part) : beat.explode);
     let target;
     if (typeof beat.target === 'string') target = this.partCenter(beat.target, worlds);
     else if (Array.isArray(beat.target)) target = new THREE.Vector3(...beat.target);
@@ -563,15 +729,85 @@ class Explore {
     const dist = (this.sphere.radius * SIZE) / (FILL_FRACTION * stageHeight * beat.zoom * Math.tan(halfFov));
     const looks = new Map(this.parts.map(part => [part.id, this.lookOf(beat, part)]));
     const occluders = new Set(this.parts.filter(part => looks.get(part.id).occluder).map(part => part.id));
-    return {cam: {yaw: beat.yaw, pitch: beat.pitch, dist, target}, looks, occluders};
+    const real = this.real ? new Map(this.parts.map(part => [part.id, this.realLookOf(beat, part)])) : null;
+    return {cam: {yaw: beat.yaw, pitch: beat.pitch, dist, target}, looks, occluders, real};
   }
 
   // ----- timing
 
   plan(b) {
     const beat = this.beats[b];
-    const end = MOVE + beat.dur;
-    return {dur: Number(end.toFixed(3)), loopFrom: MOVE, frames: Math.round(end * FPS), loopFrame: Math.round(MOVE * FPS), beatDur: beat.dur};
+    const end = beat.move + beat.dur;
+    return {dur: Number(end.toFixed(3)), loopFrom: beat.move, frames: Math.round(end * FPS), loopFrame: Math.round(beat.move * FPS), beatDur: beat.dur};
+  }
+
+  /**
+   * Explode at clip time t: a number (the v1 path), or per part when the beat staggers or explodes
+   * only some parts. Staggered parts leave one after another in `order` (equal orders together) and
+   * come back in reverse order; each travels move - stagger seconds, so all rest by the loop start.
+   */
+  explodeState(b, t, ramp) {
+    const beat = this.beats[b];
+    const prevBeat = b > 0 ? this.beats[b - 1] : null;
+    const from = prevBeat ?? beat;
+    if (!beat.stagger && !beat.explodeOnly && !from.explodeOnly) return lerp(from.explode, beat.explode, ramp);
+    const plan = this.staggerPlan(b);
+    return part => {
+      const a = this.explodeAt(from, part);
+      const c = this.explodeAt(beat, part);
+      if (a === c) return c;
+      const timing = plan.get(part.id);
+      const k = timing ? ease(clamp((t - timing.start) / timing.travel, 0, 1)) : ramp;
+      return lerp(a, c, k);
+    };
+  }
+
+  staggerPlan(b) {
+    this.staggerCache ??= new Map();
+    if (this.staggerCache.has(b)) return this.staggerCache.get(b);
+    const beat = this.beats[b];
+    const from = b > 0 ? this.beats[b - 1] : beat;
+    const stagger = Math.min(beat.stagger, Math.max(0, beat.move - 0.4));
+    const travel = Math.max(1 / FPS, beat.move - stagger);
+    const plan = new Map();
+    for (const out of [true, false]) {
+      const moving = this.parts.filter(part => {
+        if (part.explode.lengthSq() < 1e-12) return false;
+        const a = this.explodeAt(from, part);
+        const c = this.explodeAt(beat, part);
+        return out ? c > a : c < a;
+      });
+      const orders = [...new Set(moving.map(part => part.order))].sort((x, y) => (out ? x - y : y - x));
+      for (const part of moving) {
+        const rank = orders.indexOf(part.order);
+        const start = orders.length > 1 ? (stagger * rank) / (orders.length - 1) : 0;
+        plan.set(part.id, {start, travel});
+      }
+    }
+    this.staggerCache.set(b, plan);
+    return plan;
+  }
+
+  /** The clip plane of a cut part at a frame (keeps the side the normal points away from), or null. */
+  cutOf(state, part) {
+    const beat = this.beats[state.b];
+    const prevBeat = state.b > 0 ? this.beats[state.b - 1] : null;
+    const cur = beat.cut?.parts.has(part.id) ? beat.cut : null;
+    const prev = prevBeat?.cut?.parts.has(part.id) ? prevBeat.cut : null;
+    let cut = cur;
+    let amount = state.ramp;
+    if (cur && prev && cur.normal.equals(prev.normal) && cur.offset === prev.offset) amount = 1;
+    else if (!cur && prev) {
+      cut = prev;
+      amount = 1 - state.ramp;
+    }
+    if (!cut || amount < 1e-4) return null;
+    // Far side: just beyond the part, so the plane slides in from nothing to the cut.
+    const box = part.geometry.boundingBox.clone().applyMatrix4(state.worlds.get(part.id));
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const far = cut.normal.dot(sphere.center) + sphere.radius * 1.02;
+    const offset = lerp(far, cut.offset, amount);
+    return part.clip.set(cut.normal.clone().negate(), offset);
   }
 
   /** Everything about the frame at clip time t of beat b, without drawing. */
@@ -580,7 +816,8 @@ class Explore {
     const prevBeat = b > 0 ? this.beats[b - 1] : null;
     const cur = this.rest[b];
     const prev = b > 0 ? this.rest[b - 1] : null;
-    const ramp = ease(clamp(t / MOVE, 0, 1));
+    const move = beat.move;
+    const ramp = ease(clamp(t / move, 0, 1));
     const L = beat.dur;
 
     // Camera: eased move from the previous beat's rest pose, then a slow back-and-forth turn.
@@ -588,41 +825,48 @@ class Explore {
       ? prev.cam
       : {yaw: cur.cam.yaw + 24, pitch: cur.cam.pitch + 6, dist: cur.cam.dist * 1.12, target: cur.cam.target};
     let yaw = lerp(from.yaw, cur.cam.yaw, ramp);
-    if (t > MOVE && beat.turn > 0) {
+    if (t > move && beat.turn > 0) {
       const amplitude = (beat.turn * L) / Math.PI; // peak speed = turn deg/s
-      yaw += (amplitude * (1 - Math.cos((TAU * (t - MOVE)) / L))) / 2;
+      yaw += (amplitude * (1 - Math.cos((TAU * (t - move)) / L))) / 2;
     }
     const pitch = lerp(from.pitch, cur.cam.pitch, ramp);
     const dist = Math.exp(lerp(Math.log(from.dist), Math.log(cur.cam.dist), ramp));
     const target = from.target.clone().lerp(cur.cam.target, ramp);
-    const explode = lerp(prevBeat ? prevBeat.explode : beat.explode, beat.explode, ramp);
+    const explode = this.explodeState(b, t, ramp);
 
     // Anims: the current beat's play list fades in, the previous one fades out.
     const animOf = part => {
-      let angle = 0;
-      let offset = 0;
-      const add = (source, weight, tau, period) => {
-        if (!source || weight <= 0 || !source.play.has(part.id)) return;
-        const a = part.anim;
-        if (a.kind === 'spin') {
-          const revs = Math.sign(a.rpm || 1) * cycles(a.rpm / 60, period);
-          angle += weight * TAU * revs * (tau / period);
-        } else if (a.kind === 'swing') {
-          angle += weight * a.deg * DEG * Math.sin((TAU * cycles(a.hz, period) * tau) / period);
-        } else {
-          offset += weight * a.amp * Math.sin((TAU * cycles(a.hz, period) * tau) / period);
-        }
-      };
-      add(beat, ramp, t - MOVE, L);
-      if (prevBeat) add(prevBeat, 1 - ramp, t, prevBeat.dur);
-      return angle || offset ? {angle, offset} : null;
+      const out = [];
+      part.anims.forEach((a, i) => {
+        let angle = 0;
+        let offset = 0;
+        let grow = 0;
+        const add = (source, weight, tau, period) => {
+          if (!source || weight <= 0 || !source.play.has(part.id)) return;
+          if (a.kind === 'spin') {
+            const revs = Math.sign(a.rpm || 1) * cycles(a.rpm / 60, period);
+            angle += weight * TAU * revs * (tau / period);
+          } else if (a.kind === 'swing') {
+            angle += weight * a.deg * DEG * Math.sin((TAU * cycles(a.hz, period) * tau) / period);
+          } else if (a.kind === 'pulse') {
+            grow += weight * (a.scale - 1) * (0.5 - 0.5 * Math.cos((TAU * cycles(a.hz, period) * tau) / period));
+          } else {
+            offset += weight * a.amp * Math.sin((TAU * cycles(a.hz, period) * tau) / period);
+          }
+        };
+        add(beat, ramp, t - move, L);
+        if (prevBeat) add(prevBeat, 1 - ramp, t, prevBeat.dur);
+        if (angle || offset || grow) out.push({i, angle, offset, scale: 1 + grow});
+      });
+      return out.length ? out : null;
     };
     const worlds = this.partWorlds(animOf, explode);
     const shake = new Map();
     for (const part of this.parts) {
-      if (part.anim?.kind !== 'shake') continue;
+      const a = part.anims.find(item => item.kind === 'shake');
+      if (!a || this.real) continue;
       const weight = (beat.play.has(part.id) ? ramp : 0) + (prevBeat?.play.has(part.id) ? 1 - ramp : 0);
-      if (weight > 0.01) shake.set(part.id, weight * part.anim.amp);
+      if (weight > 0.01) shake.set(part.id, {amp: weight * a.amp, axis: a.axis});
     }
 
     // Looks.
@@ -643,7 +887,7 @@ class Explore {
     for (const part of this.parts) {
       const inPrev = prevOcc.has(part.id);
       const inCur = cur.occluders.has(part.id);
-      if (t >= MOVE) {
+      if (t >= move) {
         if (inCur) occClass.set(part.id, 1);
       } else if (inPrev && inCur) occClass.set(part.id, 1);
       else if (inPrev) occClass.set(part.id, 2);
@@ -653,9 +897,25 @@ class Explore {
 
     // Effects.
     const fx = [];
-    beat.fx.forEach((item, i) => fx.push({item, key: `${b}:${i}`, weight: ramp, tau: t - MOVE, period: L, beat}));
+    beat.fx.forEach((item, i) => fx.push({item, key: `${b}:${i}`, weight: ramp, tau: t - move, period: L, beat}));
     if (prevBeat && ramp < 0.999) {
       prevBeat.fx.forEach((item, i) => fx.push({item, key: `${b - 1}:${i}`, weight: 1 - ramp, tau: t, period: prevBeat.dur, beat: prevBeat}));
+    }
+
+    // Real style: ghost / dim / outline amounts eased over the move, and the cut planes.
+    let realLooks = null;
+    if (this.real) {
+      realLooks = new Map();
+      for (const part of this.parts) {
+        const a = (prev ?? cur).real.get(part.id);
+        const c = cur.real.get(part.id);
+        realLooks.set(part.id, {
+          ghost: lerp(a.ghost, c.ghost, ramp),
+          dim: lerp(a.dim, c.dim, ramp),
+          outline: lerp(a.outline, c.outline, ramp),
+          color: a.color.clone().lerp(c.color, ramp),
+        });
+      }
     }
 
     if (!withCamera) return {worlds};
@@ -673,7 +933,7 @@ class Explore {
     camera.updateMatrixWorld(true);
     const centerDist = camera.position.distanceTo(this.sphere.center);
     return {
-      b, t, ramp, worlds, looks, occClass, hiddenOpacity, fx, shake, animOf, explode,
+      b, t, ramp, move, yaw, target, worlds, looks, realLooks, occClass, hiddenOpacity, fx, shake, animOf, explode,
       near: centerDist - this.sphere.radius,
       far: centerDist + this.sphere.radius,
     };
@@ -711,7 +971,10 @@ class Explore {
   }
 
   draw(state) {
+    if (this.real) return this.drawReal(state);
     const heat = this.heatWeights(state);
+    const glow = this.glowWeights(state);
+    for (const [id, g] of glow) if (!heat.has(id)) heat.set(id, {...g, glowOnly: true});
     for (const part of this.parts) {
       const look = state.looks.get(part.id);
       const world = state.worlds.get(part.id);
@@ -752,10 +1015,10 @@ class Explore {
       // Edges (plus faint motion ghosts when shaking).
       part.batch.begin();
       this.pushPartEdges(state, part, part.batch, color, edge);
-      const amp = state.shake.get(part.id);
-      if (amp) {
-        const axis = part.anim.axis.clone().transformDirection(world);
-        for (const s of [-1, 1]) this.pushPartEdges(state, part, part.batch, color, edge * 0.22, axis.clone().multiplyScalar(s * amp));
+      const shake = state.shake.get(part.id);
+      if (shake) {
+        const axis = shake.axis.clone().transformDirection(world);
+        for (const s of [-1, 1]) this.pushPartEdges(state, part, part.batch, color, edge * 0.22, axis.clone().multiplyScalar(s * shake.amp));
       }
       part.batch.commit();
       part.lineMaterials.forEach((material, k) => {
@@ -778,11 +1041,161 @@ class Explore {
       const breathe = 0.6 + 0.4 * (0.5 - 0.5 * Math.cos((TAU * cycles(0.5, period) * tau) / period));
       for (const id of source.focus) {
         const part = this.byId.get(id);
-        if (part) this.pushPartEdges(state, part, this.fxWide, ROLE_LINEAR.answer, 0.12 * weight * breathe);
+        if (part) this.pushPartEdges(state, part, this.fxWide, ROLE_LINEAR.answer, (this.real ? 0.05 : 0.12) * weight * breathe);
       }
     };
-    add(beat, state.ramp, state.t - MOVE, beat.dur);
+    add(beat, state.ramp, state.t - beat.move, beat.dur);
     if (prevBeat) add(prevBeat, 1 - state.ramp, state.t, prevBeat.dur);
+  }
+
+  /** style "real": materials, ghost shells, cut planes, outlines, then effects and the glow pass. */
+  drawReal(state) {
+    const heat = this.heatWeights(state);
+    const glow = this.glowWeights(state);
+    // Studio follows the camera: environment turned with the yaw, lights re-aimed.
+    this.scene.environmentRotation.set(0, state.yaw * DEG, 0);
+    this.lights.aim(this.camera, state.target, this.sphere.radius);
+    for (const part of this.parts) {
+      const look = state.realLooks.get(part.id);
+      const world = state.worlds.get(part.id);
+      const mat = part.mat;
+      for (const mesh of [part.mesh, part.glowMesh, part.shell]) {
+        mesh.matrix.copy(world);
+        mesh.matrixWorldNeedsUpdate = true;
+      }
+      // Emissive: the part's own light, plus heat and glow effects.
+      const emissive = new THREE.Color(0, 0, 0);
+      if (mat.emissive) emissive.copy(mat.emissive).multiplyScalar(mat.glow);
+      const h = heat.get(part.id);
+      if (h) {
+        const shimmer = 0.85 + 0.15 * Math.sin((TAU * cycles(0.8, h.period) * h.tau) / h.period);
+        emissive.add(roleColor(h.role).clone().multiplyScalar(1.6 * h.weight * shimmer));
+      }
+      const g = glow.get(part.id);
+      if (g) {
+        const breathe = 0.5 - 0.5 * Math.cos((TAU * cycles(g.hz, g.period) * g.tau) / g.period);
+        emissive.add(roleColor(g.role).clone().multiplyScalar(1.5 * g.weight * (0.3 + 0.7 * breathe)));
+      }
+      const m = part.material;
+      m.envMapRotation.set(0, state.yaw * DEG, 0);
+      const u = m.userData.u;
+      const bright = lerp(1, REAL.dim.bright, look.dim);
+      m.emissive.copy(emissive);
+      u.uDesat.value = REAL.dim.desat * look.dim;
+      u.uBright.value = bright;
+      // Ghost: the solid fades out while the glass shell fades in. See-through parts are additive and
+      // fade by brightness; opaque ones by opacity.
+      const keep = 1 - look.ghost;
+      if (mat.glass) {
+        u.uBright.value = bright * keep;
+        part.mesh.visible = keep > 0.01;
+      } else {
+        m.opacity = keep;
+        const transparent = look.ghost > 1e-3;
+        if (m.transparent !== transparent) {
+          m.transparent = transparent;
+          m.needsUpdate = true;
+        }
+        m.depthWrite = look.ghost < 0.5;
+        part.mesh.visible = keep > 0.01;
+      }
+      const opacity = keep;
+      part.shell.visible = look.ghost > 1e-3;
+      part.shell.material.uniforms.uAmount.value = look.ghost;
+      // Glow buffer twin: black occluder when solid, the part's light when emissive.
+      const lit = emissive.r + emissive.g + emissive.b > 1e-3;
+      const solid = !mat.glass && look.ghost < 0.5;
+      part.glowMesh.visible = solid || lit;
+      part.glowMesh.material.color.copy(emissive).multiplyScalar(REAL.glowEmissive * bright * keep);
+      part.glowMesh.material.depthWrite = solid;
+      // Cut.
+      const plane = this.cutOf(state, part);
+      const planes = plane ? [plane] : null;
+      if (Boolean(plane) !== part.clipping) {
+        part.clipping = Boolean(plane);
+        for (const material of [m, part.glowMesh.material, part.shell.material, part.lineMaterials[0], part.outlineMaterial]) {
+          material.clippingPlanes = planes;
+          material.needsUpdate = true;
+        }
+      }
+      u.uCutFlat.value = plane ? 1 : 0;
+      // Faint material-tinted edge (REAL.edge) and the focus outline in the role colour.
+      part.batch.begin();
+      if (REAL.edge > 0 && opacity > 0.01) {
+        const edgeColor = mat.color.clone().lerp(WHITE, 0.5);
+        this.pushPartEdges(state, part, part.batch, edgeColor, REAL.edge * bright * (1 - look.ghost));
+      }
+      part.batch.commit();
+      part.outline.begin();
+      // Parts that glow already get a fainter outline.
+      if (look.outline > 0.01) this.pushOutline(state, part, look.color, REAL.outline.strength * look.outline * (lit ? 0.4 : 1));
+      if (plane) this.pushSection(part, world, plane, mat.color.clone().lerp(WHITE, 0.6), REAL.cutEdge * bright * (1 - look.ghost));
+      part.outline.commit();
+    }
+    this.drawFx(state, heat);
+    this.drawAnswerGlow(state);
+    this.fxWide.commit();
+    this.composer.render();
+  }
+
+  /** The cut's edge: where the clip plane crosses the part's triangles, as a thin glowing line. */
+  pushSection(part, world, plane, color, intensity) {
+    if (intensity < 1e-3) return;
+    const inverse = world.clone().invert();
+    // Nudge the line onto the kept side so the clip plane does not eat it.
+    const local = plane.clone();
+    local.constant -= this.sphere.radius * 1e-3;
+    local.applyMatrix4(inverse);
+    const pos = part.realGeometry.attributes.position.array;
+    const n = local.normal;
+    const c = local.constant;
+    const e = world.elements;
+    const k = intensity;
+    const d = [0, 0, 0];
+    const hit = [];
+    for (let t = 0; t < pos.length; t += 9) {
+      for (let j = 0; j < 3; j++) d[j] = n.x * pos[t + j * 3] + n.y * pos[t + j * 3 + 1] + n.z * pos[t + j * 3 + 2] + c;
+      if ((d[0] > 0) === (d[1] > 0) && (d[1] > 0) === (d[2] > 0)) continue;
+      hit.length = 0;
+      for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) {
+        if ((d[a] > 0) === (d[b] > 0)) continue;
+        const f = d[a] / (d[a] - d[b]);
+        const x = pos[t + a * 3] + (pos[t + b * 3] - pos[t + a * 3]) * f;
+        const y = pos[t + a * 3 + 1] + (pos[t + b * 3 + 1] - pos[t + a * 3 + 1]) * f;
+        const z = pos[t + a * 3 + 2] + (pos[t + b * 3 + 2] - pos[t + a * 3 + 2]) * f;
+        hit.push(e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]);
+      }
+      if (hit.length === 6) part.outline.push(hit[0], hit[1], hit[2], hit[3], hit[4], hit[5], color.r * k, color.g * k, color.b * k);
+    }
+  }
+
+  pushOutline(state, part, color, intensity) {
+    const world = state.worlds.get(part.id);
+    const inverse = world.clone().invert();
+    const eye = this.camera.position.clone().applyMatrix4(inverse);
+    const list = outlineEdges(part.edges, eye, part.scratchEdges);
+    const e = world.elements;
+    const k = intensity * REAL.fx;
+    for (let i = 0; i < list.length; i += 6) {
+      const x1 = list[i], y1 = list[i + 1], z1 = list[i + 2], x2 = list[i + 3], y2 = list[i + 4], z2 = list[i + 5];
+      part.outline.push(
+        e[0] * x1 + e[4] * y1 + e[8] * z1 + e[12], e[1] * x1 + e[5] * y1 + e[9] * z1 + e[13], e[2] * x1 + e[6] * y1 + e[10] * z1 + e[14],
+        e[0] * x2 + e[4] * y2 + e[8] * z2 + e[12], e[1] * x2 + e[5] * y2 + e[9] * z2 + e[13], e[2] * x2 + e[6] * y2 + e[10] * z2 + e[14],
+        color.r * k, color.g * k, color.b * k,
+      );
+    }
+  }
+
+  /** fx "glow": the part's own light breathes (per part: weight, role, hz, timing). */
+  glowWeights(state) {
+    const out = new Map();
+    for (const entry of state.fx) {
+      if (entry.item.type !== 'glow' || !this.byId.has(entry.item.on)) continue;
+      const role = ROLE[entry.item.role] ? entry.item.role : 'energy';
+      const old = out.get(entry.item.on);
+      if (!old || old.weight < entry.weight) out.set(entry.item.on, {weight: entry.weight, role, tau: entry.tau, period: entry.period, hz: Math.max(0.05, num(entry.item.hz, 1))});
+    }
+    return out;
   }
 
   heatWeights(state) {
@@ -809,6 +1222,8 @@ class Explore {
     this.fxMid.begin();
     this.fxWide.begin();
     this.points.begin();
+    this.puffs?.begin();
+    for (const batch of this.beamBatches.values()) batch.begin();
     let arrows = 0;
     for (const entry of state.fx) {
       const {item, weight} = entry;
@@ -819,18 +1234,156 @@ class Explore {
       else if (item.type === 'trail') this.fxTrail(state, entry);
       else if (item.type === 'dim') this.fxDim(state, entry);
       else if (item.type === 'arrow') arrows = this.fxArrow(state, entry, arrows);
+      else if (item.type === 'sine') this.fxSine(state, entry);
+      else if (item.type === 'steam') this.fxSteam(state, entry);
+      else if (item.type === 'beam') this.fxBeam(state, entry);
     }
     for (let i = arrows; i < this.arrowMeshes.length; i++) this.arrowMeshes[i].visible = false;
     this.fxThin.commit();
     this.fxMid.commit();
     this.fxWide.commit();
     this.points.commit();
+    this.puffs?.commit();
+    for (const batch of this.beamBatches.values()) batch.commit();
+  }
+
+  /** fx colour of a role, brighter in style "real" (the effects are light drawn on a lit object). */
+  fxColor(role, fallback) {
+    const color = roleColor(role ?? fallback);
+    return this.real ? color.clone().multiplyScalar(REAL.fx) : color;
+  }
+
+  /** fx "sine": a travelling wave from `from` to `to`, swinging along `up`. */
+  fxSine(state, entry) {
+    const item = entry.item;
+    const from = this.refPoint(state, item.from);
+    const to = this.refPoint(state, item.to);
+    if (!from || !to) return;
+    const axis = to.clone().sub(from);
+    const length = axis.length();
+    if (length < 1e-6) return;
+    const along = axis.clone().divideScalar(length);
+    const up = new THREE.Vector3(...vec3(item.up, [0, 1, 0]));
+    up.addScaledVector(along, -up.dot(along));
+    if (up.lengthSq() < 1e-8) up.set(1, 0, 0).addScaledVector(along, -along.x);
+    up.normalize();
+    const amp = num(item.amp, length * 0.08);
+    const waves = clamp(num(item.waves, 3), 0.25, 40);
+    const speed = num(item.speed, 1);
+    const P = entry.period;
+    const rate = speed === 0 ? 0 : (Math.sign(speed) * cycles(speed, P)) / P; // whole cycles per loop
+    const phase = num(item.phase, 0) * DEG;
+    const decay = clamp(num(item.decay, 1), 0, 1);
+    const color = this.fxColor(item.role, 'actor');
+    const n = clamp(Math.round(waves * 28), 40, 480);
+    const fadeEnds = u => clamp(u / 0.05, 0, 1) * clamp((1 - u) / 0.05, 0, 1);
+    let prev = null;
+    for (let i = 0; i <= n; i++) {
+      const u = i / n;
+      const a = amp * lerp(1, decay, u);
+      const y = a * Math.sin(TAU * (waves * u - rate * entry.tau) + phase);
+      const p = from.clone().addScaledVector(axis, u).addScaledVector(up, y);
+      const k = 0.9 * entry.weight * fadeEnds(u) * this.fade(state, p.x, p.y, p.z);
+      if (prev) {
+        this.fxMid.push(prev.p.x, prev.p.y, prev.p.z, p.x, p.y, p.z, color.r * prev.k, color.g * prev.k, color.b * prev.k, color.r * k, color.g * k, color.b * k);
+        const hk = 0.1;
+        this.fxWide.push(prev.p.x, prev.p.y, prev.p.z, p.x, p.y, p.z, color.r * prev.k * hk, color.g * prev.k * hk, color.b * prev.k * hk, color.r * k * hk, color.g * k * hk, color.b * k * hk);
+      }
+      prev = {p, k};
+    }
+  }
+
+  /** fx "steam": soft puffs rising from a point or the top of a part, growing and fading. */
+  fxSteam(state, entry) {
+    const item = entry.item;
+    let base;
+    if (typeof item.at === 'string' && this.byId.has(item.at)) {
+      const box = this.byId.get(item.at).geometry.boundingBox.clone().applyMatrix4(state.worlds.get(item.at));
+      base = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2);
+    } else base = this.refPoint(state, item.at);
+    if (!base) return;
+    if (!this.puffs) {
+      this.puffs = new PointBatch(this.scene, 256, PUFF_FRAGMENT); // soft already: not bloomed
+      this.puffs.begin();
+    }
+    const R = this.sphere.radius;
+    const radius = Math.max(1e-3, num(item.radius, R * 0.07));
+    const rise = Math.max(1e-3, num(item.rise, R * 0.6));
+    const color = ROLE[item.role] ? this.fxColor(item.role) : new THREE.Color(0.85, 0.9, 1).multiplyScalar(this.real ? REAL.fx : 1);
+    const P = entry.period;
+    const rate = cycles(0.3, P) / P; // one puff life is about 3 s
+    const n = 10;
+    const pxPerUnit = SIZE / (2 * Math.tan((FOV * DEG) / 2));
+    for (let k = 0; k < n; k++) {
+      const phase = (((entry.tau * rate + k / n) % 1) + 1) % 1;
+      const seed = k * 2.399;
+      const drift = radius * (0.5 + 1.4 * phase);
+      const p = base.clone();
+      p.x += Math.cos(seed) * drift * 0.6 + Math.sin(phase * TAU + seed) * radius * 0.35;
+      p.z += Math.sin(seed) * drift * 0.6;
+      p.y += rise * Math.pow(phase, 0.85);
+      const size = radius * (0.8 + 2.2 * phase);
+      const d = Math.max(1e-3, p.distanceTo(this.camera.position));
+      const px = clamp((size * 2 * pxPerUnit) / d, 2, 240);
+      const life = Math.pow(Math.sin(Math.PI * phase), 1.3) * (1 - 0.4 * phase);
+      const a = 0.38 * entry.weight * life;
+      this.puffs.push(p.x, p.y, p.z, color.r * a, color.g * a, color.b * a, px);
+    }
+  }
+
+  beamBatch(px) {
+    const key = Math.round(px * 2) / 2;
+    let batch = this.beamBatches.get(key);
+    if (!batch) {
+      batch = new LineBatch(this.scene, 256);
+      this.fxLayer(batch.addMaterial(lineMaterial(key, {depthTest: false}), 3));
+      batch.begin();
+      this.beamBatches.set(key, batch);
+    }
+    return batch;
+  }
+
+  /** fx "beam": a steady ray along a polyline, with brightness travelling along it. */
+  fxBeam(state, entry) {
+    const item = entry.item;
+    const path = (Array.isArray(item.path) ? item.path : []).filter(p => Array.isArray(p) && p.length === 3 && p.every(finite)).slice(0, LIMITS.points);
+    if (path.length < 2) return;
+    const width = clamp(num(item.width, 2), 1, 6);
+    const color = this.fxColor(item.role, 'actor');
+    const points = path.map(p => new THREE.Vector3(...p));
+    const lengths = [0];
+    for (let i = 1; i < points.length; i++) lengths.push(lengths[i - 1] + points[i].distanceTo(points[i - 1]));
+    const total = lengths[lengths.length - 1];
+    if (total < 1e-6) return;
+    const P = entry.period;
+    const rate = cycles(0.5, P) / P;
+    const pulses = 2.5; // bright bands along the beam
+    const core = this.beamBatch(0.8 + width * 0.7);
+    const halo = this.beamBatch(3 + width * 2.2);
+    const steps = 90;
+    let prev = null;
+    let seg = 0;
+    for (let i = 0; i <= steps; i++) {
+      const s = (i / steps) * total;
+      while (seg < points.length - 2 && lengths[seg + 1] < s) seg++;
+      const f = (s - lengths[seg]) / Math.max(1e-9, lengths[seg + 1] - lengths[seg]);
+      const p = points[seg].clone().lerp(points[seg + 1], clamp(f, 0, 1));
+      const u = s / total;
+      const band = Math.pow(0.5 + 0.5 * Math.cos(TAU * (pulses * u - rate * entry.tau)), 4);
+      const k = entry.weight * (0.55 + 0.45 * band) * clamp(u / 0.02, 0, 1) * clamp((1 - u) / 0.02, 0, 1);
+      if (prev) {
+        core.push(prev.p.x, prev.p.y, prev.p.z, p.x, p.y, p.z, color.r * prev.k, color.g * prev.k, color.b * prev.k, color.r * k, color.g * k, color.b * k);
+        const h = 0.16;
+        halo.push(prev.p.x, prev.p.y, prev.p.z, p.x, p.y, p.z, color.r * prev.k * h, color.g * prev.k * h, color.b * prev.k * h, color.r * k * h, color.g * k * h, color.b * k * h);
+      }
+      prev = {p, k};
+    }
   }
 
   flowData(entry) {
     let data = this.fxCache.get(entry.key);
     if (data) return data;
-    const path = (Array.isArray(entry.item.path) ? entry.item.path : []).filter(p => Array.isArray(p) && p.length === 3 && p.every(finite)).slice(0, 64);
+    const path = (Array.isArray(entry.item.path) ? entry.item.path : []).filter(p => Array.isArray(p) && p.length === 3 && p.every(finite)).slice(0, LIMITS.points);
     if (path.length < 2) return null;
     const closed = entry.item.closed === true && path.length > 2;
     const curve = curveThrough(path, closed);
@@ -857,7 +1410,7 @@ class Explore {
   fxFlow(state, entry) {
     const data = this.flowData(entry);
     if (!data) return;
-    const color = roleColor(entry.item.role ?? 'actor');
+    const color = this.fxColor(entry.item.role, 'actor');
     const w = entry.weight;
     const endFade = u => (data.closed ? 1 : clamp(u / 0.06, 0, 1) * clamp((1 - u) / 0.06, 0, 1));
     // Faint guide of the whole path.
@@ -928,7 +1481,7 @@ class Explore {
   fxHeat(state, entry) {
     const part = this.byId.get(entry.item.on);
     if (!part) return;
-    const color = roleColor(entry.item.role === 'loss' ? 'loss' : 'energy');
+    const color = this.fxColor(entry.item.role === 'loss' ? 'loss' : 'energy');
     const w = entry.weight;
     const P = entry.period;
     // Halo: the part's own edges again, wide and faint, breathing slowly.
@@ -965,7 +1518,7 @@ class Explore {
   fxWaves(state, entry) {
     const center = this.refPoint(state, entry.item.at);
     if (!center) return;
-    const color = roleColor(entry.item.role ?? 'actor');
+    const color = this.fxColor(entry.item.role, 'actor');
     const P = entry.period;
     const rate = cycles(num(entry.item.hz, 1), P) / P;
     const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0);
@@ -987,7 +1540,7 @@ class Explore {
   fxTrail(state, entry) {
     const part = this.byId.get(entry.item.on);
     if (!part) return;
-    const color = roleColor(part.role === 'object' ? 'actor' : part.role);
+    const color = this.fxColor(part.role === 'object' ? 'actor' : part.role);
     const steps = 24;
     let prev = null;
     for (let k = 0; k <= steps; k++) {
@@ -1062,7 +1615,7 @@ class Explore {
     }
     const P = entry.period;
     const pulse = 0.72 + 0.28 * (0.5 + 0.5 * Math.sin((TAU * cycles(0.5, P) * entry.tau) / P));
-    const color = roleColor(entry.item.role ?? 'energy');
+    const color = this.fxColor(entry.item.role, 'energy');
     mesh.material.color.copy(color).multiplyScalar(0.8 * pulse * entry.weight);
     const headLen = Math.min(len * 0.32, this.sphere.radius * 0.12);
     const shaftR = Math.max(len * 0.03, this.sphere.radius * 0.012);
@@ -1093,7 +1646,7 @@ class Explore {
   labelTracks(b) {
     const beat = this.beats[b];
     const plan = this.plan(b);
-    const rest = this.frameState(b, MOVE);
+    const rest = this.frameState(b, beat.move);
     const midX = this.project(this.rest[b].cam.target)[0];
     const chosen = beat.labels.map(id => {
       const part = this.byId.get(id);
@@ -1219,6 +1772,10 @@ window.R3D = {
     }
     return out;
   },
+  /** Render only (no readback), for timing. */
+  renderOnly(b, t) {
+    explore.renderAt(b, t);
+  },
   frameAt(b, t) {
     explore.renderAt(b, t);
     return explore.canvas.toDataURL('image/png');
@@ -1247,7 +1804,7 @@ window.R3D = {
   },
   /** Mean brightness of the rest frame (0..1) and the share of pixels above a faint level. */
   brightness(b) {
-    explore.renderAt(b, MOVE);
+    explore.renderAt(b, explore.beats[b].move);
     const c = document.createElement('canvas');
     c.width = SIZE;
     c.height = SIZE;
@@ -1269,9 +1826,33 @@ window.R3D = {
   dims(b) {
     return explore.dimTracks(b);
   },
+  /** Contact sheet (900x600, 3x2): six frames over beat b's clip, three in the move and three after. */
+  strip(b) {
+    const beat = explore.beats[b];
+    const m = beat.move;
+    const times = [m / 3, (2 * m) / 3, m, m + beat.dur * 0.25, m + beat.dur * 0.5, m + beat.dur * 0.75].map(t => Math.round(t * FPS) / FPS);
+    const c = document.createElement('canvas');
+    c.width = 900;
+    c.height = 600;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 900, 600);
+    times.forEach((t, i) => {
+      explore.renderAt(b, t);
+      const x = (i % 3) * 300;
+      const y = Math.floor(i / 3) * 300;
+      ctx.drawImage(explore.canvas, x, y, 300, 300);
+      ctx.fillStyle = 'rgba(201, 212, 255, 0.85)';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(`${t.toFixed(2)} s${i < 2 ? ' (move)' : i === 2 ? ' (rest)' : ''}`, x + 6, y + 14);
+      ctx.strokeStyle = '#333';
+      ctx.strokeRect(x + 0.5, y + 0.5, 299, 299);
+    });
+    return c.toDataURL('image/png');
+  },
   /** Captioned still: the rest frame with top line, labels, number and caption. */
   async card(b, meta) {
-    explore.renderAt(b, MOVE);
+    explore.renderAt(b, explore.beats[b].move);
     return drawCard(explore.canvas, meta);
   },
 };
