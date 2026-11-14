@@ -118,7 +118,7 @@ All raw clips on IceFrost's laptop in `~/Videos/wonderwhy/raw/` (not git; index:
 | 3 earbuds in | — | close-up of fingers pushing earbuds in | **missing** (earbud visible in ear in `A001_11141516_C098_2` at ~50%) |
 | 4 grass, scrolling | `mrnetwork/A001_11141516_C098_2.MOV` (26 s, 24 fps) | lying on grass, phone, earbuds in | ok |
 | 24 grass ending / B1 | `mrnetwork/A001_11141518_C099_2.MOV` (21 s), `A001_11141519_C100.MOV` (21 s) | on the grass with the glasses, arms up, touching grass | ok |
-| 5 crowd walk | `mrnetwork/IMG_5556.MOV` (2 s, from behind), `IMG_5545.MOV` (19 s), `IMG_5546.MOV` (7 s) | walking the hall | ok, but glasses already on in 5545/5546: a back-view crowd walk **without glasses** is missing |
+| 5 crowd walk | `mrnetwork/IMG_5554.MOV` (3.5 s, from behind, 30 fps), `IMG_5556.MOV` (2 s, from behind), `IMG_5545.MOV` (19 s), `IMG_5546.MOV` (7 s) | walking the hall | ok, but glasses already on in 5545/5546: a back-view crowd walk **without glasses** is missing |
 | 6 glasses on | `icefrost/PXL_20261114_153315589.mp4` (12 s) | putting the glasses on in the crowd | ok |
 | 6 alt | `mrnetwork/IMG_5543.MOV`, `IMG_5544.MOV` (6 s each) | wearing the glasses, close-up (tilted) | ok |
 | 8 earbuds in palm | `icefrost/PXL_20261114_145509708.mp4` (5 s) | open earbuds case on a table | ok |
