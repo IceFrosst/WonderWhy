@@ -1,5 +1,15 @@
 # AR renders (desktop, 14 Nov)
 
+## Picks (ready to drop into the film)
+| Scene | File | What we keep from it |
+|---|---|---|
+| Printer | [V02.mp4](V02.mp4) | The transition: the scan line rises up the printer and the hologram locks onto the real Core One, then the head explodes towards camera |
+| Printer | [V09.mp4](V09.mp4) | The spacing: the fixed display panel right of centre, clear of the printer, with the app's real caption (the honest look) |
+| Glasses (share scene) | [V04.mp4](V04.mp4) | The 3D glasses lifting out of the friend's hands and exploding into Frame, Projector, Waveguide, Neural Band. Already in the rough cut (shot s17) |
+| Intro → grey grass | [R_B3_match.mp4](R_B3_match.mp4), [intro_match.mp4](intro_match.mp4) | The team intro with its end camera matched to the man in `A001_11141516_C098 2.MOV` @ 7.0 s, and the 10.6 s transition with sound |
+
+Both printer versions are a bit zoomed in (a 16:9 window of portrait footage). The printer scene in the rough cut is still a placeholder box.
+
 1920x1080, 30 fps, H.264 CRF 17, silent. Rendered on the desktop PC (RTX 3060 Ti, WebGL through Chrome on D3D11) from 2160x3840 SDR footage built by `lib/prepare_footage.sh`. Each `V<nn>_sheet.png` shows 8 frames at the `config.sheet` times.
 
 | Version | Length | Render time | Size | Tuned |
