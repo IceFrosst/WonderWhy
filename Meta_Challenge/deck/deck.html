@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WonderWhy: pitch deck</title>
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+  :root { --navy:#0A0A23; --navy2:#14143A; --gold:#FBBF24; --cream:#F7F6F2; --violet:#7C3AED; --dim:#B9B8CC; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--navy); }
+  body { font-family: Inter, "Noto Sans", "DejaVu Sans", Arial, sans-serif; color: var(--cream); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slide { width: 1280px; height: 720px; position: relative; overflow: hidden; page-break-after: always; break-after: page;
+           background: radial-gradient(900px 500px at 85% 10%, rgba(124,58,237,.22), transparent 60%), var(--navy); padding: 64px 72px; }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+  .kicker { color: var(--gold); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; font-size: 15px; margin-bottom: 18px; }
+  h1 { font-size: 84px; line-height: 1; letter-spacing: -.02em; }
+  h2 { font-size: 46px; line-height: 1.12; letter-spacing: -.01em; max-width: 760px; }
+  h2 em, h1 em { color: var(--gold); font-style: normal; }
+  p.lead { font-size: 26px; line-height: 1.35; color: var(--cream); margin-top: 22px; max-width: 640px; }
+  .dim { color: var(--dim); }
+  .num { position: absolute; right: 36px; bottom: 26px; font-size: 14px; color: var(--dim); letter-spacing: .1em; }
+  .brand { position: absolute; left: 72px; bottom: 26px; font-size: 14px; color: var(--dim); letter-spacing: .1em; }
+  .brand b { color: var(--gold); }
+  .lens { border-radius: 22px; border: 2px solid rgba(251,191,36,.55); background: #000; box-shadow: 0 0 60px rgba(124,58,237,.35); display: block; }
+  .row { display: flex; gap: 48px; align-items: center; }
+  .grow { flex: 1; }
+  ul.tight { list-style: none; margin-top: 22px; }
+  ul.tight li { font-size: 24px; line-height: 1.35; padding-left: 28px; position: relative; margin-bottom: 14px; }
+  ul.tight li::before { content: ""; position: absolute; left: 0; top: 13px; width: 11px; height: 11px; border-radius: 50%; background: var(--gold); }
+  .card { background: var(--navy2); border: 1px solid rgba(247,246,242,.14); border-radius: 18px; padding: 26px 28px; }
+  .card.hi { border-color: var(--gold); background: linear-gradient(160deg, #1d1745, var(--navy2)); }
+  .card h3 { font-size: 26px; margin-bottom: 10px; }
+  .card.hi h3 { color: var(--gold); }
+  .card p { font-size: 21px; line-height: 1.35; color: var(--cream); }
+  .cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+  .tag { display: inline-block; background: var(--violet); color: #fff; font-size: 14px; font-weight: 700; letter-spacing: .08em; padding: 5px 12px; border-radius: 999px; margin-bottom: 14px; }
+  .tag.gold { background: var(--gold); color: var(--navy); }
+  .big { font-size: 64px; font-weight: 800; color: var(--gold); line-height: 1; }
+  .cap { font-size: 18px; color: var(--dim); margin-top: 8px; line-height: 1.3; }
+  .node { background: var(--navy2); border: 2px solid var(--violet); border-radius: 16px; padding: 16px 20px; font-size: 20px; line-height: 1.25; text-align: center; }
+  .node b { display: block; color: var(--gold); font-size: 22px; margin-bottom: 4px; }
+  .node.gold { border-color: var(--gold); }
+  .arrow { color: var(--gold); font-size: 30px; text-align: center; }
+  .steps { display: flex; gap: 14px; margin-top: 28px; }
+  .steps img { width: 188px; height: 188px; }
+  .small { font-size: 17px; color: var(--dim); line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<!-- 1 Hook -->
+<section class="slide">
+  <div class="row" style="height:100%">
+    <div class="grow">
+      <div class="kicker">Junction 2026 · Meta: AI Glasses for Everyone, Everyday</div>
+      <h1>Wonder<em>Why</em></h1>
+      <p class="lead">Look at something. Ask why.<br>See the physics drawn in your lens.</p>
+      <p class="small" style="margin-top:34px">For Meta Ray-Ban Display and the Meta Neural Band</p>
+    </div>
+    <img class="lens" src="../app/glasses/docs/states/scene-kettle-explore-s3.png" width="500" height="500" alt="Kettle heating element drawn as glowing 3D lines in the 600 by 600 lens">
+  </div>
+  <div class="num">1 / 8</div>
+</section>
+
+<!-- 2 Who -->
+<section class="slide">
+  <div class="row" style="height:100%">
+    <div class="grow">
+      <div class="kicker">Who it is for</div>
+      <h2>People who learn better from a <em>picture</em> than a paragraph.</h2>
+      <ul class="tight">
+        <li>Curious learners, about 13 and up, and adults</li>
+        <li>Dyslexic, low-literacy and second-language readers: the drawing carries the idea</li>
+        <li>The moment: a hand on a guitar string, asking why the note rises</li>
+      </ul>
+      <p class="small" style="margin-top:20px">Our assumption. We have not run a user study.</p>
+    </div>
+    <img class="lens" src="../app/glasses/docs/states/scene-guitar-explore-s3.png" width="440" height="440" alt="Guitar string drawn as a standing wave in the lens">
+  </div>
+  <div class="brand"><b>WonderWhy</b></div><div class="num">2 / 8</div>
+</section>
+
+<!-- 3 Why glasses -->
+<section class="slide">
+  <div class="kicker">Why glasses with a camera</div>
+  <h2>The object in your hands <em>is</em> the question.</h2>
+  <div class="cols3">
+    <div class="card"><span class="tag" style="background:#3b3b66">PHONE</span><h3>Stop, unlock, type</h3><p>You have to describe what you are looking at, and your hands leave the object.</p></div>
+    <div class="card"><span class="tag" style="background:#3b3b66">META AI</span><h3>Talks</h3><p>A spoken answer. Good, but you cannot see the mechanism.</p></div>
+    <div class="card hi"><span class="tag gold">WONDERWHY</span><h3>Sees it, shows it</h3><p>One photo of what you hold. A 3D line drawing of the hidden mechanism, over the real thing. Hands stay free.</p></div>
+  </div>
+  <p class="small" style="margin-top:34px">Built for the 600 × 600 additive display: black is see-through, so only bright lines are drawn. Not a mirrored phone screen.</p>
+  <div class="brand"><b>WonderWhy</b></div><div class="num">3 / 8</div>
+</section>
+
+<!-- 4 Demo path + real hardware -->
+<section class="slide">
+  <div class="kicker">Demo path, and what really ran</div>
+  <h2>Pinch. One photo. <em>Step through</em> the physics.</h2>
+  <div class="row" style="margin-top:30px; align-items:flex-start; gap:40px">
+    <div style="width:640px">
+      <div class="steps" style="margin-top:0">
+        <img class="lens" src="../app/glasses/docs/states/scene-ball-explore-s1.png" alt="Ball, step 1">
+        <img class="lens" src="../app/glasses/docs/states/scene-ball-explore-s3.png" alt="Ball, step 3">
+        <img class="lens" src="../app/glasses/docs/states/scene-ball-explore-s5.png" alt="Ball, step 5">
+      </div>
+      <p class="small" style="margin-top:14px">Ball, steps 1, 3 and 5 (state-suite screenshots, headless Chrome at 600 × 600; not photos through glasses). Swipe changes the lens, "Turn it" spins the live 3D model, a follow-up question jumps to the right step.</p>
+    </div>
+    <div class="card hi" style="flex:1; padding:22px 26px">
+      <span class="tag gold">REAL HARDWARE · LOANER, 14 NOV · ONE RUN</span>
+      <p style="font-size:20px; line-height:1.4">Band pinch → glasses photo → Android → Gemini → display <b style="color:var(--gold)">worked once</b>. Photo to phone 5.6 s over Bluetooth. Live 3D appeared 1.5 s after the pinch (wearer-reported).</p>
+      <p style="font-size:20px; line-height:1.4; margin-top:10px">In other attempts Bluetooth dropped right after the photo. Frame rate and long sessions on the glasses: <b>not measured</b>.</p>
+      <p class="small" style="margin-top:10px">Detect today: <b>~1.8 to 1.9 s on the server</b> (gemini-3.5-flash, two samples); end to end depends on the network.</p>
+    </div>
+  </div>
+  <div class="brand"><b>WonderWhy</b></div><div class="num">4 / 8</div>
+</section>
+
+<!-- 5 How built -->
+<section class="slide">
+  <div class="kicker">How it is built</div>
+  <h2>One photo in. <em>Pre-drawn</em> physics out.</h2>
+  <div style="display:grid; grid-template-columns: 1fr 40px 1fr 40px 1fr 40px 1fr; align-items:center; margin-top:30px; row-gap:10px">
+    <div class="node gold"><b>Glasses</b>Web App, React + three.js<br>Band pinch and swipe</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>Phone app</b>Android, takes the photo<br>(Web Apps get no camera)</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>Bridge</b>Node: auth, limits,<br>relay, latency log</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>Gemini</b>names one of 12<br>library objects</div>
+  </div>
+  <div style="display:grid; grid-template-columns: 1fr 40px 1fr; margin-top:18px; width:560px; margin-left:auto; margin-right:0">
+    <div class="node"><b>Library</b>12 objects, 44 lenses,<br>pre-rendered films</div>
+    <div class="arrow"> </div>
+    <div class="node gold"><b>Emulator</b>browser camera + touch,<br>stands in for glasses and band</div>
+  </div>
+  <p class="small" style="margin-top:-120px; max-width:520px">The model only picks the object and answers questions; nothing is generated per request, so after recognition everything is fast. 30 fps scenes were measured in desktop headless Chrome, not on the glasses. Bridge: 93 tests pass; Android: 172 JVM tests.</p>
+  <div class="brand"><b>WonderWhy</b></div><div class="num">5 / 8</div>
+</section>
+
+<!-- 6 Trust -->
+<section class="slide">
+  <div class="row" style="height:100%; gap:44px">
+    <div class="grow">
+      <div class="kicker">Trust and limits</div>
+      <h2>Camera on <em>only when you ask.</em></h2>
+      <ul class="tight" style="margin-top:20px">
+        <li style="font-size:22px">One photo per pinch; a consent card comes first</li>
+        <li style="font-size:22px">Not stored by us. It goes to Google Gemini; retention follows Google's API terms</li>
+        <li style="font-size:22px">A weak guess says "Not sure"; sketches say "unverified"</li>
+        <li style="font-size:22px">Bystanders: we ask wearers to avoid people; no face recognition</li>
+      </ul>
+      <p class="small" style="margin-top:6px">Judging bridge is open with a per-IP rate limit and will be re-locked afterwards.</p>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:20px">
+      <img class="lens" src="../app/glasses/docs/states/23-consent.png" width="270" height="270" alt="Consent card">
+      <div class="lens" style="width:270px;height:200px;overflow:hidden"><img src="../app/glasses/docs/states/06-not-sure.png" width="270" height="270" style="display:block;margin-top:-62px" alt="Not sure card"></div>
+    </div>
+  </div>
+  <div class="brand"><b>WonderWhy</b></div><div class="num">6 / 8</div>
+</section>
+
+<!-- 7 Adoption -->
+<section class="slide">
+  <div class="kicker">Path to adoption</div>
+  <h2>Content is <em>data</em>, so a venue can add objects.</h2>
+  <div class="cols3" style="margin-top:34px">
+    <div class="card"><div class="big">12</div><div class="cap">objects, 44 lens chapters in the library today</div></div>
+    <div class="card"><div class="big">1–3 h</div><div class="cap">to author a new object (our estimate from the spec files, not timed); no app code changes</div></div>
+    <div class="card"><div class="big">&lt; 1¢</div><div class="cap">per recognition at Flash-tier prices (estimate, not billing data)</div></div>
+  </div>
+  <div class="row" style="margin-top:30px; gap:30px; align-items:flex-start">
+    <div class="grow">
+      <p style="font-size:24px; line-height:1.35"><b style="color:var(--gold)">Pilot target:</b> one science centre gallery or one physics class, 10 to 20 objects, before and after quiz.</p>
+      <p class="small" style="margin-top:10px">Proposal only. No venue has been contacted and no pilot has run. Translations are machine-made.</p>
+    </div>
+    <div style="display:flex; gap:12px">
+      <img class="lens" src="../app/glasses/docs/states/scene-phone-explore-s3.png" width="120" height="120" alt="Phone">
+      <img class="lens" src="../app/glasses/docs/states/scene-spoon-explore-s3.png" width="120" height="120" alt="Spoon">
+      <img class="lens" src="../app/glasses/docs/states/scene-bicycle-explore-s3.png" width="120" height="120" alt="Bicycle">
+    </div>
+  </div>
+  <div class="brand"><b>WonderWhy</b></div><div class="num">7 / 8</div>
+</section>
+
+<!-- 8 Close -->
+<section class="slide">
+  <div class="row" style="height:100%; gap:56px">
+    <div class="grow">
+      <div class="kicker">Try it now, no login</div>
+      <h2>Look at anything.<br>See the <em>physics</em> inside it.</h2>
+      <p class="lead" style="font-size:24px">Live camera emulator: your camera, the real glasses Web App, live 3D lines.</p>
+      <p style="font-size:22px; margin-top:18px; color:var(--gold); font-weight:700">lens.167-71-139-39.sslip.io/emulator</p>
+      <p class="small" style="margin-top:22px">Code: github.com/IceFrosst/WonderWhy<br>Team: Alex (MrNetwork) · IceFrost · IdelicMemor</p>
+    </div>
+    <div style="text-align:center">
+      <img src="emulator-qr.png" width="360" height="360" style="border-radius:20px; border:6px solid var(--cream); display:block" alt="QR code to the live emulator">
+      <p class="small" style="margin-top:12px">Scan to open the emulator</p>
+    </div>
+  </div>
+  <div class="brand"><b>WonderWhy</b></div><div class="num">8 / 8</div>
+</section>
+
+</body>
+</html>

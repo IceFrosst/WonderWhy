@@ -21,7 +21,7 @@ updated: 2026-11-14
 | Real-glasses results and design baseline | [Design_Handoff](Design_Handoff.md) |
 | Explanation lenses | [Modes](Modes.md) |
 | Challenge brief | [Brief](Brief.md) |
-| Submission text with claim status labels, deck outline | [Submission](Submission.md), [Deck](Deck.md) |
+| Submission text with claim status labels, deck outline and the built deck (PDF) | [Submission](Submission.md), [Deck](Deck.md), [WonderWhy_Deck.pdf](deck/WonderWhy_Deck.pdf) |
 | Real-glasses test sheet | [Glasses_Test](Glasses_Test.md) |
 | Film, storyboards, playback | [Video_Plan](Video_Plan.md), [Video_Script](Video_Script.md), [Video_Review](Video_Review.md), [Storyboards](Storyboards.md), [Demo_Playback](Demo_Playback.md), [Proof_Sheet](Proof_Sheet.md) |
 | Hackathon logistics (internal) | [team-notes/](team-notes/README.md) |
