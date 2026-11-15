@@ -50,12 +50,50 @@ Follow-ups work in the same flow: "Why does it click off?" jumps to the lens and
 
 | Design choice | Why it matters | Evidence |
 |---|---|---|
-| **Closed-set recognition** against a curated library, not open-ended generation | Reliable, cheap (one short model call per pinch), explanations are checked in advance | [`detect.js`](../Meta_Challenge/app/bridge/detect.js) builds the prompt from each object's `detect_hint` |
+| **Closed-set recognition** against a curated library, not open-ended generation | Reliable, cheap (one short model call per pinch, see [cost](#feasibility-and-cost)), explanations are checked in advance | [`detect.js`](../Meta_Challenge/app/bridge/detect.js) builds the prompt from each object's `detect_hint` |
 | **Pre-rendered films and stills** | Fast after recognition, works over weak Wi-Fi, no per-request video generation | [`bridge/media/`](../Meta_Challenge/app/bridge/media), [3D screen](../Meta_Challenge/app/glasses/docs/3d-screen.md) |
 | **Offline fallback** | A venue with bad connectivity still works: the Web App's built-in demos and the Android offline picker of saved cards | [Android README](../Meta_Challenge/app/android/README.md), [state `02-home-offline`](../Meta_Challenge/app/glasses/docs/states/02-home-offline.png) |
 | **Honest uncertainty** | A weak guess shows "Not sure"; unknown objects can get a sketch labelled *unverified* | [PROTOCOL `lowConfidence`](../Meta_Challenge/app/shared/PROTOCOL.md) |
 | **Content as data** | A venue's object set is an `objects.json` entry plus a render spec | [render3d README](../Meta_Challenge/app/render3d/README.md), [MODEL3D.md](../Meta_Challenge/app/shared/MODEL3D.md) |
 | **No login for visitors** | Nothing to sign up for at a kiosk-style station | The emulator and demo need no account |
+
+## Feasibility and cost
+
+Numbers here are **estimates from the repo and git history, not measured project costs**. We did not time authoring sessions and did not pull billing data.
+
+### Content authoring per object
+
+| What | Measured from the repo | Estimate |
+|---|---|---|
+| Explore spec (6 beats, 3D shapes, labels, captions), one Python file per object in [`render3d/specs/`](../Meta_Challenge/app/render3d/specs) | 7 Explore specs, 146 to 293 lines each, average about 223 | |
+| Live 3D spec (one lens built for the live line renderer), same folder | 6 live specs, 151 to 219 lines each, average about 183 (1,097 lines in total) | |
+| Lens text (captions, answer, `detect_hint`) | 12 objects and 44 lens chapters in [`objects.json`](../Meta_Challenge/app/shared/objects.json) | |
+| Time per object | Not recorded. The git history only gives commit gaps: the six Explore specs went from "half done" (14 Nov 08:35) to "finished, every still checked against its caption" (11:33) in about three hours, and the six live specs landed in a single commit | **About 1 to 3 hours per object** for a person who knows the spec format, including checking each still against its caption (our estimate; physics fact-checking by a teacher comes on top) |
+| Rendering and export | Automatic: `render.mjs` writes the films, stills and `tracks.json`, [`export-media`](../Meta_Challenge/app/bridge/README.md) the card stills | Minutes of machine time per object |
+
+A venue's 10 to 20 objects are therefore roughly 10 to 60 person-hours of authoring (estimate), with no change to the app code ([Design_Handoff "Edit and preview"](../Meta_Challenge/Design_Handoff.md#edit-and-preview)).
+
+### Model cost per recognition
+
+| Item | Value |
+|---|---|
+| Model | Gemini Flash tier: `gemini-3.5-flash` on the live bridge |
+| Calls per pinch | One `/detect` call: two JPEGs (full view and centre crop) plus a short closed-set prompt listing the library's objects, JSON reply with an id, a confidence and one short answer ([`detect.js`](../Meta_Challenge/app/bridge/detect.js)) |
+| Size (estimate) | Roughly 1 to 3 thousand input tokens and under 100 visible output tokens per call; the output cap is set higher because Gemini counts thinking tokens against it |
+| Cost (estimate) | A fraction of a cent per recognition at Flash-tier list prices. Check Google's current price list; we have not measured billing |
+| Time (measured) | About 1.8 to 1.9 s detect time on the server for library objects (15 Nov 07:55, two samples). End to end depends on the network |
+| Extra calls | A follow-up question is one more small call; a generated sketch for an unknown object is one more call (off by default) |
+| Cost control | Closed set, pre-rendered films (no per-request video generation), a per-IP rate limit and 4 concurrent model calls on the live bridge |
+
+### Venue pilot target (proposal)
+
+| | |
+|---|---|
+| Target | One science centre or museum gallery, or one school physics class |
+| Scope | 10 to 20 objects physically in the room, authored as library entries |
+| Status | **Proposal only. No venue has been contacted and no pilot has run** |
+| Needed from the venue | A few loaner Display pairs for supervised visitors, Wi-Fi, a teacher or curator to check captions |
+| Cost shape | Authoring hours (once per object) plus a few cents of model calls per visitor session (assuming a handful of recognitions per visit). Hardware loan is the real constraint |
 
 ## Adoption and pilot path
 
