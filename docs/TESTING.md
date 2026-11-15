@@ -6,9 +6,9 @@
 
 | Suite | Count | Last result | Run here for this README? |
 |---|---|---|---|
-| Bridge (Node test runner) | **93** tests, 10 files | 93 pass, 0 fail (about 13 s) | **Yes** (`npm ci && npm test`) |
+| Bridge (Node test runner) | **101** tests, 11 files | 101 pass, 0 fail (about 3 s on 15 Nov, after syncing from the team repo at `b49ddb9`) | **Yes** (`npm ci && npm test`) |
 | Glasses Web App type-check + production build | n/a | Build passes | **Yes** (`npm ci && npm run build`) |
-| Docs link check | 580+ relative links | All resolve, including heading anchors | **Yes** (`node scripts/check-md-links.mjs --anchors`) |
+| Docs link check | 800+ relative links | All resolve, including heading anchors | **Yes** (`node scripts/check-md-links.mjs --anchors`) |
 | Android JVM unit tests | **172** `@Test`s in 21 files | 172 passed on 14 Nov (README); a debug APK was built and installed on the loaner phone | No (needs JDK 17 + Android SDK) |
 | Glasses state and scene suite (headless Chrome, 600 × 600) | **182** captures: 47 named states + 135 lens/scene steps | All 182 OK on 14 Nov 20:11 UTC ([report](../Meta_Challenge/app/glasses/docs/README.md)) | No (needs Playwright browsers; regenerates the report and screenshots) |
 | Translation checker | 5 languages | **Fails**: 15 problems per language (see below) | **Yes** |
@@ -29,7 +29,8 @@ cd Meta_Challenge/app/bridge && npm ci && npm test      # node --test test/*.tes
 | [`lang.test.js`](../Meta_Challenge/app/bridge/test/lang.test.js), [`spectext.test.js`](../Meta_Challenge/app/bridge/test/spectext.test.js) | 6 + 5 | Translation merge per field, language normalisation, bad translation files, localized drawing text, answer cap (14 words), safe 4xx/5xx bodies with request ids |
 | [`latency.test.js`](../Meta_Challenge/app/bridge/test/latency.test.js) | 4 | `/rendered`, p50/p90 summary, no clock mixing |
 | [`model3d.test.js`](../Meta_Challenge/app/bridge/test/model3d.test.js), [`sketch.test.js`](../Meta_Challenge/app/bridge/test/sketch.test.js) | 15 + 17 | Validation of generated 3D models and sketches (caps, ranges, forced `verified: false`, malformed input never throws) |
-| [`emulator.test.js`](../Meta_Challenge/app/bridge/test/emulator.test.js) | 1 | `/emulator` is served with a camera-friendly, same-origin CSP |
+| [`emulator.test.js`](../Meta_Challenge/app/bridge/test/emulator.test.js) | 2 | `/emulator` is served with a camera-friendly, same-origin CSP; it opens on a WonderWhy start screen with the privacy notice (Google Gemini, not stored, do not point at people) and `photo()` refuses to upload before consent |
+| [`ratelimit.test.js`](../Meta_Challenge/app/bridge/test/ratelimit.test.js) | 7 | Per-IP token bucket with a minute and an hour window, `X-Forwarded-For` trusted only from a private peer, 429 `rate_limited` with `Retry-After` on `/detect` and `/ask`, limits configured by `LENS_RATE_PER_MIN` / `LENS_RATE_PER_HOUR` |
 
 ## Glasses Web App
 
