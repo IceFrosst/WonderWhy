@@ -1,6 +1,6 @@
 {
  "meta": {
-  "title": "WonderWhy rough cut 2 (intro matched into the grass)",
+  "title": "WonderWhy rough cut 2 (intro matched, printer picks V02 + V09)",
   "fps": 30,
   "debug": true,
   "sheet": [
@@ -226,40 +226,29 @@
    ]
   },
   {
-   "id": "s09",
-   "label": "Printer close + the answer (printer3d render / GLASS)",
-   "raw": "printer_1_core_one.mp4",
-   "in": 4.0,
-   "dur": 4.0,
-   "frame": "fit",
-   "grade": [
-    [
-     0,
-     1,
-     0.2
-    ]
-   ],
+   "id": "s09a",
+   "label": "PRINTER pick V02: scan line locks the hologram on, head explodes",
+   "raw": "video/ar/renders/V02.mp4",
+   "in": 0.9,
+   "dur": 4.4,
+   "frame": "asset",
    "text": [
     {
-     "t": 0.3,
-     "dur": 3.5,
+     "t": 2.6,
+     "dur": 1.7,
      "text": "Opens the part you asked about",
      "style": "label",
      "pos": "upper-left"
     }
-   ],
-   "boxes": [
-    {
-     "t": 0.2,
-     "dur": 3.7,
-     "x": 1320,
-     "y": 250,
-     "w": 540,
-     "h": 540,
-     "label": "RENDER",
-     "sub": "printer3d answer. Look: V02's scan-line lock-on as the transition, V09's panel spacing in the corner"
-    }
    ]
+  },
+  {
+   "id": "s09b",
+   "label": "PRINTER pick V09: the answer in the panel, as on the glasses",
+   "raw": "video/ar/renders/V09.mp4",
+   "in": 3.0,
+   "dur": 4.0,
+   "frame": "asset"
   },
   {
    "id": "s10",
