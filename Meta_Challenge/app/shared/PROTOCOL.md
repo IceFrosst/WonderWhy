@@ -109,14 +109,14 @@ Source of truth for `summary`, `steps` and `lenses` is `shared/objects.json` (`t
 | Glasses Web App | Shows the translated lens title, lead and captions from `show.lenses` when `show.lang` is not `en`; drawings keep English labels for now |
 
 ### Sketch for an unknown object (generated, always marked unverified)
-The library has 6 objects. For anything else the bridge can ask the model for a small explanation in the same data format the library lenses use, and the glasses draw it with the same scenes.
+The library has 12 objects (pre-built, instant). Any other object still works: the bridge asks the model for a small explanation in the same data format the library lenses use, and the glasses draw it with the same scenes.
 
 | What | Rule |
 |---|---|
-| Switch | `SKETCH_PROVIDER` on the bridge: unset or `off` (default, no sketches), `fixture` (a recorded sketch, for tests and demos without a key), `auto` (the detect provider writes it: `gemini`, `anthropic`, or a dev stand-in) |
+| Switch | `SKETCH_PROVIDER` on the bridge: unset or `off` (default, no sketches), `fixture` (a recorded sketch, for tests and demos without a key), `auto` (the detect provider writes it: `gemini`, `anthropic`, or a dev stand-in; the live bridge runs `auto`). `SKETCH_MODEL` optionally picks a stronger model for sketches only (live: `gemini-4-carbon`; recognition stays on `gemini-3.5-flash`). Generation takes about a minute (57 s measured), so the live bridge sets `SKETCH_TIMEOUT_MS=90000` |
 | When | Only for a `show` with `objectId: "unknown"`, a real photo and no `forceObjectId` |
 | `show.sketchPending` | `true` on that `show` when a sketch is being made. The glasses add a line "Drawing a sketch…" under the model's answer |
-| New frame `sketch` (bridge to glasses and phone) | `{ "type": "sketch", "reqId": "...", "sketch": { ... } }` when it is ready, or `{ "type": "sketch", "reqId": "...", "error": "sketch_failed" }`. Always arrives within `SKETCH_TIMEOUT_MS` (default 20 000) of the `show` |
+| New frame `sketch` (bridge to glasses and phone) | `{ "type": "sketch", "reqId": "...", "sketch": { ... } }` when it is ready, or `{ "type": "sketch", "reqId": "...", "error": "sketch_failed" }`. Always arrives within `SKETCH_TIMEOUT_MS` (default 20 000; 90 000 on the live bridge) of the `show` |
 | `sketch` object | `{ "label": "Stapler", "answer": "one line, 12 words at most", "verified": false, "chapters": [ ... ] }` with 1 to 3 chapters. A chapter is exactly a library chapter: `{ "lens": "flow" \| "number" \| "whatif", "scene": "flow" \| "number" \| "curve", "title", "lead", "captions": [..], "knobs"?: [..], "spec": { ... } }`. Specs follow the same shapes as in `shared/objects.json` |
 | Checked twice | The bridge drops a sketch that is not well-formed (wrong shape, too many items, text over the caps). The glasses validate every `spec` again before drawing; a lens whose spec fails is shown as text only |
 | HTTP | `POST /detect` answers at once with the `show` (no sketch). Send `"waitSketch": true` in the body to make it wait and return `show.sketch` (or `show.sketchError`) in the same response: one call for the phone app |

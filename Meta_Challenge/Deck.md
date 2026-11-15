@@ -61,14 +61,14 @@ The guidebook's peer review uses different criteria (Innovation, Impact, Impleme
 |---|---|
 | Who has this problem, and how do you know? | Learners who stop to look things up. We have not run a study, this is our assumption |
 | What exists already? | Meta AI explains by voice. We show a checked animation of the mechanism, drawn for the additive display, with several lenses per object |
-| Does it only work on 12 objects? | Yes for checked physics (12 library objects, 7 with the full lens set verified). Others show "Not sure" or a sketch tagged unverified |
+| Does it only work on 12 objects? | No. 12 library objects are pre-built and instant (7 with the full lens set verified). Any other object is recognised in about 2 s and then gets a live 3D explanation generated from the photo and the voice question (`gemini-4-carbon`), which takes about a minute (57 s measured) and is tagged unverified. Below 0.6 confidence the app shows "Not sure" |
 | Does it work offline or without the Web App? | Phone app: saved cards offline (with stills for all 7 objects, bundled into the app), stills from the bridge online. Tested in the emulator, not on glasses |
 | What was technically hard? | The camera is only in the phone app and the animation only in the Web App, and they cannot run at once. We built a bridge that links them and a `/last` replay for a handover |
 | What does not work yet? | (Written before the loaner session; see the hardware evidence paragraph below.) Nothing had run on real glasses. Spoken questions ran only with injected text, not a real microphone. Translations are machine-made. Sketches for unknown objects are unverified and off by default. Clips are made but not played by the phone app. Detection accuracy was measured on a dev stand-in, not Gemini |
 | Why not a phone? | A phone works, but you stop, unlock and aim. Glasses keep your hands on the object. We have not compared them in a user test |
 | How do you handle privacy? | One photo per pinch, not saved on the phone, sent to our bridge and a model provider. The microphone listens only while an answer is on screen. No account, no history. Consent card exists in the Web App; not yet in the phone app |
 | How would it scale or who pays? | Schools and science centres first. We have no pricing and no pilot yet; authoring and model-cost estimates are in [USE_CASE](../docs/USE_CASE.md#feasibility-and-cost) |
-| How did you test it? | Headless Chrome at 600x600 (125 of 125 screens and states, 30 fps), 93 bridge tests, 172 Android JVM tests, an emulator and a Pixel 8 with Meta's mock glasses, Meta's test gate. Real glasses: one successful loaner run (14 Nov), see [Design_Handoff](Design_Handoff.md#what-the-loaner-established). Frame rates are desktop headless Chrome |
+| How did you test it? | Headless Chrome at 600x600 (125 of 125 screens and states, 30 fps), 101 bridge tests, 172 Android JVM tests, an emulator and a Pixel 8 with Meta's mock glasses, Meta's test gate. Real glasses: one successful loaner run (14 Nov), see [Design_Handoff](Design_Handoff.md#what-the-loaner-established). Frame rates are desktop headless Chrome |
 
 ## TODO (human)
 - Which props are on the table for peer review (Sun 10:30-14:00).
