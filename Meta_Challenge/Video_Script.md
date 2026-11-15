@@ -14,6 +14,8 @@ updated: 2026-11-14
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
 
+Changes 15 Nov ~02:50: **LOOK AT / ANYTHING.** now stacked on the **left** panel; *ANYTHING.* breaks into **OBJECTS** / **CONCEPTS** on the rows below (LOOK AT stays). The Meta Ray-Ban Display callout stays on the right until the cut. **Earbuds copy** (re-rendered V3, `earbuds_v3/out/V3_air_curiosity.mp4`): amber kicker *Something piqued your curiosity?* → live question **"How does the noise cancellation work?"** (was "Wait, how did these block all that?") → big line **Visual explanation with the physics behind it.** (replaces "See how it really works."). `cinematic_v10.mp4`, 1:32.70.
+
 Changes 15 Nov ~02:30: **reveal subtitles replaced by overlays** on the blurred side panels (never on the face): glasses-on → gold callout line from the lens to *WORN HERE · META RAY-BAN DISPLAY · AI glasses with a display in the lens*; then **LOOK AT** (left) / **ANYTHING.** (right) slam in, *ANYTHING.* breaks apart into **OBJECTS** (left) / **CONCEPTS** (right). The example list (Earbuds · Sauna steam · Wi-Fi · sky) is dropped. **STOPPED.** now runs diagonally (rising left→right, 10°) through the side panels and below the face and phone; the hit flash is removed and rays fade out around face/phone. `cinematic_v9.mp4` **1:32.70** (2.70 s over). Overlays: `edits/overlays/look/` (HTML, transparent frames) + `edits/cinematic/overlay_fx.py` after `build.sh`.
 
 Changes 15 Nov ~00:50: **STOPPED. now lands on the grey grass shot** (red slam + burst keyed over IceFrost scrolling, 1.63 s, fades out); the drop ends on *AND THEN YOU* and hard-cuts straight into it. `cinematic_v8.mp4` = **1:32.70** (2.70 s over 1:30). Overlay: `edits/cinematic/overlay_stopped.py` after `build.sh`.
@@ -36,7 +38,7 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 | 5 | **LOOK AT** / **ANYTHING.** | side-panel overlay, kinetic |
 | 6 | *ANYTHING.* breaks into **OBJECTS** / **CONCEPTS** | side-panel overlay |
 | 7 | Callout: *META RAY-BAN DISPLAY · AI glasses with a display in the lens* | at glasses-on, line from the lens |
-| 8 | **See how it really works.** | big |
+| 8 | *Something piqued your curiosity?* → **Visual explanation with the physics behind it.** | earbuds shot, kicker + big line |
 | 9 | **Feed your curiosity. Grow your understanding of the world.** · *WonderWhy* | big + tag |
 | 10 | *Ask out loud* | label |
 | 11 | *Opens the part you asked about* | label |
@@ -56,7 +58,7 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 |---|---|---|
 | Child (ElevenLabs) | "How does it all really work?" (soft, wondering; starts 3.3 s) | 1 |
 | Child, happy | "Why?" | 24 |
-| IceFrost | "Wait, how did these block all that?" | 8 |
+| IceFrost | "How does the noise cancellation work?" | 8 |
 | IceFrost (VO) | "How does it build this?" | 11 |
 | IceFrost | "Here, try these." | 19 |
 | Friend | "Wait, how do these even work?" | 20 |
