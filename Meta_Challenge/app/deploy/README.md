@@ -18,11 +18,9 @@ The bridge and the built glasses app run as one container, `lens-bridge`, on the
 - Caveat: because `lens-bridge` joins Athena's network, `docker compose down` in `/opt/athena/website` will warn that the network is still in use. Containers still stop and `up` still works.
 
 ## Lock it, then add the model key (humans, in this order)
-The bridge refuses to start with an Anthropic or Gemini provider and no token. Set the token before adding a model key; `LENS_ALLOW_OPEN=1` is an explicit emergency override, not the deployment default. The bridge on `main` has auth (see [PROTOCOL](../shared/PROTOCOL.md) "v1 additions"). **Live state (15 Nov, 03:54 UTC): OPEN for judging, on owner request.** `LENS_TOKEN` is commented out and `LENS_ALLOW_OPEN=1` is set in `/opt/lens/data/.env` (backup `.env.bak-before-open-20261115-035353`), container restarted, same image. Anyone can use `/emulator`, `/phone` and `/` without a token; every detect spends Gemini credit (MAX_INFLIGHT 4, no per-user rate limit). Re-lock: restore the backup `.env` and `docker restart lens-bridge`; `/health` must show `"auth":true`.
+The bridge refuses to start with an Anthropic or Gemini provider and no token. Set the token before adding a model key; `LENS_ALLOW_OPEN=1` is an explicit emergency override, not the deployment default. The bridge on `main` has auth (see [PROTOCOL](../shared/PROTOCOL.md) "v1 additions"). **Live state (15 Nov, 03:54 UTC): OPEN for judging, on owner request.** `LENS_TOKEN` is commented out and `LENS_ALLOW_OPEN=1` is set in `/opt/lens/data/.env` (backup `.env.bak-before-open-20261115-035353`), container restarted, same image. Anyone can use `/emulator`, `/phone` and `/` without a token; every detect spends Gemini credit (MAX_INFLIGHT 4, plus a per-IP rate limit on recognition). The bridge will be re-locked after judging. Re-lock: restore the backup `.env` and `docker restart lens-bridge`; `/health` must show `"auth":true`.
 
 **Deployed 15 Nov 06:12 local from `main` d615e15** (Alex's live 3D screen, six demo objects): bridge 93/93, glasses build OK, local mock smoke OK. Rollback: image `lens-bridge:rollback-20261115-061115`, files `/opt/lens/app.bak-20261115-061115`.
-
-Public no-backend fallback: https://wonderwhy-demo.vercel.app (saved explanations only, branch `demo/public-prebuilt-judge`).
 
 | # | Do | Check |
 |---|---|---|

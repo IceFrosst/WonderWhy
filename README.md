@@ -3,6 +3,8 @@
 **Look at something. Ask why. See the physics drawn in your lens.**
 A real-world explanation mode for **Meta Ray-Ban Display + Meta Neural Band**, built for Junction 2026 · Meta challenge *"AI Glasses for Everyone, Everyday"*.
 
+*Naming: the product is **WonderWhy**. Its first working name was Physics Lens, and a few code and tool identifiers (the installed app label, the "Hey Meta" tool name, the install deep link) still say "Physics Lens".*
+
 ![Kettle heating element, drawn as live 3D lines in the 600 × 600 lens](Meta_Challenge/app/glasses/docs/states/scene-kettle-explore-s3.png)
 
 ## 60-second overview
@@ -19,13 +21,19 @@ A real-world explanation mode for **Meta Ray-Ban Display + Meta Neural Band**, b
 
 | What | Link |
 |---|---|
-| Public demo: saved explanations, no backend | <https://wonderwhy-demo.vercel.app> |
-| Live camera emulator: your phone or laptop camera + touch gestures that act like the Neural Band, real bridge and model | <https://lens.167-71-139-39.sslip.io/emulator> |
-| Glasses app on the live bridge (600 × 600) | <https://lens.167-71-139-39.sslip.io/> |
-| Demo clips of real objects | [`DemoVideos/Objects/`](DemoVideos/Objects/) |
-| Deck outline and film script | [Deck.md](Meta_Challenge/Deck.md), [Video_Script.md](Meta_Challenge/Video_Script.md) |
+| **1. Live camera emulator (start here)**: your phone or laptop camera passes through, with the real glasses Web App and its live 3D line renders drawn over it, and touch gestures that act like the Neural Band. Real bridge and model | <https://lens.167-71-139-39.sslip.io/emulator> |
+| 2. Glasses app on the live bridge (open at 600 × 600) | <https://lens.167-71-139-39.sslip.io/> |
+| Pitch deck (PDF, 8 slides) | [`WonderWhy_Deck.pdf`](Meta_Challenge/deck/WonderWhy_Deck.pdf) (outline: [Deck.md](Meta_Challenge/Deck.md)) |
+| Demo clips of real objects (raw footage, no app overlay) | [`DemoVideos/Objects/`](DemoVideos/Objects/) |
+| Film script | [Video_Script.md](Meta_Challenge/Video_Script.md) |
 
-The emulator draws the real glasses Web App over your camera. Tap = pinch, swipe = D-pad, long press = back, round button = "Look and explain" ([bridge/README](Meta_Challenge/app/bridge/README.md#glasses-emulator-on-a-phone-emulator)). The live bridge was set to open mode for judging, so every recognition spends our Gemini credit ([deploy/README](Meta_Challenge/app/deploy/README.md)); the Vercel demo works even if that is switched off.
+**How to use the emulator (3 steps)**
+
+1. Open the emulator link on a phone or laptop and allow the camera. Read the start screen's privacy notice, then start.
+2. Point the camera at a library object (kettle, guitar, ball, bicycle, metal spoon, phone, earbuds, pendulum) and press the round **Look and explain** button. That is the Band pinch: one photo is taken and the object is recognised.
+3. Use gestures like the Neural Band: **tap** = pinch (next step, go deeper), **swipe** = D-pad (change lens, turn the live 3D model), **long press** = back. Details: [bridge/README](Meta_Challenge/app/bridge/README.md#glasses-emulator-on-a-phone-emulator).
+
+The live bridge is **open for judging** (no token) with a per-IP rate limit on recognition, and will be re-locked after judging ([deploy/README](Meta_Challenge/app/deploy/README.md)). Every recognition spends our Gemini credit, so please do not script it. If recognition is unavailable, pick an object by hand in the glasses app (link 2): the library art needs no model.
 
 ## How WonderWhy meets the judging criteria
 
@@ -37,7 +45,7 @@ The emulator draws the real glasses Web App over your camera. Tap = pinch, swipe
 | One object, several **lenses**, each answering a different question | [Modes.md](Meta_Challenge/Modes.md), library data [`objects.json`](Meta_Challenge/app/shared/objects.json): 12 objects, 44 lens chapters, 8 objects with pre-rendered films in [`bridge/media/`](Meta_Challenge/app/bridge/media) |
 | First-person is the input: the photo is the question, aimed by where you look (centre crop sent as a second image) | `focusBase64` in [PROTOCOL.md](Meta_Challenge/app/shared/PROTOCOL.md); [bridge/detect.js](Meta_Challenge/app/bridge/detect.js) |
 | Defined user, moment and venues | [docs/USE_CASE.md](docs/USE_CASE.md) |
-| Real objects filmed for the story (printers, sauna, air bike) | [`DemoVideos/Objects/`](DemoVideos/Objects/README.md) |
+| Real objects filmed for the story (printers, sauna, air bike; raw footage, no app overlay) | [`DemoVideos/Objects/`](DemoVideos/Objects/README.md) |
 
 ### 2. Technical execution (25%)
 
@@ -46,7 +54,7 @@ The emulator draws the real glasses Web App over your camera. Tap = pinch, swipe
 | Three cooperating parts: glasses Web App (React + three.js, Meta Wearables UI toolkit), Node bridge (HTTP + WebSocket), Android app (Device Access Toolkit 1.0.1) | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [`app/glasses`](Meta_Challenge/app/glasses), [`app/bridge`](Meta_Challenge/app/bridge), [`app/android`](Meta_Challenge/app/android) |
 | Versioned wire protocol with timeouts, heartbeat, replay handover, limits | [PROTOCOL.md](Meta_Challenge/app/shared/PROTOCOL.md) |
 | Handles permissions, errors, connectivity and device-state changes (take off, battery, heat, Bluetooth drop, camera denied) | [docs/UX_ACCESSIBILITY_TRUST.md](docs/UX_ACCESSIBILITY_TRUST.md#error-and-device-states), [`DeviceStates.kt`](Meta_Challenge/app/android/app/src/main/java/com/junction2026/lens/DeviceStates.kt), [`bridge.ts`](Meta_Challenge/app/glasses/src/bridge.ts) |
-| Performance trade-offs measured: 30 fps scenes, lazy 3D chunk, WebGL-loss fallback, latency log with p50/p90 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#latency-and-performance-trade-offs), [glasses/docs/README.md](Meta_Challenge/app/glasses/docs/README.md) |
+| Performance trade-offs measured: 30 fps scenes (desktop headless Chrome, not the glasses), lazy 3D chunk, WebGL-loss fallback, latency log with p50/p90 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#latency-and-performance-trade-offs), [glasses/docs/README.md](Meta_Challenge/app/glasses/docs/README.md) |
 | Tests: **93** bridge tests, **172** Android JVM tests, **182** headless-browser state/scene checks | [docs/TESTING.md](docs/TESTING.md) |
 | Provider switch (Gemini, Anthropic, mock) with a fully working offline/mock path | [bridge/README.md](Meta_Challenge/app/bridge/README.md) |
 
@@ -54,7 +62,7 @@ The emulator draws the real glasses Web App over your camera. Tap = pinch, swipe
 
 | Claim | Evidence |
 |---|---|
-| Works on real hardware, with numbers: photo 5.6 s over Bluetooth, recognition 5.1 s (one successful run); film motion 1.1 s and live 3D 1.5 s after the pinch | [Design_Handoff](Meta_Challenge/Design_Handoff.md#what-the-loaner-established) |
+| Works on real hardware, with numbers from **one** successful loaner run (14 Nov): photo to phone 5.6 s over Bluetooth; film motion 1.1 s and live 3D 1.5 s after the pinch. Recognition today: model `gemini-3.5-flash`, **about 1.8 to 1.9 s detect time measured on the server** for library objects (15 Nov, two samples); end to end depends on the network | [Design_Handoff](Meta_Challenge/Design_Handoff.md#what-the-loaner-established) |
 | Feasible by design: closed-set recognition against a curated library, pre-rendered content, offline fallbacks, one cheap model call per pinch | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/USE_CASE.md](docs/USE_CASE.md#why-this-is-feasible) |
 | Content is authored as data (`render3d/specs` → `objects.json`), so a venue can add objects without new app code | [Design_Handoff "Edit and preview"](Meta_Challenge/Design_Handoff.md#edit-and-preview), [render3d/README](Meta_Challenge/app/render3d/README.md) |
 | Focused adoption path: one science centre or physics class with a before/after quiz. **Planned, no pilot has run** | [docs/USE_CASE.md](docs/USE_CASE.md#adoption-and-pilot-path) |
@@ -103,7 +111,8 @@ Details, data flow and failure handling: [docs/ARCHITECTURE.md](docs/ARCHITECTUR
 | [`Meta_Challenge/`](Meta_Challenge/README.md) | Product docs: [Brief](Meta_Challenge/Brief.md), [Modes](Meta_Challenge/Modes.md), [Submission](Meta_Challenge/Submission.md), [Deck](Meta_Challenge/Deck.md), [Design_Handoff](Meta_Challenge/Design_Handoff.md), [Glasses_Test](Meta_Challenge/Glasses_Test.md), video notes |
 | [`Meta_Challenge/team-notes/`](Meta_Challenge/team-notes/README.md) | Internal hackathon logistics (plan, booth questions, hand-overs). Not needed to judge |
 | [`Meta_Challenge/video`](Meta_Challenge/video) | The WonderWhy film pipeline: AR renders, cuts, voice auditions |
-| [`DemoVideos/Objects/`](DemoVideos/Objects/) | Raw footage of real objects |
+| [`Meta_Challenge/deck/`](Meta_Challenge/deck) | Pitch deck: [`WonderWhy_Deck.pdf`](Meta_Challenge/deck/WonderWhy_Deck.pdf), its HTML source and emulator QR |
+| [`DemoVideos/Objects/`](DemoVideos/Objects/) | Raw filmed footage of real objects, used for the film (no app overlay) |
 | [`scripts/check-md-links.mjs`](scripts/check-md-links.mjs) | Checks every relative Markdown link resolves |
 
 ## Run it locally (about 2 minutes)
@@ -151,13 +160,13 @@ We would rather you read these here than discover them.
 | Area | Limitation |
 |---|---|
 | Real hardware | Verified on a loaner, in single runs only: Bluetooth dropped right after photo delivery in other attempts. Continuous drag, frame rate and long sessions on the glasses are **not measured**; audio routing and native MP4 playback on the glasses still need a listening and motion check. |
-| Latency | Pinch to explanation is several seconds on the real path (photo transfer 5.6 s + recognition 5.1 s in the one successful run). Pre-rendered content makes everything after recognition fast. |
+| Latency | Pinch to explanation is several seconds on the real path: in the one successful loaner run the photo took 5.6 s to reach the phone over Bluetooth, and that run's recognition (an earlier model setting) is not comparable to today's. The live bridge now uses `gemini-3.5-flash`: about 1.8 to 1.9 s detect time measured **on the server** (15 Nov, two samples), so end-to-end time depends on the network. Pre-rendered content makes everything after recognition fast. |
 | Recognition | Closed set: 12 library objects. Anything else gets "Not sure" or, if enabled, a generated sketch marked *unverified*. Detection accuracy has no published benchmark; the earlier benchmark used a stand-in model. |
 | Translations | Finnish, Swedish, German, Spanish and French are machine-made, not read by native speakers. `i18n/check.mjs` currently **fails**: the files lag the library (5 newer objects and the phone Explore chapter fall back to English). Button labels such as "Pause" and "Listen" stay English. |
 | Accessibility | No `prefers-reduced-motion` handling yet (Pause button and hold-on-input exist); no testing with disabled users; speech uses the browser voice. |
-| Privacy | The photo is sent to the model provider (Gemini on the live bridge). The apps and bridge do not store it, but we have not audited the provider's retention. The live bridge is open for judging (no token), with a cap of 4 concurrent model calls and no per-user rate limit. |
+| Privacy | The photo is sent to the model provider (Gemini on the live bridge). The apps and bridge do not store it, but we have not audited the provider's retention. The live bridge is open for judging (no token), with a per-IP rate limit and a cap of 4 concurrent model calls; it will be re-locked after judging. See [bystander privacy and consent](docs/UX_ACCESSIBILITY_TRUST.md#bystander-privacy-and-consent). |
 | Physics accuracy | Library captions were fact-checked by the team and an independent pass; generated sketches and free-form model answers are not checked. |
-| Pilot | No pilot has run. The pilot plan is a proposal. |
+| Pilot | No pilot has run. The pilot plan is a proposal; no venue has been contacted. |
 | Platform | Android only (no iOS build). Web Apps on the Display get no camera, so the phone app is part of the capture path. |
 | Older docs | Some documents under `Meta_Challenge/` record the state at a given hour on 13 to 15 Nov (for example "7 objects", "nothing has run on real glasses") and carry status notes where they were superseded. `docs/` and this README are current. |
 

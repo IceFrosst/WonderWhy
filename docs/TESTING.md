@@ -76,7 +76,7 @@ Checklists: [`Glasses_Test.md`](../Meta_Challenge/Glasses_Test.md) (20-minute sh
 
 | Flow | Result |
 |---|---|
-| Band pinch → glasses photo → Android → Gemini → display | Verified in one successful run: JPEG at the phone in 5,594 ms, upload 9 ms later, "Smartphone" recognised at 99% in 5,083 ms. Other attempts lost Bluetooth right after the JPEG; one retry reconnected |
+| Band pinch → glasses photo → Android → Gemini → display | Verified in one successful run: JPEG at the phone in 5,594 ms, upload 9 ms later, "Smartphone" recognised at 99% in 5,083 ms (model setting of that day; today's live bridge, `gemini-3.5-flash`, measured about 1.8 to 1.9 s detect time on the server, 15 Nov, two samples). Other attempts lost Bluetooth right after the JPEG; one retry reconnected |
 | Kettle film and live Inspect (3D) | Displayed and responded; one run: 1,133 ms to film motion, 1,546 ms to Inspect. Continuous drag, frame rate and long sessions **not measured** |
 | Spoken follow-up | Glasses microphone transcribed; one `/ask` returned HTTP 502, the retry worked. Narration quality and audio routing **not tested** |
 | Web App "Ask" | Opened the phone visual; "Hey Meta" gave a spoken answer without opening the visual; WebMCP registration verified in Chromium |

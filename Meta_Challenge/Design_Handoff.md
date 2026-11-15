@@ -1,12 +1,12 @@
-# Physics Lens design handoff
+# WonderWhy design handoff
 
-November 14, 2026 · Loaner session complete. Use this page for the current baseline, [Loaner_Test.md](team-notes/Loaner_Test.md) for timings and retests, and [render3d/README.md](app/render3d/README.md) for the asset pipeline. The Android and glasses apps are named **Physics Lens**. Earlier notes also use **WonderWhy**.
+November 14, 2026 · Loaner session complete. Use this page for the current baseline, [Loaner_Test.md](team-notes/Loaner_Test.md) for timings and retests, and [render3d/README.md](app/render3d/README.md) for the asset pipeline. The product is **WonderWhy**. Its first working name was **Physics Lens**, and the Android app label, the glasses Web App's installed name, the "Hey Meta" tool name and the install deep link in the loaner builds still say Physics Lens.
 
 ## What the loaner established
 
 | Flow | Result |
 | --- | --- |
-| Band pinch → real glasses photo → Android → Gemini → display | Verified. In the successful phone run, Android received the JPEG in 5,594 ms and began upload 9 ms later. The bridge recognized Smartphone at 99% in 5,083 ms and Android acknowledged the display. Other attempts lost Bluetooth immediately after JPEG delivery, including after the upload change. Android reconnected in one observed retry. |
+| Band pinch → real glasses photo → Android → Gemini → display | Verified. In the successful phone run, Android received the JPEG in 5,594 ms and began upload 9 ms later. The bridge recognized Smartphone at 99% in 5,083 ms (the model setting of that day) and Android acknowledged the display. Today the live bridge now uses `gemini-3.5-flash`, which measured about 1.8 to 1.9 s detect time on the server for library objects (15 Nov 07:55, two samples); end to end depends on the network. Other attempts lost Bluetooth immediately after JPEG delivery, including after the upload change. Android reconnected in one observed retry. |
 | Kettle film and live Inspect | The wearer confirmed that live Inspect displayed and responded. They reported **1,133 ms to film motion** and **1,546 ms to Inspect** in one run. Continuous drag, rendered frame rate and long-session performance still need device measurements. |
 | Spoken follow-up in Android | The glasses microphone transcribed speech. One bridge follow-up returned HTTP 502 and the wearer reported the retry worked. Narration quality and audio routing still need a listening test on the glasses. |
 | Ask in the glasses Web App | The wearer reported that Ask opened the phone visual. This uses the existing six-beat smartphone animation. The direct “Hey Meta” trial produced a spoken answer without opening a visual. WebMCP registration and the callable handler were verified in Chromium. |
@@ -15,7 +15,7 @@ November 14, 2026 · Loaner session complete. Use this page for the current base
 
 ## Review the design without a loaner
 
-- Open the [hosted glasses app](https://lens.167-71-139-39.sslip.io/) at 600 × 600 for library playback, or the [camera simulator](https://lens.167-71-139-39.sslip.io/emulator) to use the same app with mouse, keyboard, and the browser camera. Use the team’s private bridge credential for hosted recognition. Library art can be reviewed directly by selecting the object.
+- Open the [hosted glasses app](https://lens.167-71-139-39.sslip.io/) at 600 × 600 for library playback, or the [camera simulator](https://lens.167-71-139-39.sslip.io/emulator) to use the same app with mouse, keyboard, and the browser camera. The live bridge is open for judging with a per-IP rate limit (no credential needed) and will be re-locked after judging. Library art can be reviewed directly by selecting the object, with no model call.
 - **Guitar and phone films** use the stage pinch to step. Right focuses **Home** and Down focuses the film controls. In cards, Right focuses **Home** and pinch selects it. Left from Home returns focus to the step button. Use **Listen** in film controls to check the timing of a caption against the visuals.
 - **Kettle** uses Right from the film to enter **Inspect**. Drag horizontally to rotate and vertically to tilt. Pinch in Rotate mode to explode or reassemble. The other modes are Zoom and Pan. From Rotate, press Up then pinch **Back to film**. Repeat with `?live3d=0` on the direct Web App URL to compare the two pre-rendered 72-angle atlases. The simulator accepts keyboard arrows and Enter as well as pointer input.
 - **Ask** opens the existing phone and kettle visuals from a question. In a desktop browser, type the question and select **Show visual**. On the glasses, pinch the text field to use their dictation composer. The status line shows whether the wake-word tool registered or received a command.
@@ -44,7 +44,7 @@ npm --prefix Meta_Challenge/app/glasses run build
 node Meta_Challenge/app/glasses/scripts/live-kettle-smoke.mjs
 ```
 
-The first two commands pack the phone spec and rewrite its stills for visual iteration. Run the full object render before reviewing changes to motion or label timing. For a fresh Android build run `./gradlew assembleDebug testDebugUnitTest` from `app/android` with JDK 17 and the Android SDK, then use the APK at `app/android/app/build/outputs/apk/debug/app-debug.apk`. For another device slot, use the [loaner checklist](team-notes/Loaner_Test.md). It includes pairing context, camera modes, voice, and measured timing stages. The hosted bridge is token-protected and runs Gemini. Keep the credential in the team’s private channel.
+The first two commands pack the phone spec and rewrite its stills for visual iteration. Run the full object render before reviewing changes to motion or label timing. For a fresh Android build run `./gradlew assembleDebug testDebugUnitTest` from `app/android` with JDK 17 and the Android SDK, then use the APK at `app/android/app/build/outputs/apk/debug/app-debug.apk`. For another device slot, use the [loaner checklist](team-notes/Loaner_Test.md). It includes pairing context, camera modes, voice, and measured timing stages. The hosted bridge runs Gemini. It is open for judging and will be re-locked afterwards; when it is locked, the token stays in the team’s private channel.
 
 ## Baseline to compare against
 

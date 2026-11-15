@@ -38,7 +38,7 @@ Legend: **R** real footage, **G** recording of the glasses display, **K** kit re
 | Time | Beat | Shots | Caption | VO (optional) | Sound |
 |---|---|---|---|---|---|
 | 0:00-0:03 | Hook | R hand and phone, pinch; K layers explode | Inside the phone you're holding | none | Click on the pinch, music in |
-| 0:03-0:08 | Name and proof | G: the same phone card, system yellow frame left in. Tag "Recorded on the glasses" | Physics Lens · Meta Ray-Ban Display | "Look at anything. Pinch. See the physics inside." | |
+| 0:03-0:08 | Name and proof | G: the same phone card, system yellow frame left in. Tag "Recorded on the glasses" | WonderWhy · Meta Ray-Ban Display | "Look at anything. Pinch. See the physics inside." | |
 | 0:08-0:15 | Person and problem | R: teammate at a kettle, pulls out phone, scrolls a text wall, gives up | Today: stop, unlock, read a wall of text | "Everyday things run on physics you can't see." | Music dips |
 | 0:15-0:45 | Demo, one real kettle run | R: look, band pinch (2 s). G: progress card, speed-ramped with an on-screen "×N, real wait NN s". G: card; she asks; cutaway steps; swipe to What if; The number | One pinch = one photo → Ask: "How is it built?" → Swipe = new lens → Boiling 1 L: about 2 cents | "I ask a question. It opens the lens that answers it." | Click on every pinch |
 | 0:45-0:57 | Range | K clean over R plates, 2 s each: guitar wave, Moon throw, gears, spoon atoms, keys. Tag "Simulated view" | 7 objects · 29 lenses · physics checked | "Different lenses answer different questions." | Beat cuts |

@@ -1,5 +1,7 @@
 # Object scenes (raw footage for the explanation visuals)
 
+> **What these files are:** raw filmed footage of real objects, used as the backdrop for the WonderWhy film. They are **not** recordings of the app: there is no app overlay, no glasses display and no live recognition in them. The line-art explanations in the film were drawn separately (see [`Meta_Challenge/video/ar`](../../Meta_Challenge/video/ar/README.md)); to see the real app, use the live emulator <https://lens.167-71-139-39.sslip.io/emulator>.
+
 Filmed by IceFrost on a Pixel, Sat 14 Nov 2026. 4K HEVC portrait (rotation flag -90), location and device metadata stripped (lossless copy). Owner of the final visuals: **@mrnetwork0001** (see the GitHub issue "Object scenes: final visuals").
 
 | File | Length | What | Film slot (script: `Meta_Challenge/Video_Script.md`) | Explanation to show |

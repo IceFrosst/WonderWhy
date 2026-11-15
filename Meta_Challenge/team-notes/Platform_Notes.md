@@ -27,7 +27,7 @@ updated: 2026-11-13
 | Input | Neural Band pinch, drag and D-pad swipes. Voice only through a text field the wearer activates, or through WebMCP (Meta AI calls our tools). Motion, orientation, compass, steps, GPS |
 | Camera | **None** |
 | Network | Normal REST, WebSocket and storage |
-| Hosting | Must be a public **HTTPS** URL (Vercel, Netlify, Cloudflare and similar). Installed by scanning a QR code with the **phone**, which opens the Meta AI app |
+| Hosting | Must be a public **HTTPS** URL (any static host with HTTPS). Installed by scanning a QR code with the **phone**, which opens the Meta AI app |
 | Setup | Meta AI app v272+, glasses v125+, Developer Mode (tap the app version 5 times) |
 
 ## Device Access Toolkit (phone app, iOS 17.2+ or Android 10+)
