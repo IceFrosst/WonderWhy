@@ -2,6 +2,14 @@
 
 [← README](../README.md) · [Architecture](ARCHITECTURE.md) · [UX, accessibility and trust](UX_ACCESSIBILITY_TRUST.md) · [Testing](TESTING.md)
 
+## Pitch
+
+> Curiosity usually dies in three seconds. You see something and wonder how it works, but looking it up means stopping, taking out your phone... So you don't.
+>
+> WonderWhy closes that gap. Look at anything, ask why, and a 3D explanation of the physics behind it appears in your AR glasses. Curiosity becomes understanding before the moment passes.
+>
+> **Curiosity and learning everyday unleashed.**
+
 ## Problem
 
 Everyday objects hide their mechanism: a kettle that clicks off, a guitar string that changes pitch, a metal spoon that feels cold. The curiosity is strongest *while you hold the thing*. Today the answer costs a context switch: unlock a phone, find words for what you are looking at, read a wall of text. For many people (younger learners, people with dyslexia or low literacy, second-language speakers, anyone who learns visually) that text is the barrier, and the moment has passed anyway.
@@ -50,10 +58,10 @@ Follow-ups work in the same flow: "Why does it click off?" jumps to the lens and
 
 | Design choice | Why it matters | Evidence |
 |---|---|---|
-| **Closed-set recognition** against a curated library, not open-ended generation | Reliable, cheap (one short model call per pinch, see [cost](#feasibility-and-cost)), explanations are checked in advance | [`detect.js`](../Meta_Challenge/app/bridge/detect.js) builds the prompt from each object's `detect_hint` |
+| **Library first: 12 curated objects with checked, pre-built explanations; anything else is generated** | Library objects are reliable, cheap (one short model call per pinch, see [cost](#feasibility-and-cost)) and checked in advance. Any other object is recognised in about 2 s and then gets a generated, *unverified* 3D explanation that takes about a minute (57 s measured) and costs more | [`detect.js`](../Meta_Challenge/app/bridge/detect.js) builds the prompt from each object's `detect_hint` and `sketch` generates the rest; [bridge README](../Meta_Challenge/app/bridge/README.md) (`SKETCH_PROVIDER`, `SKETCH_MODEL`) |
 | **Pre-rendered films and stills** | Fast after recognition, works over weak Wi-Fi, no per-request video generation | [`bridge/media/`](../Meta_Challenge/app/bridge/media), [3D screen](../Meta_Challenge/app/glasses/docs/3d-screen.md) |
 | **Offline fallback** | A venue with bad connectivity still works: the Web App's built-in demos and the Android offline picker of saved cards | [Android README](../Meta_Challenge/app/android/README.md), [state `02-home-offline`](../Meta_Challenge/app/glasses/docs/states/02-home-offline.png) |
-| **Honest uncertainty** | A weak guess shows "Not sure"; unknown objects can get a sketch labelled *unverified* | [PROTOCOL `lowConfidence`](../Meta_Challenge/app/shared/PROTOCOL.md) |
+| **Honest uncertainty** | A weak guess shows "Not sure"; objects outside the library get a generated explanation labelled *unverified* | [PROTOCOL `lowConfidence`](../Meta_Challenge/app/shared/PROTOCOL.md) |
 | **Content as data** | A venue's object set is an `objects.json` entry plus a render spec | [render3d README](../Meta_Challenge/app/render3d/README.md), [MODEL3D.md](../Meta_Challenge/app/shared/MODEL3D.md) |
 | **No login for visitors** | Nothing to sign up for at a kiosk-style station | The emulator and demo need no account |
 
@@ -73,17 +81,66 @@ Numbers here are **estimates from the repo and git history, not measured project
 
 A venue's 10 to 20 objects are therefore roughly 10 to 60 person-hours of authoring (estimate), with no change to the app code ([Design_Handoff "Edit and preview"](../Meta_Challenge/Design_Handoff.md#edit-and-preview)).
 
-### Model cost per recognition
+### Coverage and time per object
+
+| Case | Flow | Time |
+|---|---|---|
+| One of the 12 **library objects** | Recognition (`gemini-3.5-flash`), then pre-built lenses and films | About 2 s recognition (1.8 to 1.9 s measured on the server, two samples, 15 Nov); the rest is instant |
+| **Any other object** | Recognition, then the bridge generates a live 3D explanation from the photo and the voice question (`SKETCH_PROVIDER=auto`, `SKETCH_MODEL=gemini-4-carbon`), marked *unverified* | About a minute: **57 s** measured for a pair of glasses (15 Nov); a flash-class model measured **19.5 s**. Single runs, team-reported, no log file in this repo |
+
+### Approximate cost per use (estimate)
+
+**These are estimates, not billing data.** Prices were read from Google's public [Gemini API pricing page](https://ai.google.dev/gemini-api/docs/pricing) on **15 Nov 2026**; they change, and our own account may be on credits. The bridge does not record token counts, so the token sizes below are our **assumptions**, not measurements.
+
+Pricing facts read on 15 Nov 2026 (USD per 1M tokens, paid tier, standard):
+
+| Model | Input | Output (incl. thinking) | Note |
+|---|---|---|---|
+| `gemini-4-carbon` | $2.00 until 30 Nov 2026, then $4.00 | $10.00 until 30 Nov 2026, then $20.00 | Used for generated 3D explanations |
+| `gemini-3.6-flash` | $0.75 until 31 Dec 2026, then $1.50 | $3.75 until 31 Dec 2026, then $7.50 | **No price is listed for `gemini-3.5-flash`.** Google's model page calls it deprecated and says API requests to it are routed to `gemini-3.6-flash`, so we price recognition at the `gemini-3.6-flash` rates (our assumption that billing follows the routing). Our setting still says `gemini-3.5-flash` |
+
+Token assumptions:
+
+| Call | Low assumption | High assumption |
+|---|---|---|
+| Recognition | 1,500 in (about 1 image of about 1k tokens plus prompt), 200 out | 3,000 in (the bridge actually sends two JPEGs, full view and centre crop, plus the library prompt), 1,000 out including thinking (the output cap is 4,096) |
+| Generated 3D sketch | 2,000 in, 8,000 out including thinking | 2,000 in, 12,000 out including thinking (output budget is 16,000) |
+
+Computed cost per call (in USD, arithmetic on the numbers above):
+
+| Call | Prices of 15 Nov 2026 (promotional) | List prices from 1 Jan 2027 (carbon: from 1 Dec 2026) |
+|---|---|---|
+| Recognition, library object (flash rates) | **$0.0019** low, **$0.0060** high | $0.0038 low, $0.0120 high |
+| Generated sketch on `gemini-4-carbon` | **$0.084** low, **$0.124** high | $0.168 low, $0.248 high |
+| Generated sketch on a flash model (the 19.5 s alternative, same tokens, flash rates; not what the live bridge uses) | $0.032 low, $0.047 high | $0.063 low, $0.093 high |
+
+Library objects cost only the recognition. An unknown object costs the recognition **plus** the sketch.
+
+Cost per 1,000 sessions (one pinch each, carbon for sketches; follow-up questions not included):
+
+| Scenario | Prices of 15 Nov 2026 | List prices from 1 Jan 2027 |
+|---|---|---|
+| All 1,000 sessions on library objects | $1.88 to $6.00 | $3.75 to $12.00 |
+| 20% unknown (800 library, 200 generated; every session is recognised) | $18.68 to $30.80 | $37.35 to $61.60 |
+
+The "to" ranges run from the low to the high token assumption (low recognition with low sketch, high with high). In the 20% case, the sketches are roughly 80 to 90% of the bill. Between 1 Dec and 31 Dec 2026 the carbon list price applies while flash is still promotional; that mix is not shown.
+
+What limits spend on the live bridge today: a per-IP rate limit on `/detect` and `/ask` (live: `LENS_RATE_PER_MIN=10`, `LENS_RATE_PER_HOUR=100`), 4 concurrent model calls, closed-set prompt, pre-rendered films (no per-request video generation).
+
+Cost levers, **proposals, not built**:
+
+| Lever | Status |
+|---|---|
+| **Cache generated sketches** and reuse them after the first generation of an object, so a repeated unknown object costs nothing and returns instantly | Not built: the bridge has no sketch cache, every pinch on an unknown object generates again. A reviewed sketch could also be promoted into the library |
+| **Consider Meta's own models** (for example Llama vision models or Meta AI APIs) for recognition, and possibly for the sketch, to reduce cost | Not evaluated. We have not tested any Meta model for recognition or sketch quality, latency or price; evaluate later |
+| Use the flash-class model for sketches when a minute is too long | Possible by changing `SKETCH_MODEL`; measured 19.5 s once, quality not compared |
+
+### Other costs
 
 | Item | Value |
 |---|---|
-| Model | Gemini Flash tier: `gemini-3.5-flash` on the live bridge |
-| Calls per pinch | One `/detect` call: two JPEGs (full view and centre crop) plus a short closed-set prompt listing the library's objects, JSON reply with an id, a confidence and one short answer ([`detect.js`](../Meta_Challenge/app/bridge/detect.js)) |
-| Size (estimate) | Roughly 1 to 3 thousand input tokens and under 100 visible output tokens per call; the output cap is set higher because Gemini counts thinking tokens against it |
-| Cost (estimate) | A fraction of a cent per recognition at Flash-tier list prices. Check Google's current price list; we have not measured billing |
-| Time (measured) | About 1.8 to 1.9 s detect time on the server for library objects (15 Nov 07:55, two samples). End to end depends on the network |
-| Extra calls | A follow-up question is one more small call; a generated sketch for an unknown object is one more call (off by default) |
-| Cost control | Closed set, pre-rendered films (no per-request video generation), a per-IP rate limit and 4 concurrent model calls on the live bridge |
+| Extra calls | A follow-up question is one more small call (`POST /ask`) |
+| Earlier measurement | Recognition on a Claude dev stand-in took p50 5.8 s; that is not the live provider and is only kept for history |
 
 ### Venue pilot target (proposal)
 
@@ -93,7 +150,7 @@ A venue's 10 to 20 objects are therefore roughly 10 to 60 person-hours of author
 | Scope | 10 to 20 objects physically in the room, authored as library entries |
 | Status | **Proposal only. No venue has been contacted and no pilot has run** |
 | Needed from the venue | A few loaner Display pairs for supervised visitors, Wi-Fi, a teacher or curator to check captions |
-| Cost shape | Authoring hours (once per object) plus a few cents of model calls per visitor session (assuming a handful of recognitions per visit). Hardware loan is the real constraint |
+| Cost shape | Authoring hours (once per object) plus model calls per visitor session: for library objects about 0.2 to 0.6 US cent per recognition, and about $0.08 to $0.25 for each generated explanation (see the [cost table](#approximate-cost-per-use-estimate)). Hardware loan is the real constraint |
 
 ## Adoption and pilot path
 
