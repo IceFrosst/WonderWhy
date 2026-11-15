@@ -22,7 +22,7 @@ We cannot show you what Meta staff said, and we have no data on other teams' tes
 |---|---|
 | A Display Web App gets **no camera**, so the photo must be taken by an Android app through the Device Access Toolkit, and the drawing must be made in the Web App. The two cannot run at once on the glasses, so we built a bridge between them (HTTP and WebSocket, with a replay of the last result for a handover) | [README, Known limitations "Platform"](../README.md#known-limitations), [ARCHITECTURE](ARCHITECTURE.md), [Booth_Questions "What the simulators can answer"](../Meta_Challenge/team-notes/Booth_Questions.md) (toolkit and Web App at the same time: "No ... test on real glasses") |
 | The display is 600 × 600 and additive: black is see-through, so only bright lines can be drawn | [DESIGN.md](../Meta_Challenge/app/shared/DESIGN.md), [3D screen spec](../Meta_Challenge/app/glasses/docs/3d-screen.md) |
-| Live 3D line rendering inside a Web App: a three.js renderer with a 3D model schema, an "Inspect" view you can turn with the Band, a WebGL-loss fallback to 72-angle sheets, and a first load under Meta's size gate | [MODEL3D.md](../Meta_Challenge/app/shared/MODEL3D.md), [Design_Handoff "Final playback and package measurements"](../Meta_Challenge/Design_Handoff.md#final-playback-and-package-measurements) |
+| Live 3D line rendering inside a Web App: a three.js renderer with a 3D model schema, an "Inspect" view you can turn with the Band, a WebGL-loss fallback to 72-angle sheets, and a first load under Meta's size gate | [MODEL3D.md](../Meta_Challenge/app/shared/MODEL3D.md), [Design_Handoff "Baseline to compare against"](../Meta_Challenge/Design_Handoff.md#baseline-to-compare-against) |
 | Neural Band input behaves differently from the docs: on the real glasses a pinch arrives as a short `Drag DOWN → UP` followed by `Select`, so the Android app treats a short drag as a pinch | [Loaner_Test "Evidence captured on November 14"](../Meta_Challenge/team-notes/Loaner_Test.md), commit `11:20` on 14 Nov in the table below |
 
 ## Effort in numbers (verified in the repo)
@@ -53,7 +53,7 @@ Between the first commit (13 Nov 22:37) and the sync (15 Nov 08:03), **32 of the
 
 | What | Count | Evidence |
 |---|---|---|
-| Bridge tests (Node test runner) | **101** in 11 files, all pass; re-run for this page (`npm ci && npm test`) | [bridge/test](../Meta_Challenge/app/bridge/test), [TESTING](TESTING.md#bridge-tests-meta_challengeappbridgetest) |
+| Bridge tests (Node test runner) | **101** in 11 files, all pass; re-run for this page (`npm ci && npm test`) | [bridge/test](../Meta_Challenge/app/bridge/test), [TESTING](TESTING.md#bridge-tests-metachallengeappbridgetest) |
 | Android JVM tests | **172** `@Test`s in 21 files; 172 passed on 14 Nov per the Android README (not re-run for this page: needs JDK 17 and the Android SDK) | [android tests](../Meta_Challenge/app/android/app/src/test/java/com/junction2026/lens), [Android README](../Meta_Challenge/app/android/README.md) |
 | Glasses state and scene captures (headless Chrome, 600 × 600) | **182** (47 named states and 135 lens/scene steps), all OK in the report of 14 Nov 20:11 UTC (not re-run for this page: needs Playwright browsers). The [Design_Handoff](../Meta_Challenge/Design_Handoff.md#baseline-to-compare-against) notes that an earlier, expanded run had failures in the home/demo scripts and was stopped | [glasses docs report](../Meta_Challenge/app/glasses/docs/README.md) |
 | Glasses build | Type-check and production build pass (run for this page) | [TESTING](TESTING.md) |
