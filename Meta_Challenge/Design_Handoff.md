@@ -1,6 +1,6 @@
 # Physics Lens design handoff
 
-November 14, 2026 · Loaner session complete. Use this page for the current baseline, [Loaner_Test.md](Loaner_Test.md) for timings and retests, and [render3d/README.md](app/render3d/README.md) for the asset pipeline. The Android and glasses apps are named **Physics Lens**. Earlier notes also use **WonderWhy**.
+November 14, 2026 · Loaner session complete. Use this page for the current baseline, [Loaner_Test.md](team-notes/Loaner_Test.md) for timings and retests, and [render3d/README.md](app/render3d/README.md) for the asset pipeline. The Android and glasses apps are named **Physics Lens**. Earlier notes also use **WonderWhy**.
 
 ## What the loaner established
 
@@ -44,7 +44,7 @@ npm --prefix Meta_Challenge/app/glasses run build
 node Meta_Challenge/app/glasses/scripts/live-kettle-smoke.mjs
 ```
 
-The first two commands pack the phone spec and rewrite its stills for visual iteration. Run the full object render before reviewing changes to motion or label timing. For a fresh Android build run `./gradlew assembleDebug testDebugUnitTest` from `app/android` with JDK 17 and the Android SDK, then use the APK at `app/android/app/build/outputs/apk/debug/app-debug.apk`. For another device slot, use the [loaner checklist](Loaner_Test.md). It includes pairing context, camera modes, voice, and measured timing stages. The hosted bridge is token-protected and runs Gemini. Keep the credential in the team’s private channel.
+The first two commands pack the phone spec and rewrite its stills for visual iteration. Run the full object render before reviewing changes to motion or label timing. For a fresh Android build run `./gradlew assembleDebug testDebugUnitTest` from `app/android` with JDK 17 and the Android SDK, then use the APK at `app/android/app/build/outputs/apk/debug/app-debug.apk`. For another device slot, use the [loaner checklist](team-notes/Loaner_Test.md). It includes pairing context, camera modes, voice, and measured timing stages. The hosted bridge is token-protected and runs Gemini. Keep the credential in the team’s private channel.
 
 ## Baseline to compare against
 

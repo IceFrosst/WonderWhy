@@ -43,12 +43,12 @@ Fallbacks, in order: object buttons on the phone page (no camera, no model); "De
 | Every screen and state of the glasses app, with screenshots | `cd glasses && npm run test:states` | 125 of 125, 215 KB gzipped, 5 requests, about 30 fps (headless). Screenshots: [glasses/docs/](glasses/docs/README.md) |
 | Recognition on photos | `cd bridge && DETECT_PROVIDER=claude BENCH_N=1 BENCH_SIZES=MEDIUM npm run bench` (photos in `bridge/samples/`, not in git) | 18 of 18 on the dev stand-in. Gemini: not run |
 | Translations match the English | `node shared/i18n/check.mjs` | 5 languages ok, 390 strings each incl. text inside the drawings (machine-translated, need a native read) |
-| Android app with mock glasses on an emulator | [Overnight/evidence/android-emulator/](../../Overnight/evidence/android-emulator/README.md) | Ran end to end with the stand-in (kettle 0.97) |
+| Android app with mock glasses on an emulator | Overnight/evidence/android-emulator/ *(internal note, not in this repo)* | Ran end to end with the stand-in (kettle 0.97) |
 | Stills and clips for the phone-only route | `cd glasses && npm run export:media` (needs ffmpeg for clips) | 90 captioned stills, 90 text-free stills (`c<step>.png`), 29 clips in `bridge/media/` |
 | Footage for the pitch video | `cd glasses && npm run export:video` | Branch `idea/video-kit` (re-render after lens changes) |
 
 ## Not proven anywhere yet
-- Real Ray-Ban Display glasses: nothing has run on them. Checklist: [Glasses_Test.md](../Glasses_Test.md).
+- Real Ray-Ban Display glasses: written before the 14 Nov loaner session; what it verified is in [Design_Handoff.md](../Design_Handoff.md#what-the-loaner-established), the rest is unverified. Checklist: [Glasses_Test.md](../Glasses_Test.md).
 - Gemini: speed and accuracy numbers. Run the bench with the key and put p50 / p90 in [README.md](README.md).
 - The live droplet runs an older bridge (deployed 00:42 UTC, before the security fixes). Deploy `main`, then follow "Lock it" in [deploy/README.md](deploy/README.md) **before** any key goes on it.
 - A native speaker has not read the translations.

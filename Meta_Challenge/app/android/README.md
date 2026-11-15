@@ -1,5 +1,7 @@
 # Physics Lens: Android app (Meta DAT 1.0.1)
 
+> **Status note.** The "untested on real glasses" lines below were written before the 14 Nov loaner session. Real hardware results (Band pinch → glasses photo → Android → Gemini → display) are in [Design_Handoff.md](../../Design_Handoff.md#what-the-loaner-established) and [team-notes/Loaner_Test.md](../../team-notes/Loaner_Test.md). Anything not listed there is still unverified on real glasses.
+
 Phone app that drives Meta Ray-Ban Display glasses (or the SDK's Mock Device Kit). Pinch → one photo → bridge `/detect` → result card on the glasses.
 
 ## What it does

@@ -1,6 +1,6 @@
 # WonderWhy · final 30 minutes with the glasses
 
-The loaner session has ended. See the [design handoff](Design_Handoff.md) and [loaner evidence](Loaner_Test.md) for the results and what to retest.
+The loaner session has ended. See the [design handoff](../Design_Handoff.md) and [loaner evidence](Loaner_Test.md) for the results and what to retest.
 
 Use the installed Android APK and the already installed Physics Lens Web App. Keep the existing Meta AI pairing, Developer Mode, and permissions. For the first pass leave **Film on glasses off**. Android needs to stay connected for the glasses camera. The Web App runs the film and live Inspect. If the camera permission or photo consent has already been granted, there should be no settings change during the walkthrough.
 

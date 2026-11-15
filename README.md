@@ -11,7 +11,7 @@ Look at something, pinch, and the glasses show *why it works*: a short, animated
 | Public demo (saved explanations, no backend) | https://wonderwhy-demo.vercel.app |
 | Live camera emulator (your camera + pinch, real bridge) | https://lens.167-71-139-39.sslip.io/emulator |
 | Glasses app on the live bridge (600 × 600) | https://lens.167-71-139-39.sslip.io/ |
-| Demo clips of real objects | [`DemoVideos/Objects/`](DemoVideos/Objects/) |
+| Demo clips of real objects | [`DemoVideos/Objects/`](DemoVideos/Objects) |
 
 ## How it fits together
 
@@ -32,7 +32,7 @@ Ray-Ban Display + Neural Band ──> Android app (Meta Wearables toolkit) ─�
 | Video pipeline | [`Meta_Challenge/video`](Meta_Challenge/video) | The WonderWhy film: AR renders, rough cuts, child voice auditions |
 | Docs | [`Meta_Challenge/`](Meta_Challenge/README.md) | Plan, modes, platform notes, test sheets, video script, submission text |
 
-Good starting points: [`Meta_Challenge/README.md`](Meta_Challenge/README.md), [`Modes.md`](Meta_Challenge/Modes.md), [`Platform_Notes.md`](Meta_Challenge/Platform_Notes.md), [`app/DEMO.md`](Meta_Challenge/app/DEMO.md), [`Submission.md`](Meta_Challenge/Submission.md).
+Good starting points: [`Meta_Challenge/README.md`](Meta_Challenge/README.md), [`Modes.md`](Meta_Challenge/Modes.md), [`Platform_Notes.md`](Meta_Challenge/team-notes/Platform_Notes.md), [`app/DEMO.md`](Meta_Challenge/app/DEMO.md), [`Submission.md`](Meta_Challenge/Submission.md).
 
 ## Run it locally (about 2 minutes)
 

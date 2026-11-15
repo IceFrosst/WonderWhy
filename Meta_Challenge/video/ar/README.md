@@ -21,7 +21,7 @@ Ten 6-8 s versions of one idea: **our own 3D objects (the ones the glasses app s
 - **Grey to colour.** The story: life goes muted and grey as you stop asking why, and gets brighter when you get curious again. Every version starts muted or cold and lets colour come back with the hologram. Palette: cyan `#4df0ff`, amber `#ffc247`, green `#6dff9c`, gold for warmth.
 - **Honesty.** The real glasses show a fixed panel in one eye; the lines are not stuck to objects. A world-locked hologram is fine as "what it feels like", but small print such as *Visualised. On the glasses it's a panel in your view.* keeps judges from calling it fake. V03 and V09 show the real panel.
 
-## Lessons from the Stoa film ([FILMMAKING.md](../../../stoa/video/FILMMAKING.md))
+## Lessons from the Stoa film (FILMMAKING.md *(internal note, not in this repo)*)
 - Open on a person and a want. The first 3 s must read muted on a phone.
 - Transitions are moves (whip, push, zoom-through), not fades. Nothing static for more than 0.6 s; aim for at least 2.5 px/frame of motion.
 - Give text time: a label needs about 0.5 s more than you think. Text stays inside the frame and its box at every frame.

@@ -1,6 +1,6 @@
 # Physics Lens: one visual direction (glasses, phone page, Android cards)
 
-Owner: `desktop` brain. `friend` follows this for the Android cards and asks for changes in its outbox. Written fresh at the event; the reference projects in [DESIGN_REFERENCES](../../../Overnight/DESIGN_REFERENCES.md) set the bar for taste only.
+Owner: `desktop` brain. `friend` follows this for the Android cards and asks for changes in its outbox. Written fresh at the event; the reference projects in DESIGN_REFERENCES *(internal note, not in this repo)* set the bar for taste only.
 
 ## Who and what feeling
 | | |

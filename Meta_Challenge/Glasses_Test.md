@@ -9,14 +9,15 @@ updated: 2026-11-14
 
 > [!summary]
 > Nothing has run on real glasses yet. Ordered so the tests that change our plan come first. Bring: Display pair, Neural Band, Android phone (12+), laptop, stopwatch, a ball, a guitar or kettle. Write results in the pass/fail column.
+> **Status note:** this sheet was written before the 14 Nov loaner session. What that session verified, and what is still open, is in [Design_Handoff.md](Design_Handoff.md#what-the-loaner-established). The Android unit test `GlassesCheckTest` reads this file, so it stays here.
 >
 > The same rows can be ticked in the Android app under Developer > Glasses check, which produces a text report to share (built and run on the emulator only).
 
-**Prepare before the slot** (not counted in the 20 min): phone has the Meta AI app v272+ and our APK installed with "Mock glasses" OFF, app restarted ([android README](app/android/README.md)). Bridge token is at hand (ask a teammate, never in git). Open booth questions: [Booth_Questions](Booth_Questions.md).
+**Prepare before the slot** (not counted in the 20 min): phone has the Meta AI app v272+ and our APK installed with "Mock glasses" OFF, app restarted ([android README](app/android/README.md)). Bridge token is at hand (ask a teammate, never in git). Open booth questions: [Booth_Questions](team-notes/Booth_Questions.md).
 
 | # | Min | Step | What to do | Expected | Pass / fail | If it fails | Skip if short? |
 |---|---|---|---|---|---|---|---|
-| 1 | 0-3 | Developer Mode and versions | Meta AI app: Developer Mode on (tap app version 5 times). Note app version and glasses version. Glasses paired, Display model | App v272+, Developer Mode on, glasses shown as connected. Version numbers noted | [ ] | Update the app, factory reset the loaner ([Discord_Notes](Discord_Notes.md) links), ask the Meta booth. Note: the v272+/v125+ numbers are unverified in Meta's repos ([Plan](Plan.md)) | No |
+| 1 | 0-3 | Developer Mode and versions | Meta AI app: Developer Mode on (tap app version 5 times). Note app version and glasses version. Glasses paired, Display model | App v272+, Developer Mode on, glasses shown as connected. Version numbers noted | [ ] | Update the app, factory reset the loaner ([Discord_Notes](team-notes/Discord_Notes.md) links), ask the Meta booth. Note: the v272+/v125+ numbers are unverified in Meta's repos ([Plan](team-notes/Plan.md)) | No |
 | 2 | 3-6 | **Key test: phone app registration** | Open our app, Mock OFF, tap Connect | Meta AI opens, you approve, it returns through `physicslens://`, state "connected" | [ ] | Note the exact error. Check restart after switching mock off. Without this, steps 3-6 are blocked: switch to Web App tests (step 7+) | No |
 | 3 | 6-8 | Camera permission | Allow camera when asked. Then deny once and retry | Allow: session starts. Deny: "camera denied" card with "Try again", no crash | [ ] | Check Meta AI app permissions. Record what the card shows | No |
 | 4 | 8-11 | **Pinch to photo to card** | Look at the ball. Pinch (`Select`). Then try the phone button "Explain what I see" | "Looking..." card, then label and concept card on the Display. "Again" and "Done" work | [ ] | Try the capture button instead of pinch. If no card: phone button only. Check bridge `/health` and token. If provider is `mock`, a "Not sure" card is expected, so use a forced object | No |
@@ -46,7 +47,7 @@ updated: 2026-11-14
 | 4 and 6 pass | Demo the handover. Latency numbers go in the deck |
 | 8 fails (unreadable) | Increase stroke width and contrast. Film in the simulator |
 
-## Booth questions this test answers ([Booth_Questions](Booth_Questions.md))
+## Booth questions this test answers ([Booth_Questions](team-notes/Booth_Questions.md))
 | Q | Answered by step |
 |---|---|
 | 1b: can the phone app hand over to the Web App | 6 |

@@ -10,7 +10,7 @@ updated: 2026-11-14
 **Current baseline** · [Design handoff](Design_Handoff.md) covers the loaner results, simulator controls, and where to edit and regenerate the visuals.
 
 > [!summary]
-> Our **grand prize project**. Idea: **real-world explanation mode**. The trajectory-prediction idea is parked (see [Wearables_Research](../Research/Wearables_Research.md)).
+> Our **grand prize project**. Idea: **real-world explanation mode**. The trajectory-prediction idea is parked (see Wearables_Research *(internal note, not in this repo)*).
 
 ## Idea: real-world explanation mode (draft, 13 Nov)
 | Decision | Choice |
@@ -29,18 +29,18 @@ updated: 2026-11-14
 | Phones | Team has iPhone and Android; who has which is in issue #1. Android is easier (builds from Linux) |
 | Name | Not yet |
 | Scope | **Bare-bones shippable demo first**; nice-to-haves later |
-| Build path | See [Platform_Notes](Platform_Notes.md): start DAT-only (B), go hybrid with a WebGL Web App (A) if time allows |
+| Build path | See [Platform_Notes](team-notes/Platform_Notes.md): start DAT-only (B), go hybrid with a WebGL Web App (A) if time allows |
 
 Notes:
-- The Display web app gets no camera, so the camera goes glasses → phone (toolkit app) → model. Details in [Platform_Notes](Platform_Notes.md).
+- The Display web app gets no camera, so the camera goes glasses → phone (toolkit app) → model. Details in [Platform_Notes](team-notes/Platform_Notes.md).
 - Opus writing animation code takes seconds. Plan an instant short answer (text or voice) first, with the animation arriving after.
 - The Gemini API tech prize is €4k and DeepMind is on the jury. Option: Gemini for seeing the object, Opus for writing the animation.
 
-**Going to the Meta booth? Take [Booth_Questions](Booth_Questions.md).**
+**Going to the Meta booth? Take [Booth_Questions](team-notes/Booth_Questions.md).**
 
-**Plan:** [Plan](Plan.md) (Fable 5.2 review, hour-by-hour plan, booth questions). **Build:** [app/README](app/README.md). **Submit:** [Submission](Submission.md), [Deck](Deck.md), [Glasses_Test](Glasses_Test.md).
+**Plan:** [Plan](team-notes/Plan.md) (Fable 5.2 review, hour-by-hour plan, booth questions). **Build:** [app/README](app/README.md). **Submit:** [Submission](Submission.md), [Deck](Deck.md), [Glasses_Test](Glasses_Test.md).
 
-## The brief (full text: [Brief](Brief.md), Discord: [Discord_Notes](Discord_Notes.md))
+## The brief (full text: [Brief](Brief.md), Discord: [Discord_Notes](team-notes/Discord_Notes.md))
 - Show how a first-person view enables new or better everyday interactions.
 - Deliver: a working prototype plus a **deck**. It must handle permissions, errors, connectivity and device state changes.
 - Consent, safe data practices and accessibility must show in the demo.
@@ -54,13 +54,13 @@ Notes:
 - Contact: Amanda Le (mentor). Web Apps: Ming Lin, William La, Amy Lee, Odil Nikadambaev. DAT iOS: Dennis Punjabi.
 
 ## Idea shortlist
-_To fill in._ Candidates: [Wearables_Research](../Research/Wearables_Research.md#other-glasses-ideas-not-yet-picked).
+_To fill in._ Candidates: Wearables_Research *(internal note, not in this repo)*.
 
 ## Status (Sat 14 Nov)
 | Item | State |
 |---|---|
 | Idea chosen | **Physics Lens** (explanation mode). Name still open |
-| Booth questions answered | Partly: [Booth_Questions](Booth_Questions.md) |
+| Booth questions answered | Partly: [Booth_Questions](team-notes/Booth_Questions.md) |
 | Code | Android camera and Gemini result rendering ran on the loaner. The glasses Web App played the existing films and ran live kettle Inspect. See [Design handoff](Design_Handoff.md) for the verified routes and unresolved device checks. |
-| Docs | [Design handoff](Design_Handoff.md), [loaner results and retest checklist](Loaner_Test.md), [submission draft](Submission.md), [deck](Deck.md) |
+| Docs | [Design handoff](Design_Handoff.md), [loaner results and retest checklist](team-notes/Loaner_Test.md), [submission draft](Submission.md), [deck](Deck.md) |
 | Open for humans | Name, video, repo URL, live bridge deploy and lock, a Finnish read of the translations |

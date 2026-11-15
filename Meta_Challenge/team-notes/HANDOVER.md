@@ -8,7 +8,7 @@ updated: 2026-11-14
 # Handover (Sat 14 Nov, 18:25) — start a fresh session from here
 
 > [!summary]
-> Product: **WonderWhy** (Meta Ray-Ban Display + Neural Band). Video: "Never stop asking why", max 1:30. Script: [Video_Script.md](Video_Script.md) (draft 8). Review: [Video_Review.md](Video_Review.md). Tests: [Test_Now.md](Test_Now.md).
+> Product: **WonderWhy** (Meta Ray-Ban Display + Neural Band). Video: "Never stop asking why", max 1:30. Script: [Video_Script.md](../Video_Script.md) (draft 8). Review: [Video_Review.md](../Video_Review.md). Tests: [Test_Now.md](Test_Now.md).
 
 ## Running right now (on IceFrost's laptop)
 | Job | Where | Notes |
@@ -26,7 +26,7 @@ updated: 2026-11-14
 |---|---|
 | B1, B3, A (grass), sauna, gym bike, earbuds in, earbuds in palm, band plate, all crowd scenes (walk, stop, glasses on, earbuds out, pinch), friend share scene, 3D printer (wide, focus, macro) | IceFrost's phone and the friend's uploads. **Nothing new is on `main` yet** (checked 18:20: last commits are Stoa). Agree one folder: suggested `~/Videos/wonderwhy/raw/` on the laptop, not git (large files) |
 
-**Collecting (18:30):** folder `~/Videos/wonderwhy/raw/{icefrost,mrnetwork,friend}/` on IceFrost's laptop. Script [video/ingest.sh](video/ingest.sh): `adb` (Pixel on USB), `sort <who>` (LocalSend drops in ~/Downloads), `index` (writes `raw/INDEX.md`: duration, res, fps, codec, HDR). iPhone footage: AirDrop to MrNetwork's Mac, then LocalSend to the laptop (keeps full quality; not WhatsApp).
+**Collecting (18:30):** folder `~/Videos/wonderwhy/raw/{icefrost,mrnetwork,friend}/` on IceFrost's laptop. Script [video/ingest.sh](../video/ingest.sh): `adb` (Pixel on USB), `sort <who>` (LocalSend drops in ~/Downloads), `index` (writes `raw/INDEX.md`: duration, res, fps, codec, HDR). iPhone footage: AirDrop to MrNetwork's Mac, then LocalSend to the laptop (keeps full quality; not WhatsApp).
 
 Plan: IceFrost does a rough edit on the phone first; then the code pipeline polishes (grade grey/gold, captions, composites, sound).
 

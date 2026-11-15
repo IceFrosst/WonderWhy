@@ -7,7 +7,7 @@ updated: 2026-11-14
 
 # Test what we have now (Sat 14 Nov, updated 12:05)
 
-For the next checkout use the [current loaner checklist](Loaner_Test.md). The [design handoff](Design_Handoff.md) records the end of the live session and links the simulator.
+For the next checkout use the [current loaner checklist](Loaner_Test.md). The [design handoff](../Design_Handoff.md) records the end of the live session and links the simulator.
 
 > [!summary]
 > For whoever holds the glasses next. Everything is set up on IceFrost's **Pixel 8** and the **Display glasses + band**. Takes about 15 minutes. Write what you see in the last column, or just tell IceFrost.
