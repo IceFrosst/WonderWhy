@@ -14,6 +14,8 @@ updated: 2026-11-14
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
 
+Changes 15 Nov ~04:15 (v14, 1:22.70): **slop_machine box cut** (curiosity: muted stays). **Printer answer = team's P6 Heat** (`act4_printer/final/P6_heat.mp4`, `6852ab3`: one bit of filament 20 °C → 215 °C → solid → fused, line *Melted at 215°, solid in seconds.*), replacing Alex's AR V02/V09. **Spoken prompt on every example**, earbuds style (cyan listening glyph, live words, then "sent" into the panel): printer *How does it build this?* (replaces "Ask out loud"), sauna *Why does steam feel hotter?*, bike *Why is faster so much harder?*; earbuds keeps *How does the noise cancellation work?*. *Feed your curiosity. Grow your understanding of the world. · WonderWhy* stays at the start of the printer shot. Overlays: `edits/overlays/prompts/`.
+
 Changes 15 Nov ~03:55 (v13, 1:22.70): second detection box on IceFrost's head through the grey hall walk: **curiosity: muted** (hand-tracked, 0:10.1–0:14.4, fades before the glasses go on).
 
 Changes 15 Nov ~03:40 (v12, **1:22.70**): caption *Even this?* removed; **how-it-works diagram removed** (owner); YOLO-style red detection box on the phone in the grey hall walk: **slop_machine 0.99** (hand-tracked, 0:09.9–0:11.7; `edits/overlays/slop/make.py`). Next: voice-over, SFX, music.
