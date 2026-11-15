@@ -7,6 +7,25 @@ updated: 2026-11-14
 
 # Meta challenge: AI Glasses for Everyone, Everyday
 
+> **Judges: start at the [root README](../README.md) and [`docs/`](../docs/).** This folder holds the working product docs written during the hackathon; each file records the state at the time it was written (some carry status notes where later work superseded them). Internal logistics moved to [`team-notes/`](team-notes/README.md).
+
+## Doc map
+
+| Need | Read |
+|---|---|
+| The pitch, evidence per judging criterion | [Root README](../README.md) |
+| Problem, audience, scenarios, pilot path | [docs/USE_CASE.md](../docs/USE_CASE.md) |
+| How it is built | [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md), [app/shared/PROTOCOL.md](app/shared/PROTOCOL.md) |
+| Input, accessibility, consent, error states | [docs/UX_ACCESSIBILITY_TRUST.md](../docs/UX_ACCESSIBILITY_TRUST.md) |
+| Tests and results | [docs/TESTING.md](../docs/TESTING.md) |
+| Real-glasses results and design baseline | [Design_Handoff](Design_Handoff.md) |
+| Explanation lenses | [Modes](Modes.md) |
+| Challenge brief | [Brief](Brief.md) |
+| Submission text with claim status labels, deck outline | [Submission](Submission.md), [Deck](Deck.md) |
+| Real-glasses test sheet | [Glasses_Test](Glasses_Test.md) |
+| Film, storyboards, playback | [Video_Plan](Video_Plan.md), [Video_Script](Video_Script.md), [Video_Review](Video_Review.md), [Storyboards](Storyboards.md), [Demo_Playback](Demo_Playback.md), [Proof_Sheet](Proof_Sheet.md) |
+| Hackathon logistics (internal) | [team-notes/](team-notes/README.md) |
+
 **Current baseline** · [Design handoff](Design_Handoff.md) covers the loaner results, simulator controls, and where to edit and regenerate the visuals.
 
 > [!summary]
