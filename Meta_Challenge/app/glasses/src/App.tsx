@@ -277,12 +277,12 @@ function HomeScreen({connected, openObject, startDemo, takePhoto, openAsk}: Home
   let flatIndex = 0;
   return (
     <Page
-      headerText="Physics Lens"
+      headerText="WonderWhy"
       headerMetadata={connected ? 'Bridge connected' : 'Bridge offline (demo)'}
       enableSystemBarInset={false}
     >
       <div className={`action-page-shell home-page home-page--${columns === 3 ? 'three' : 'two'}`}>
-        <ScrollView insetForHeader ariaLabel="Physics Lens">
+        <ScrollView insetForHeader ariaLabel="WonderWhy">
           <Panel width="100%">
             <div className="content-inset home-intro">
               <TextView as="p" textStyle={TextStyle.BODY2}>
@@ -359,7 +359,7 @@ function AskScreen({onAsk, onBack, voiceStatus}: {
     return () => window.removeEventListener('keydown', onKey, true);
   }, []);
   return (
-    <Page headerText="Ask Physics Lens" enableSystemBarInset={false}>
+    <Page headerText="Ask WonderWhy" enableSystemBarInset={false}>
       <form className="ask-form" ref={formRef} onSubmit={event => {
         event.preventDefault();
         setInvalid(!onAsk(text));
@@ -453,7 +453,7 @@ function ConsentScreen({onAccept}: ConsentScreenProps) {
             Before you start
           </TextView>
           <TextView as="p" textStyle={TextStyle.META1}>
-            The camera is used only when you pinch. One photo goes to our server to name the object. It is not stored.
+            Each pinch sends one photo through our bridge to Google Gemini to recognise the object. We do not store it. Please do not point at people or bystanders without their permission.
           </TextView>
           <ButtonRail>
             <Button ref={buttonRef} title="OK, start" onClick={onAccept} />
@@ -564,7 +564,7 @@ export default function App() {
       setViewNow({k: 'home'});
       flashCard({
         title: 'No photo arrived',
-        body: 'Open Physics Lens on your phone and check that the glasses are connected. Then try again.',
+        body: 'Open WonderWhy on your phone and check that the glasses are connected. Then try again.',
       }, CARD_MS);
     }, 35000);
   }, [flashCard, setViewNow]);

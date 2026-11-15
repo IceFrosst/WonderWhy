@@ -27,6 +27,7 @@ const ERROR_MESSAGES = {
   bad_request: 'The request is invalid.',
   bad_image: 'A valid JPEG image is required.',
   busy: 'The model is busy; try again shortly.',
+  rate_limited: "You're asking a lot! Please wait a moment and try again.",
   detect_timeout: 'The model did not answer in time.',
   detect_failed: 'The model could not answer the request.',
   server_error: 'The bridge could not complete the request.',
@@ -115,6 +116,62 @@ function sameToken(actual, expected) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+function isPrivateAddress(address) {
+  const a = String(address || '').toLowerCase().replace(/^::ffff:/, '');
+  if (a === '::1' || a === 'localhost') return true;
+  if (/^(fc|fd)[0-9a-f]{2}:/.test(a) || /^fe[89ab][0-9a-f]:/.test(a)) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(a);
+  if (!m) return false;
+  const [x, y] = [Number(m[1]), Number(m[2])];
+  return x === 10 || x === 127 || (x === 172 && y >= 16 && y <= 31) || (x === 192 && y === 168) || (x === 169 && y === 254);
+}
+
+function peerAddress(address) { return String(address || '').replace(/^::ffff:/i, ''); }
+
+// Client address for rate limiting. X-Forwarded-For is honoured only when the direct peer is private (Caddy on the docker network);
+// the right-most entry that is not itself a private proxy is the client.
+export function clientIp(req) {
+  const peer = peerAddress(req.socket?.remoteAddress);
+  if (!isPrivateAddress(peer)) return peer || 'unknown';
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map((v) => peerAddress(v.trim())).filter(Boolean);
+  for (let i = forwarded.length - 1; i >= 0; i--) if (!isPrivateAddress(forwarded[i])) return forwarded[i];
+  return forwarded.length ? forwarded[0] : peer || 'unknown';
+}
+
+// Per-IP token buckets (burst = the limit, refilled evenly over the window). A limit of 0 disables that window.
+export function createRateLimiter({ perMinute = 0, perHour = 0, now = Date.now, maxEntries = 10000 } = {}) {
+  const windows = [[perMinute, 60000], [perHour, 3600000]].filter(([limit]) => limit > 0);
+  const buckets = new Map();
+  return {
+    enabled: windows.length > 0,
+    // Returns 0 when allowed (and consumes one token per window), otherwise the seconds to wait.
+    take(key) {
+      if (!windows.length) return 0;
+      const t = now();
+      let entry = buckets.get(key);
+      if (!entry) {
+        if (buckets.size >= maxEntries) for (const [k, v] of buckets) { if (t - v.at > 60000) buckets.delete(k); if (buckets.size < maxEntries * 0.9) break; }
+        entry = { at: t, tokens: windows.map(([limit]) => limit) };
+        buckets.set(key, entry);
+      }
+      const elapsed = t - entry.at; entry.at = t;
+      entry.tokens = entry.tokens.map((tokens, i) => Math.min(windows[i][0], tokens + elapsed * windows[i][0] / windows[i][1]));
+      let wait = 0;
+      entry.tokens.forEach((tokens, i) => { if (tokens < 1) wait = Math.max(wait, Math.ceil((1 - tokens) * windows[i][1] / windows[i][0] / 1000)); });
+      if (wait) return Math.max(1, wait);
+      entry.tokens = entry.tokens.map((tokens) => tokens - 1);
+      return 0;
+    },
+    size: () => buckets.size,
+  };
+}
+
+function nonNegative(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
 function normalizeLang(value) {
   if (typeof value !== 'string') return 'en';
   const lang = value.trim().toLowerCase().split(/[-_]/, 1)[0];
@@ -198,6 +255,8 @@ export function start({
   maxSockets = positive(process.env.MAX_SOCKETS, 50),
   detectTimeoutMs = detectTimeout(process.env, provider),
   sketchProvider = process.env.SKETCH_PROVIDER || '',
+  ratePerMinute,
+  ratePerHour,
   sketchFn = generateSketch,
   sketchTimeoutMs,
   mediaRoot = path.join(here, 'media'),
@@ -214,6 +273,12 @@ export function start({
   const i18nBase = path.resolve(i18nRoot);
   const translations = new Map();
   const originAllowlist = new Set(String(allowedOrigins).split(',').map((s) => s.trim()).filter(Boolean));
+  // Model-spending routes (/detect, /ask; sketches are generated inside /detect) are limited per client IP.
+  // The mock provider spends nothing, so it is unlimited unless a limit is set explicitly.
+  const rateLimiter = createRateLimiter({
+    perMinute: nonNegative(ratePerMinute ?? process.env.LENS_RATE_PER_MIN, provider === 'mock' ? 0 : 6),
+    perHour: nonNegative(ratePerHour ?? process.env.LENS_RATE_PER_HOUR, provider === 'mock' ? 0 : 60),
+  });
   const requestedSketchMode = sketchProvider === 'fixture' || sketchProvider === 'auto' ? sketchProvider : 'off';
   const sketchMode = requestedSketchMode === 'auto' && provider === 'mock' ? 'off' : requestedSketchMode;
   const sketchDeadlineMs = positive(sketchTimeoutMs ?? process.env.SKETCH_TIMEOUT_MS, STAND_INS.has(provider) ? 60000 : 20000);
@@ -758,6 +823,13 @@ export function start({
       }
       if (req.method === 'GET' && url.pathname === '/latency') return json(req, res, 200, summary());
       if (req.method === 'GET' && url.pathname === '/health') return json(req, res, 200, { ok: true, auth: Boolean(token), ...(!token ? { open: true } : {}), provider, sketch: sketchMode, ...(STAND_INS.has(provider) ? { standIn: true } : {}), glasses: glasses.size, phones: phones.size });
+      if (req.method === 'POST' && (url.pathname === '/detect' || url.pathname === '/ask') && rateLimiter.enabled) {
+        const wait = rateLimiter.take(clientIp(req));
+        if (wait) {
+          const reqId = requestId();
+          return requestError(req, res, 429, 'rate_limited', reqId, { 'retry-after': String(wait) });
+        }
+      }
       if (req.method === 'POST' && url.pathname === '/detect') return await handleDetect(req, res);
       if (req.method === 'POST' && url.pathname === '/ask') return await handleAsk(req, res);
       if (req.method === 'POST' && url.pathname === '/rendered') return await handleRendered(req, res);

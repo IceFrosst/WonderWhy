@@ -273,7 +273,10 @@ export async function sketch({ imageBase64, focusBase64, hint = '', lang = 'en',
     if (prov === 'gemini' && !env.GEMINI_API_KEY) throw codeErr('sketch_failed', 'GEMINI_API_KEY not set');
     const prompt = buildSketchPrompt({ objects, lang, hint });
     const call = prov === 'anthropic' ? callAnthropic : prov === 'pi' ? callPi : prov === 'claude' ? callClaudeCli : callGemini;
-    const { text, model } = await call({ imageBase64, focusBase64, prompt, env, timeoutMs, maxTokens: 1800, purpose: 'sketch' });
+    // SKETCH_MODEL lets the slow, generated 3D sketch use a stronger model than fast recognition.
+    const sketchEnv = env.SKETCH_MODEL && prov === 'gemini' ? { ...env, GEMINI_MODEL: env.SKETCH_MODEL }
+      : env.SKETCH_MODEL && prov === 'anthropic' ? { ...env, ANTHROPIC_MODEL: env.SKETCH_MODEL } : env;
+    const { text, model } = await call({ imageBase64, focusBase64, prompt, env: sketchEnv, timeoutMs, maxTokens: 16000, purpose: 'sketch' });
     const parsed = parseSketchReply(text);
     if (!parsed) throw codeErr('sketch_failed', 'No usable sketch in model reply');
     return { sketch: parsed, model, ms: Date.now() - t0 };

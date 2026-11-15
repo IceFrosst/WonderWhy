@@ -142,7 +142,7 @@ test('classifier provider request stays byte-identical and sketch gets a larger 
     ] }] });
     assert.equal(requests[0].body, expected);
     const made = await detectSketch({ imageBase64: 'image', objects, env, provider: 'anthropic', timeoutMs: 1000 });
-    assert.equal(made.sketch.label, fixture.label); assert.equal(JSON.parse(requests[1].body).max_tokens, 1800);
+    assert.equal(made.sketch.label, fixture.label); assert.equal(JSON.parse(requests[1].body).max_tokens, 16000);
   } finally { globalThis.fetch = originalFetch; }
 });
 

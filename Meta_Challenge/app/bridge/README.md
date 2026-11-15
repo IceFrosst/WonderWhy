@@ -19,11 +19,13 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 | `LENS_ALLOW_OPEN` | Set to `1` only to intentionally run Anthropic or Gemini without `LENS_TOKEN`; paid providers otherwise refuse to start open |
 | `LENS_ALLOWED_ORIGINS` | Comma-separated extra browser origins allowed by CORS while the bridge is locked; the bridge's own origin is always allowed |
 | `MAX_INFLIGHT` | Maximum simultaneous non-mock model calls across detect, ask, and sketch; default 4 |
+| `LENS_RATE_PER_MIN` / `LENS_RATE_PER_HOUR` | Per-IP limits for the model-spending routes `POST /detect` and `POST /ask` (sketches run inside `/detect`). Defaults 6 per minute and 60 per hour for real providers; the mock provider is unlimited unless set; `0` disables a window. Excess calls get `429 rate_limited` with a friendly `message` and `Retry-After`. `X-Forwarded-For` is trusted only when the direct peer is a private/docker address (Caddy) |
 | `MAX_SOCKETS` | Maximum WebSocket clients; default 50 |
 | `MIN_CONFIDENCE` | Library matches below this become `lowConfidence`; default 0.6 |
 | `LAST_TTL_MS` | How long `/last` and glasses replay retain a `show`; default 120000 |
 | `HEARTBEAT_MS` | App and WebSocket heartbeat interval; default 10000 |
 | `DETECT_PROVIDER` | `anthropic` / `gemini` / `mock` / `pi` / `claude`; unset = anthropic if key, else gemini if key, else mock |
+| `SKETCH_MODEL` | Optional model for generated sketches only (e.g. `gemini-4-carbon`), so recognition can stay on a fast model |
 | `SKETCH_PROVIDER` | `off` / `fixture` / `auto`; unset is off. `auto` uses the detect provider and is disabled with `mock` |
 | `SKETCH_TIMEOUT_MS` | Sketch deadline; default 20000, or 60000 for a dev stand-in provider |
 | `CLAUDE_DETECT_MODEL` | Only for `claude`: a **dev-only stand-in** that runs the local `claude` command with the login of whoever runs the bridge (default model `haiku`, timeout 60 s, about 10 s per photo). It spends that person's subscription, so it is opt-in, answers carry `standIn: true`, and it must never run on the droplet |

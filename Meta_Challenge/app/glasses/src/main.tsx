@@ -24,7 +24,7 @@ class AppBoundary extends Component<{children: ReactNode}, BoundaryState> {
   }
 
   render(): ReactNode {
-    if (this.state.failed) return <div className="center">Physics Lens</div>;
+    if (this.state.failed) return <div className="center">WonderWhy</div>;
     return <div className="fill" key={this.state.reset}>{this.props.children}</div>;
   }
 }

@@ -760,7 +760,7 @@ async function main() {
       send(session, {type: 'detecting', reqId: 'slow-1', timeoutMs: 0});
       await session.expectText('Took too long', {exact: true});
       session.check(Date.now() - started >= 1900, `detect timeout was not clamped to 2 s; elapsed ${Date.now() - started} ms`);
-      await session.expectText('Physics Lens', {exact: true});
+      await session.expectText('WonderWhy', {exact: true});
     });
 
     await simple('not-sure', {}, async session => {
@@ -790,7 +790,7 @@ async function main() {
       await session.expectText(/^Looking/);
       send(session, {type: 'error', code: 'detect_failed', message: 'Model did not answer', reqId: 'error-1'});
       await session.expectText('Model did not answer', {exact: true});
-      await session.expectText('Physics Lens', {exact: true});
+      await session.expectText('WonderWhy', {exact: true});
     });
 
     await simple('bridge-drop-while-looking', {}, async session => {
@@ -834,7 +834,7 @@ async function main() {
       send(session, {type: 'device', state: 'doffed'});
       await session.page.waitForTimeout(100);
       send(session, {type: 'device', state: 'donned'});
-      await session.expectText('Physics Lens', {exact: true});
+      await session.expectText('WonderWhy', {exact: true});
     });
 
     await simple('clear', {}, async session => {
@@ -845,7 +845,7 @@ async function main() {
       const found = await visibleText(session.page);
       session.check(found === '', `expected clear to blank the screen, found "${found}"`);
       await session.page.keyboard.press('Enter');
-      await session.expectText('Physics Lens', {exact: true});
+      await session.expectText('WonderWhy', {exact: true});
       send(session, {type: 'clear'});
       await session.page.waitForTimeout(100);
     });
@@ -908,11 +908,11 @@ async function main() {
       session.result.screenshotCaptured = true;
       await session.page.evaluate(() => document.activeElement?.blur());
       await session.page.keyboard.press('Enter');
-      await session.expectText('Physics Lens', {exact: true});
+      await session.expectText('WonderWhy', {exact: true});
       const stored = await session.page.evaluate(() => localStorage.getItem('lens.consent'));
       session.check(stored !== null && !Number.isNaN(Date.parse(stored)), `expected an ISO consent date, found ${JSON.stringify(stored)}`);
       await session.page.reload({waitUntil: 'networkidle'});
-      await session.expectText('Physics Lens', {exact: true});
+      await session.expectText('WonderWhy', {exact: true});
       const cardVisible = await session.page.getByText('Before you start', {exact: true}).isVisible().catch(() => false);
       session.check(!cardVisible, 'consent card returned after reloading with stored consent');
     });
@@ -1147,7 +1147,7 @@ async function main() {
       send(session, {type: 'clear'});
       await session.page.waitForTimeout(100);
       await session.page.keyboard.press('Enter');
-      await session.expectText('Physics Lens', {exact: true});
+      await session.expectText('WonderWhy', {exact: true});
       session.check(!await session.page.locator('.ex-tag', {hasText: 'Demo'}).isVisible().catch(() => false), 'clear did not stop demo mode');
       send(session, {type: 'nav', action: 'demo'});
       await session.expectText('Demo', {exact: true});

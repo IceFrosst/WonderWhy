@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#000000">
-<title>Lens emulator</title>
+<title>WonderWhy</title>
 <style>
   :root { --panel: 56; --glow: 1; --x: 62; --y: 58; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -36,8 +36,14 @@
   @keyframes rip { from { opacity: .9; transform: scale(.6); } to { opacity: 0; transform: scale(1.4); } }
   body.clean #bar, body.clean #shot, body.clean #dot { opacity: 0; pointer-events: none; }
   body.clean.ghost .ripple, body.clean.ghost .arrow { display: none; }
-  #start { position: fixed; inset: 0; display: grid; place-items: center; background: #000; }
-  #start button { width: 88px; height: 88px; border-radius: 44px; border: 2px solid #4df0ff; background: transparent; color: #4df0ff; }
+  #start { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: #000; overflow: auto; touch-action: auto; }
+  #start .card { max-width: 420px; display: flex; flex-direction: column; gap: 14px; text-align: left; }
+  #start h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: .01em; }
+  #start p { margin: 0; font-size: 16px; line-height: 1.45; color: #c9d0d8; }
+  #start .privacy { border: 1px solid #2a3038; border-radius: 12px; padding: 12px 14px; background: #10141a; font-size: 14px; color: #eef1f5; }
+  #start .privacy b { color: #4df0ff; }
+  #start button { align-self: stretch; min-height: 52px; padding: 0 24px; border-radius: 26px; border: 2px solid #4df0ff; background: transparent; color: #4df0ff; font: 600 17px system-ui, sans-serif; }
+  #start button:focus-visible { outline: 3px solid #eef1f5; outline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -64,7 +70,14 @@
   </div>
   <output id="timing" aria-live="polite">No capture measured</output>
 </div>
-<div id="start"><button id="go" aria-label="Start camera"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></div>
+<div id="start" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+  <div class="card">
+    <h1 id="startTitle">WonderWhy</h1>
+    <p>Point the camera at an everyday object and see how it works, with animated visual explanations.</p>
+    <p class="privacy"><b>Privacy:</b> when you take a photo, one picture is sent through our server to Google Gemini to recognise the object. We do not store it. Please do not point at people, and ask before photographing anyone nearby.</p>
+    <button id="go" type="button">Start camera</button>
+  </div>
+</div>
 <script>
 (() => {
   'use strict';
@@ -98,10 +111,19 @@
       $('cam').srcObject = stream; $('cam').style.transform = facing === 'user' ? 'scaleX(-1)' : '';
     } catch { $('dot').className = 'bad'; }
   }
-  $('go').addEventListener('click', async () => {
+  // Consent to the photo upload is given on the start screen and remembered for this browser session only.
+  let consented = false;
+  try { consented = sessionStorage.getItem('emu.consent') === '1'; } catch {}
+  async function begin() {
     $('start').remove(); await camera(); fit();
     try { await navigator.wakeLock?.request('screen'); } catch {}
+  }
+  $('go').addEventListener('click', () => {
+    consented = true;
+    try { sessionStorage.setItem('emu.consent', '1'); } catch {}
+    begin();
   });
+  if (consented) begin(); else $('go').focus();
   $('bFlip').addEventListener('click', () => { facing = facing === 'environment' ? 'user' : 'environment'; store.set('facing', facing); camera(); });
 
   // Neural band: gestures become the glasses app's own keys (arrows = D-pad, Enter = pinch, Escape = back).
@@ -189,6 +211,7 @@
     down = null;
   });
   addEventListener('keydown', (e) => {
+    if ($('start')) return; // the start screen's own button handles Enter
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.key)) { e.preventDefault(); key(e.key); }
   });
 
@@ -222,7 +245,7 @@
     ].filter(Boolean).join(' · ');
   }
   async function photo() {
-    const v = $('cam'); if (busy || !v.videoWidth) return; busy = true; $('busy').className = 'on';
+    const v = $('cam'); if (!consented || busy || !v.videoWidth) return; busy = true; $('busy').className = 'on';
     const start = performance.now();
     const t_capture = Date.now(); const vw = v.videoWidth; const vh = v.videoHeight; const side = Math.min(vw, vh) * 0.5;
     const imageBase64 = jpeg(0, 0, vw, vh, 1280);
@@ -235,7 +258,7 @@
       const result = await r.json();
       captureTiming.responseMs = Math.round(performance.now() - start);
       captureTiming.detectMs = result.timings?.detectMs;
-      if (!r.ok) captureTiming.error = result.error || `HTTP ${r.status}`;
+      if (!r.ok) captureTiming.error = r.status === 429 ? (result.message || 'Too many photos, try again shortly') : (result.error || `HTTP ${r.status}`);
       if (r.status === 401) $('dot').className = 'bad';
     } catch { $('dot').className = 'bad'; captureTiming.error = 'Bridge unavailable'; }
     renderTiming();
