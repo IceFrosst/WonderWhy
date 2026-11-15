@@ -77,10 +77,11 @@ Checklists: [`Glasses_Test.md`](../Meta_Challenge/Glasses_Test.md) (20-minute sh
 
 | Flow | Result |
 |---|---|
-| Band pinch → glasses photo → Android → Gemini → display | Verified in one successful run: JPEG at the phone in 5,594 ms, upload 9 ms later, "Smartphone" recognised at 99% in 5,083 ms (model setting of that day; today's live bridge, `gemini-3.5-flash`, measured about 1.8 to 1.9 s detect time on the server, 15 Nov, two samples). Other attempts lost Bluetooth right after the JPEG; one retry reconnected |
+| Band pinch → glasses photo → Android → Gemini → display | Verified in one successful run: JPEG at the phone in 5,594 ms, upload 9 ms later, "Smartphone" recognised at 99% in 5,083 ms (model setting of that day; today's live bridge, `gemini-3.6-flash` since 15 Nov about 08:25, measured about 1.6 to 2.2 s detect time on the server for the sauna and printer photos; team benchmark, not logged in this repo). Other attempts lost Bluetooth right after the JPEG; one retry reconnected |
 | Kettle film and live Inspect (3D) | Displayed and responded; one run: 1,133 ms to film motion, 1,546 ms to Inspect. Continuous drag, frame rate and long sessions **not measured** |
 | Spoken follow-up | Glasses microphone transcribed; one `/ask` returned HTTP 502, the retry worked. Narration quality and audio routing **not tested** |
 | Web App "Ask" | Opened the phone visual; "Hey Meta" gave a spoken answer without opening the visual; WebMCP registration verified in Chromium |
+| Live 3D generation for an object outside the library, on the glasses | **Owner-reported:** the owner ran one test with the glasses and Alex tested live generation twice. Not logged in this repo, no timings recorded from those runs. The 57 s carbon generation time is from a direct sketch test on 15 Nov, not from the glasses runs |
 | Camera relay while the Web App is in front | In code; **no confirmed end-to-end run** |
 | Guitar → Home fix | Passed in the simulator only; **to confirm on glasses** |
 

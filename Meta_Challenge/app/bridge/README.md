@@ -31,7 +31,7 @@ Open the phone stand-in at <http://localhost:8787/phone> (webcam, Space = pinch)
 | `CLAUDE_DETECT_MODEL` | Only for `claude`: a **dev-only stand-in** that runs the local `claude` command with the login of whoever runs the bridge (default model `haiku`, timeout 60 s, about 10 s per photo). It spends that person's subscription, so it is opt-in, answers carry `standIn: true`, and it must never run on the droplet |
 | `PI_DETECT_MODEL`, `DETECT_TIMEOUT_MS` | Only for `pi`: runs the local `pi` CLI with that machine's model login (no API key). Dev only: about 7 s per photo, default model `anthropic/claude-haiku-4-5`, default timeout 25 s |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | default model `claude-haiku-5-5` |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | code default model `gemini-4-carbon`; the live bridge sets `GEMINI_MODEL=gemini-3.5-flash` (about 1.8 to 1.9 s detect on the server, 15 Nov, two samples) (key sent in header). Output cap is at least 4096 tokens because Gemini 3+/4 thinking counts toward it. Carbon takes 6-7 s, so set `DETECT_TIMEOUT_MS=15000` |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | code default model `gemini-4-carbon`; the live bridge sets `GEMINI_MODEL=gemini-3.6-flash` since 15 Nov about 08:25 (about 1.6 to 2.2 s detect on the server for the sauna and printer photos, team benchmark; earlier `gemini-3.5-flash` is deprecated and routed to it by Google) (key sent in header). Output cap is at least 4096 tokens because Gemini 3+/4 thinking counts toward it. Carbon takes 6-7 s, so set `DETECT_TIMEOUT_MS=15000` |
 | `LATENCY_LOG` | path of the JSONL log, default `latency.jsonl` |
 
 ## Endpoints

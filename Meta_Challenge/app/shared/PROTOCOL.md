@@ -113,7 +113,7 @@ The library has 12 objects (pre-built, instant). Any other object still works: t
 
 | What | Rule |
 |---|---|
-| Switch | `SKETCH_PROVIDER` on the bridge: unset or `off` (default, no sketches), `fixture` (a recorded sketch, for tests and demos without a key), `auto` (the detect provider writes it: `gemini`, `anthropic`, or a dev stand-in; the live bridge runs `auto`). `SKETCH_MODEL` optionally picks a stronger model for sketches only (live: `gemini-4-carbon`; recognition stays on `gemini-3.5-flash`). Generation takes about a minute (57 s measured), so the live bridge sets `SKETCH_TIMEOUT_MS=90000` |
+| Switch | `SKETCH_PROVIDER` on the bridge: unset or `off` (default, no sketches), `fixture` (a recorded sketch, for tests and demos without a key), `auto` (the detect provider writes it: `gemini`, `anthropic`, or a dev stand-in; the live bridge runs `auto`). `SKETCH_MODEL` optionally picks a stronger model for sketches only (live: `gemini-4-carbon`; recognition stays on `gemini-3.6-flash`). Generation takes about a minute (57 s measured in a direct sketch test on 15 Nov), so the live bridge sets `SKETCH_TIMEOUT_MS=90000` |
 | When | Only for a `show` with `objectId: "unknown"`, a real photo and no `forceObjectId` |
 | `show.sketchPending` | `true` on that `show` when a sketch is being made. The glasses add a line "Drawing a sketch…" under the model's answer |
 | New frame `sketch` (bridge to glasses and phone) | `{ "type": "sketch", "reqId": "...", "sketch": { ... } }` when it is ready, or `{ "type": "sketch", "reqId": "...", "error": "sketch_failed" }`. Always arrives within `SKETCH_TIMEOUT_MS` (default 20 000; 90 000 on the live bridge) of the `show` |

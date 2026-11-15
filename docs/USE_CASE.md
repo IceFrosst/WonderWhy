@@ -85,8 +85,8 @@ A venue's 10 to 20 objects are therefore roughly 10 to 60 person-hours of author
 
 | Case | Flow | Time |
 |---|---|---|
-| One of the 12 **library objects** | Recognition (`gemini-3.5-flash`), then pre-built lenses and films | About 2 s recognition (1.8 to 1.9 s measured on the server, two samples, 15 Nov); the rest is instant |
-| **Any other object** | Recognition, then the bridge generates a live 3D explanation from the photo and the voice question (`SKETCH_PROVIDER=auto`, `SKETCH_MODEL=gemini-4-carbon`), marked *unverified* | About a minute: **57 s** measured for a pair of glasses (15 Nov); a flash-class model measured **19.5 s**. Single runs, team-reported, no log file in this repo |
+| One of the 12 **library objects** | Recognition (`gemini-3.6-flash`), then pre-built lenses and films | About 2 s recognition (1.6 to 2.2 s detect measured on the server for the sauna and printer photos, 15 Nov; not logged in this repo); the rest is instant |
+| **Any other object** | Recognition, then the bridge generates a live 3D explanation from the photo and the voice question (`SKETCH_PROVIDER=auto`, `SKETCH_MODEL=gemini-4-carbon`), marked *unverified* | About a minute: **57 s** measured for a pair of glasses in a direct sketch test on 15 Nov; a flash-class model measured **19.5 s**. Single runs, team-reported, no log file in this repo. The team also ran live generation on the real glasses (owner-reported, not logged in the repo) |
 
 ### Approximate cost per use (estimate)
 
@@ -97,7 +97,7 @@ Pricing facts read on 15 Nov 2026 (USD per 1M tokens, paid tier, standard):
 | Model | Input | Output (incl. thinking) | Note |
 |---|---|---|---|
 | `gemini-4-carbon` | $2.00 until 30 Nov 2026, then $4.00 | $10.00 until 30 Nov 2026, then $20.00 | Used for generated 3D explanations |
-| `gemini-3.6-flash` | $0.75 until 31 Dec 2026, then $1.50 | $3.75 until 31 Dec 2026, then $7.50 | **No price is listed for `gemini-3.5-flash`.** Google's model page calls it deprecated and says API requests to it are routed to `gemini-3.6-flash`, so we price recognition at the `gemini-3.6-flash` rates (our assumption that billing follows the routing). Our setting still says `gemini-3.5-flash` |
+| `gemini-3.6-flash` | $0.75 until 31 Dec 2026, then $1.50 | $3.75 until 31 Dec 2026, then $7.50 | Recognition runs on this model since 15 Nov about 08:25 (`GEMINI_MODEL` on the server). Before that the setting was `gemini-3.5-flash`, which has no listed price: Google's model page calls it deprecated and routes API requests to `gemini-3.6-flash` |
 
 Token assumptions:
 
@@ -115,6 +115,8 @@ Computed cost per call (in USD, arithmetic on the numbers above):
 | Generated sketch on a flash model (the 19.5 s alternative, same tokens, flash rates; not what the live bridge uses) | $0.032 low, $0.047 high | $0.063 low, $0.093 high |
 
 Library objects cost only the recognition. An unknown object costs the recognition **plus** the sketch.
+
+**Observed cost (owner/team account, not billing data in this repo):** a live generation for an object outside the library costs about **$0.10** on the live bridge. That sits inside our estimate band for the carbon sketch ($0.084 to $0.124 at the prices of 15 Nov).
 
 Cost per 1,000 sessions (one pinch each, carbon for sketches; follow-up questions not included):
 
@@ -134,6 +136,19 @@ Cost levers, **proposals, not built**:
 | **Cache generated sketches** and reuse them after the first generation of an object, so a repeated unknown object costs nothing and returns instantly | Not built: the bridge has no sketch cache, every pinch on an unknown object generates again. A reviewed sketch could also be promoted into the library |
 | **Consider Meta's own models** (for example Llama vision models or Meta AI APIs) for recognition, and possibly for the sketch, to reduce cost | Not evaluated. We have not tested any Meta model for recognition or sketch quality, latency or price; evaluate later |
 | Use the flash-class model for sketches when a minute is too long | Possible by changing `SKETCH_MODEL`; measured 19.5 s once, quality not compared |
+
+### Cost trend
+
+Where we are: a live generation for an object outside the library costs about **$0.10** today (owner/team-observed on the live bridge; our estimate band is $0.084 to $0.124 for `gemini-4-carbon` at the prices of 15 Nov). We expect the cost per new object to **fall over time**, mainly because of what we build and choose, not because of list prices. This is a trajectory, **not a guarantee**.
+
+| Driver | Effect on cost | Status |
+|---|---|---|
+| Cheaper, faster model for sketches | A flash-class model measured 19.5 s against 57 s; at the same token assumptions it estimates at about $0.03 to $0.05 (the table above: $0.032 to $0.047 at the prices of 15 Nov) | Possible by changing `SKETCH_MODEL`; quality not compared, **not adopted** |
+| Cache generated explanations | Each new object is generated once and reused, so a repeat costs nothing and returns instantly | **Proposal, not built** |
+| Meta's own models | Might lower recognition and sketch cost | **To evaluate**, nothing tested |
+| Falling per-token prices | Not something to rely on: the Google pricing page we read on 15 Nov lists `gemini-4-carbon` at double the price after 30 Nov 2026 (and `gemini-3.6-flash` at double after 31 Dec 2026) | Fact from the page; it pushes cost **up** in the short term |
+
+So the honest short-term picture is flat to higher list prices; the decline we expect comes from caching (every object paid for once) and from smaller models, once we have checked their quality.
 
 ### Other costs
 

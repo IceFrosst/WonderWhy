@@ -23,7 +23,7 @@ updated: 2026-11-15
 | Project name | WonderWhy (formerly Physics Lens; some app and tool identifiers still use the old name) | Done |
 | Punchline | Look at anything. See the physics inside it. | Done |
 | Description | Below | Done |
-| Challenge(s) | Meta: AI Glasses for Everyone, Everyday. Tech: Best Use of Gemini API (the live bridge runs Gemini: `gemini-3.5-flash` for recognition, `gemini-4-carbon` for generated 3D explanations) | TODO (human): confirm the one-project rule |
+| Challenge(s) | Meta: AI Glasses for Everyone, Everyday. Tech: Best Use of Gemini API (the live bridge runs Gemini: `gemini-3.6-flash` for recognition, `gemini-4-carbon` for generated 3D explanations) | TODO (human): confirm the one-project rule |
 | Technologies | Below | Done |
 | Video (public, **max 2:00**) | TODO (human): link, checked logged out | TODO (human) |
 | Demo link | Live camera emulator (start here): https://lens.167-71-139-39.sslip.io/emulator. Glasses app (open at 600 × 600): https://lens.167-71-139-39.sslip.io/ (install on glasses with [install-qr.png](app/deploy/install-qr.png)). Phone page: `/phone`. The bridge is open for judging with a per-IP rate limit and will be re-locked afterwards | Done |
@@ -49,7 +49,7 @@ WonderWhy runs on Meta Ray-Ban Display glasses. You look at an object and pinch.
 - **Shows, does not only tell:** captions and animation help people who struggle with long text or audio.
 - **Camera only on request:** one photo per pinch. The phone app does not save it. See limits below.
 - **Honest about doubt:** a weak guess shows "Not sure what this is" and opens no scene.
-- **Works on library objects instantly, and on any other object in about a minute:** 12 library objects are pre-built. Any other object is still recognised in about 2 s, and the bridge then generates a live 3D explanation from the photo and your voice question (`gemini-4-carbon`, about a minute: 57 s measured for a pair of glasses; a flash model took 19.5 s). Generated explanations are tagged unverified.
+- **Works on library objects instantly, and on any other object in about a minute:** 12 library objects are pre-built. Any other object is still recognised in about 2 s, and the bridge then generates a live 3D explanation from the photo and your voice question (`gemini-4-carbon`, about a minute: 57 s in a direct sketch test on 15 Nov for a pair of glasses; a flash model took 19.5 s). Generated explanations are tagged unverified.
 - **Ask more:** a follow-up question, typed or spoken, jumps to the lens that answers it. Text comes in Finnish, Swedish, German, Spanish and French as well as English.
 
 Built for hands-on learners (students aged about 13-18 and curious adults), including people for whom a spoken paragraph does not work.
@@ -64,7 +64,7 @@ Counts in the table were made on 14 Nov from `shared/objects.json` (7 objects, 2
 | First load 214 KB gzipped, 5 requests (limit 300 KB, 15) | **TESTED** | Desktop status 03:20 UTC, after the glasses polish (214 KB); 5 requests and Meta's test gate measured at 211 to 212 KB earlier ([app README](app/README.md), desktop status *(internal note, not in this repo)*) |
 | Bridge: identified result to scene painted about 50 ms | **TESTED** | Laptop, headless Chrome, 13 Nov ([app README](app/README.md)). Excludes the model and Bluetooth |
 | Detection accuracy: 18 of 18 test photos right (7 objects plus 4 unrelated, "unknown") | **TESTED** on a **dev stand-in** | Claude Haiku through a local command line on the desktop, 1 run each, Wikimedia photos ([app README](app/README.md)). **Not Gemini**, not the demo provider |
-| Detection time p50 5.8 s, p90 7.8 s | **TESTED** on a **dev stand-in** | Same run. This is the stand-in's process start, not the demo provider's speed. Live Gemini time is separate: model `gemini-3.5-flash`, about **1.8 to 1.9 s detect time measured on the server** for library objects (15 Nov 07:55, two samples, not a benchmark). End to end depends on the network |
+| Detection time p50 5.8 s, p90 7.8 s | **TESTED** on a **dev stand-in** | Same run. This is the stand-in's process start, not the demo provider's speed. Live Gemini time is separate: model `gemini-3.6-flash` (since 15 Nov about 08:25), about **1.6 to 2.2 s detect time measured on the server** for the sauna and printer photos (team benchmark on 15 Nov, 1.4 to 2.1 s on the earlier `gemini-3.5-flash`; no log in this repo). End to end depends on the network |
 | Aim: model looks at the centre crop as well as the full photo | **TESTED** | One run, kettle and guitar in one frame: centre crop "kettle" 3 of 3, full photo alone "guitar" 3 of 3 ([PROTOCOL](app/shared/PROTOCOL.md)). Small sample |
 | Android app: connect, pinch, one photo, bridge `/detect`, result card | **TESTED** in **mock mode** | Pixel 8, Android 17, Meta Mock Device Kit, 14 Nov. The phone camera stands in for the glasses ([android README](app/android/README.md)) |
 | Android app end to end with the real prompt path | **TESTED** | Emulator, Mock Device Kit, local bridge, real model through a dev stand-in: kettle detected 0.97, device and error cards (evidence *(internal note, not in this repo)*, MrNetwork's Mac and the desktop) |
@@ -98,7 +98,7 @@ Counts in the table were made on 14 Nov from `shared/objects.json` (7 objects, 2
 | Refuses to explain people | **PLANNED** | Not built |
 
 ## Technologies
-Meta Wearables Device Access Toolkit 1.0.1 (Android, Kotlin, speech module `mwdat-speech`), Meta Mock Device Kit, Meta Ray-Ban Display Web App (React, Canvas 2D, Vite), Node.js bridge (HTTP + WebSocket), model detection via Gemini (`gemini-3.5-flash`) or Claude API (provider switch), generated 3D explanations via `gemini-4-carbon` (`SKETCH_MODEL`), Docker, Caddy. TODO (human): drop whichever model is not used in the final run.
+Meta Wearables Device Access Toolkit 1.0.1 (Android, Kotlin, speech module `mwdat-speech`), Meta Mock Device Kit, Meta Ray-Ban Display Web App (React, Canvas 2D, Vite), Node.js bridge (HTTP + WebSocket), model detection via Gemini (`gemini-3.6-flash`) or Claude API (provider switch), generated 3D explanations via `gemini-4-carbon` (`SKETCH_MODEL`), Docker, Caddy. TODO (human): drop whichever model is not used in the final run.
 
 ## Privacy and consent (what is true)
 | Point | Truth | Source |
@@ -115,9 +115,10 @@ Meta Wearables Device Access Toolkit 1.0.1 (Android, Kotlin, speech module `mwda
 ## Known limits
 - Real capture and live kettle Inspect worked on the loaner. A complete photo-to-film run initiated from the foreground Web App and visible native MP4 playback still need acceptance. [Loaner evidence](team-notes/Loaner_Test.md)
 - 12 library objects (7 with the full lens set verified on 14 Nov) are pre-built and instant. Any other object is recognised in about 2 s and then gets a generated 3D explanation that takes about a minute (57 s measured) and is tagged unverified; below 0.6 confidence the app shows "Not sure". Generated explanations are not cached, so each repeat costs again ([cost estimate](../docs/USE_CASE.md#feasibility-and-cost)).
+- Live generation was also tried on the real glasses (the owner once, Alex twice). This is **owner-reported** and not logged in the repo; the 57 s figure is from a direct sketch test on 15 Nov.
 - Physics is prerendered and checked by the team; the lens captions also went through an independent physics fact-check (18 captions corrected, curves recomputed). Sketches and model answers are not checked.
 - The earlier aggregate detection benchmark used a stand-in. The real smartphone run used Gemini. Translations are machine-made.
-- The hosted bridge uses Gemini (`gemini-3.5-flash` for recognition, `gemini-4-carbon` for generated explanations). Google's model page now marks `gemini-3.5-flash` deprecated and says API requests to it are routed to `gemini-3.6-flash` (read on 15 Nov); we have not changed the setting. The bridge is open for judging with a per-IP rate limit (10 per minute, 100 per hour) and will be re-locked after judging; no credential is needed to try it.
+- The hosted bridge uses Gemini (`gemini-3.6-flash` for recognition, `gemini-4-carbon` for generated explanations). Recognition was switched from `gemini-3.5-flash` to `gemini-3.6-flash` on 15 Nov about 08:25 because Google marks 3.5-flash deprecated and routes API requests to 3.6-flash. A generated explanation costs about $0.10 each (owner/team-observed; estimate band $0.084 to $0.124), with no cache yet: see [Cost trend](../docs/USE_CASE.md#cost-trend). The bridge is open for judging with a per-IP rate limit (10 per minute, 100 per hour) and will be re-locked after judging; no credential is needed to try it.
 
 ## Pilot path
 One physics class or a science centre, with a before and after quiz. **PLANNED**, no pilot has run and no venue has been contacted. Authoring effort, model cost and venue target: [feasibility and cost](../docs/USE_CASE.md#feasibility-and-cost).
