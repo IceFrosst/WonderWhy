@@ -14,6 +14,14 @@ updated: 2026-11-14
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
 
+## Current cut — v15, 1:14.667
+
+Older printer POV removed (241 frames); P6 Heat stays at 0:27.367–0:33.367 with *How does it build this?*. Exact copy *Feed your curiosity. Grow your understanding of the world. · WonderWhy* moves to the sharing scene's side space at 0:46.367–0:48.767. All retained scene lengths unchanged; later scenes shift 8.033 seconds earlier. Full decode and script syntax checks passed; independent visual/code review accepted (2240 frames, 30 fps). Continuous playback/audio assessment remains outstanding.
+
+**Next:** add owner-approved **Austin take A** (`video/voices/child/lines/austin_timid_A.mp3`) to a separate v16; different narrator for the rest is requested but not selected/generated. Music and SFX remain pending. No new ElevenLabs credits spent.
+
+### Historical edit notes
+
 Changes 15 Nov ~04:15 (v14, 1:22.70): **slop_machine box cut** (curiosity: muted stays). **Printer answer = team's P6 Heat** (`act4_printer/final/P6_heat.mp4`, `6852ab3`: one bit of filament 20 °C → 215 °C → solid → fused, line *Melted at 215°, solid in seconds.*), replacing Alex's AR V02/V09. **Spoken prompt on every example**, earbuds style (cyan listening glyph, live words, then "sent" into the panel): printer *How does it build this?* (replaces "Ask out loud"), sauna *Why does steam feel hotter?*, bike *Why is faster so much harder?*; earbuds keeps *How does the noise cancellation work?*. *Feed your curiosity. Grow your understanding of the world. · WonderWhy* stays at the start of the printer shot. Overlays: `edits/overlays/prompts/`.
 
 Changes 15 Nov ~03:55 (v13, 1:22.70): second detection box on IceFrost's head through the grey hall walk: **curiosity: muted** (hand-tracked, 0:10.1–0:14.4, fades before the glasses go on).
