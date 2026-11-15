@@ -14,6 +14,8 @@ updated: 2026-11-14
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
 
+Changes 15 Nov ~02:30: **reveal subtitles replaced by overlays** on the blurred side panels (never on the face): glasses-on → gold callout line from the lens to *WORN HERE · META RAY-BAN DISPLAY · AI glasses with a display in the lens*; then **LOOK AT** (left) / **ANYTHING.** (right) slam in, *ANYTHING.* breaks apart into **OBJECTS** (left) / **CONCEPTS** (right). The example list (Earbuds · Sauna steam · Wi-Fi · sky) is dropped. **STOPPED.** now runs diagonally (rising left→right, 10°) through the side panels and below the face and phone; the hit flash is removed and rays fade out around face/phone. `cinematic_v9.mp4` **1:32.70** (2.70 s over). Overlays: `edits/overlays/look/` (HTML, transparent frames) + `edits/cinematic/overlay_fx.py` after `build.sh`.
+
 Changes 15 Nov ~00:50: **STOPPED. now lands on the grey grass shot** (red slam + burst keyed over IceFrost scrolling, 1.63 s, fades out); the drop ends on *AND THEN YOU* and hard-cuts straight into it. `cinematic_v8.mp4` = **1:32.70** (2.70 s over 1:30). Overlay: `edits/cinematic/overlay_stopped.py` after `build.sh`.
 
 Changes 15 Nov ~00:30 (draft 13): **kinetic drop** between the gold intro and the grey grass, built with the Scenario *Kinetic Film* engine (code only; no Scenario music/AI used): gold slam *YOU USED TO / ASK WHY.* → cold flip *AND THEN / YOU* → **STOPPED.** in red on black → hard cut to IceFrost on the grass (2.73 s, local `edits/kinetic/bomb/`). Captions 3/4 removed from the grass shot (no double text). **End card** now the kinetic Logo block with the Orbit Star logo (`Meta_Challenge/brand/` on `claude/wizardly-franklin-515rin`), tagline + CTA line. Video: `cinematic_v7.mp4`, **1:33.67 — 3.67 s over the 1:30 cap; owner to choose cuts.** Silent kinetic pieces: hit SFX/music pending.
@@ -31,9 +33,9 @@ Changes from draft 8: Act 1 is **CODE** (three variants being built, pick one), 
 | 1 | *How does it all really work?* | child, soft, handwritten gold ("How" from 3.3 s, rest 4.2–5.15 s) |
 | 3 | **YOU USED TO ASK WHY.** | kinetic drop, gold slam |
 | 4 | **AND THEN YOU** (black) → **STOPPED.** in red, slammed over the grey grass shot | kinetic drop |
-| 5 | **Look at anything.** | gold, big |
-| 6 | *An object or a concept.* | gold, small |
-| 7 | *Earbuds · Sauna steam · Wi-Fi · Why the sky is blue* | quick text list, not visualised |
+| 5 | **LOOK AT** / **ANYTHING.** | side-panel overlay, kinetic |
+| 6 | *ANYTHING.* breaks into **OBJECTS** / **CONCEPTS** | side-panel overlay |
+| 7 | Callout: *META RAY-BAN DISPLAY · AI glasses with a display in the lens* | at glasses-on, line from the lens |
 | 8 | **See how it really works.** | big |
 | 9 | **Feed your curiosity. Grow your understanding of the world.** · *WonderWhy* | big + tag |
 | 10 | *Ask out loud* | label |
