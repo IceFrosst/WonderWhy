@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AR Versions</title>
+<style>
+:root{--bg:#111316;--card:#1b1e23;--ink:#e8ecf1;--soft:#9aa4b1;--line:#2a2f37;--accent:#4df0ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,sans-serif}
+header{padding:16px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;font-weight:600}
+button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+main{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:16px;padding:16px 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+video{width:100%;display:block;background:#000;aspect-ratio:16/9}
+.meta{padding:10px 12px}.meta b{color:var(--accent)}.meta p{margin:4px 0 0;color:var(--soft)}
+.big{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:9}
+.big video{width:min(96vw,170vh);aspect-ratio:16/9}
+@media(max-width:520px){main{grid-template-columns:1fr;padding:16px}}
+</style></head><body>
+<header><h1>AR versions V01–V10</h1>
+<button id="all">Play all</button><button id="stop">Pause all</button>
+<span style="color:var(--soft)">Click a title to open it large. Esc closes.</span></header>
+<main id="grid"></main>
+<div class="big" id="big"><video id="bigv" controls loop></video></div>
+<script>
+const R='./';
+const V=[
+['V01','The printer prints its own hologram','7.3 s · no tuning'],
+['V02','X-ray peel onto the printer','7.0 s · no tuning'],
+['V03','Over the shoulder + in-eye panel','7.0 s · no tuning'],
+['V04','Glasses explode out of the friend\'s hands','8.0 s · landing pose retuned'],
+['V05','Colour spreads out from the lenses','7.0 s · grade is very blue/purple'],
+['V06','Grey world, colour behind the lines','6.8 s · faint double ghost ~4.3 s'],
+['V07','Earbuds and the anti-noise trick','7.5 s · no tuning'],
+['V08','Notebook margins','8.0 s · top note moved into frame'],
+['V09','Through the glasses (honest panel)','8.0 s · panel text small'],
+['V10','Beat montage: printer, earbuds, glasses','8.4 s · check the whip'],
+];
+const g=document.getElementById('grid'),big=document.getElementById('big'),bv=document.getElementById('bigv');
+for(const [id,t,n] of V){const c=document.createElement('div');c.className='card';
+c.innerHTML=`<video src="${R}${id}.mp4" controls loop muted preload="metadata" poster="${R}${id}_sheet.png"></video><div class="meta"><b style="cursor:pointer">${id}</b> ${t}<p>${n}</p></div>`;
+c.querySelector('b').onclick=()=>{bv.src=R+id+'.mp4';big.style.display='flex';bv.play()};g.appendChild(c)}
+document.getElementById('all').onclick=()=>document.querySelectorAll('main video').forEach(v=>{v.currentTime=0;v.play()});
+document.getElementById('stop').onclick=()=>document.querySelectorAll('video').forEach(v=>v.pause());
+const close=()=>{bv.pause();big.style.display='none'};big.onclick=e=>{if(e.target===big)close()};addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+</script></body></html>
