@@ -14,6 +14,8 @@ updated: 2026-11-14
 > **Source key:** **CODE** = code-drawn on black (no AI image model available) · **REAL** = filmed · **GLASS** = Meta AI "Record display" from the real glasses · **RENDER** = our clean object animation, Screen-blended in a fixed square right of centre (the display is a fixed panel in one eye; lines are never stuck to the object).
 > **Edit rules:** waits are cut out. Corner tag on glasses shots: *Recorded on the glasses · edited for time*. Blur faces of other participants in crowd shots.
 
+Changes 15 Nov ~03:55 (v13, 1:22.70): second detection box on IceFrost's head through the grey hall walk: **curiosity: muted** (hand-tracked, 0:10.1–0:14.4, fades before the glasses go on).
+
 Changes 15 Nov ~03:40 (v12, **1:22.70**): caption *Even this?* removed; **how-it-works diagram removed** (owner); YOLO-style red detection box on the phone in the grey hall walk: **slop_machine 0.99** (hand-tracked, 0:09.9–0:11.7; `edits/overlays/slop/make.py`). Next: voice-over, SFX, music.
 
 Changes 15 Nov ~03:20 (v11, **1:26.70 — under 1:30**): intro is now Alex's **R_B3_match** (`video/ar/renders/`, kid upright, hair matched to IceFrost, end pose matched to the grass clip). **Printer answer** (was placeholder C) = Alex's **V02** scan-line lock-on + exploding head (0.9–4.9 s) → **V09** answer in the fixed panel (4.9–6.9 s), 6 s, caption *Opens the part you asked about* kept. **Glasses-explain-themselves (F) removed** by owner: no explanation in the share scene. **Minecraft toast** on the grass ending when IceFrost touches the grass: *Advancement Made! · Touch Grass* (code-drawn 5x7 pixel font + grass block, top-right, 1:12.2–1:15.9; `edits/overlays/achievement/make.py`). Note: *Even this?* (caption 18) now has no payoff.
