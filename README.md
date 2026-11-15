@@ -11,6 +11,8 @@ A real-world explanation mode for **Meta Ray-Ban Display + Meta Neural Band**, b
 >
 > **Curiosity and learning everyday unleashed.**
 
+**Watch the film (1:24):** [`WonderWhy_final_A2.mp4`](Meta_Challenge/video/renders/WonderWhy_final_A2.mp4) (1080p, 58 MB, compressed from the master render).
+
 ![Kettle heating element, drawn as live 3D lines in the 600 × 600 lens](Meta_Challenge/app/glasses/docs/states/scene-kettle-explore-s3.png)
 
 ## 60-second overview
@@ -30,6 +32,7 @@ A real-world explanation mode for **Meta Ray-Ban Display + Meta Neural Band**, b
 |---|---|
 | **1. Live camera emulator (start here)**: your phone or laptop camera passes through, with the real glasses Web App and its live 3D line renders drawn over it, and touch gestures that act like the Neural Band. Real bridge and model | <https://lens.167-71-139-39.sslip.io/emulator> |
 | 2. Glasses app on the live bridge (open at 600 × 600) | <https://lens.167-71-139-39.sslip.io/> |
+| **The film (1:24, 1080p)** | [`WonderWhy_final_A2.mp4`](Meta_Challenge/video/renders/WonderWhy_final_A2.mp4) (earlier cuts: [`video/renders/`](Meta_Challenge/video/renders/README.md)) |
 | Pitch deck (PDF, 8 slides) | [`WonderWhy_Deck.pdf`](Meta_Challenge/deck/WonderWhy_Deck.pdf) (outline: [Deck.md](Meta_Challenge/Deck.md)) |
 | Demo clips of real objects (raw footage, no app overlay) | [`DemoVideos/Objects/`](DemoVideos/Objects/) |
 | Film script | [Video_Script.md](Meta_Challenge/Video_Script.md) |
@@ -46,7 +49,7 @@ The live bridge is **open for judging** (no token) with a per-IP rate limit (10 
 
 | Object | What happens | Time | Status |
 |---|---|---|---|
-| One of the **12 library objects** (kettle, guitar, ball, bicycle, metal spoon, phone, earbuds, pendulum display glasses, spin bike, sauna stove and 3D printer) | Recognised, then the pre-built lenses and films play | Recognition about 2 s (`gemini-3.6-flash`, team-measured on the server: 1.6 to 2.2 s detect for the sauna and printer photos, 15 Nov; not logged in this repo); everything after is instant | Physics captions checked by the team and an independent pass |
+| One of the **12 library objects** (kettle, guitar, ball, bicycle, metal spoon, phone, earbuds, pendulum, display glasses, spin bike, sauna stove and 3D printer) | Recognised, then the pre-built lenses and films play | Recognition about 2 s (`gemini-3.6-flash`, team-measured on the server: 1.6 to 2.2 s detect for the sauna and printer photos, 15 Nov; not logged in this repo); everything after is instant | Physics captions checked by the team and an independent pass |
 | **Any other object** | Recognised, then the bridge generates a live 3D explanation (`SKETCH_PROVIDER=auto`, model `gemini-4-carbon` via `SKETCH_MODEL`) from the photo and, when the client sends one, the voice question; the glasses show "Drawing a sketch…" while it runs | About a minute: **57 s** measured for a pair of glasses (15 Nov); a flash-class model measured 19.5 s | Marked **unverified**: the numbers are the model's estimates, not checked facts |
 
 The two figures for generated explanations are single runs on the live server, not a benchmark. The 57 s carbon figure is from a direct sketch test on 15 Nov. Runs with the real glasses on the live generation (the owner tested it once, Alex twice) are **owner-reported** and not logged in this repo. The carbon figure is also recorded in the message of team-repo commit [`fd04c8e`](https://github.com/IceFrosst/Junction-2026/commit/fd04c8e); the 19.5 s flash figure and the 2 s recognition figure are team measurements on the server, with no log file in this repo. Wire format: [PROTOCOL "Sketch for an unknown object"](Meta_Challenge/app/shared/PROTOCOL.md).

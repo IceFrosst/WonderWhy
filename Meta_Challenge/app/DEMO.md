@@ -42,7 +42,7 @@ Fallbacks, in order: object buttons on the phone page (no camera, no model); "De
 | Bridge unit and security tests | `cd bridge && npm test` | 75 pass |
 | Every screen and state of the glasses app, with screenshots | `cd glasses && npm run test:states` | 125 of 125, 215 KB gzipped, 5 requests, about 30 fps (headless). Screenshots: [glasses/docs/](glasses/docs/README.md) |
 | Recognition on photos | `cd bridge && DETECT_PROVIDER=claude BENCH_N=1 BENCH_SIZES=MEDIUM npm run bench` (photos in `bridge/samples/`, not in git) | 18 of 18 on the dev stand-in. Gemini: not run |
-| Translations match the English | `node shared/i18n/check.mjs` | 5 languages ok, 390 strings each incl. text inside the drawings (machine-translated, need a native read) |
+| Translations match the English | `node shared/i18n/check.mjs` | 14 Nov: 5 languages ok, 390 strings each incl. text inside the drawings (machine-translated, need a native read). **15 Nov: fails** for all 5: the 5 newer objects (earbuds, glasses, spin bike, sauna, 3D printer) and the reworked ball Explore chapter are not translated yet; the bridge falls back to English for them |
 | Android app with mock glasses on an emulator | Overnight/evidence/android-emulator/ *(internal note, not in this repo)* | Ran end to end with the stand-in (kettle 0.97) |
 | Stills and clips for the phone-only route | `cd glasses && npm run export:media` (needs ffmpeg for clips) | 90 captioned stills, 90 text-free stills (`c<step>.png`), 29 clips in `bridge/media/` |
 | Footage for the pitch video | `cd glasses && npm run export:video` | Branch `idea/video-kit` (re-render after lens changes) |

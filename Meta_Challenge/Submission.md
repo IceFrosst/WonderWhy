@@ -25,7 +25,7 @@ updated: 2026-11-15
 | Description | Below | Done |
 | Challenge(s) | Meta: AI Glasses for Everyone, Everyday. Tech: Best Use of Gemini API (the live bridge runs Gemini: `gemini-3.6-flash` for recognition, `gemini-4-carbon` for generated 3D explanations) | TODO (human): confirm the one-project rule |
 | Technologies | Below | Done |
-| Video (public, **max 2:00**) | TODO (human): link, checked logged out | TODO (human) |
+| Video (public, **max 2:00**) | Final film (1:24) is in the repo: [`video/renders/WonderWhy_final_A2.mp4`](video/renders/WonderWhy_final_A2.mp4). TODO (human): public video link, checked logged out | TODO (human) |
 | Demo link | Live camera emulator (start here): https://lens.167-71-139-39.sslip.io/emulator. Glasses app (open at 600 × 600): https://lens.167-71-139-39.sslip.io/ (install on glasses with [install-qr.png](app/deploy/install-qr.png)). Phone page: `/phone`. The bridge is open for judging with a per-IP rate limit and will be re-locked afterwards | Done |
 | Source link (public repo, MIT) | https://github.com/IceFrosst/WonderWhy (the 73 MB building models mentioned in the handover are not in this repo) | Done |
 | Source code publicity | Public | Done |
